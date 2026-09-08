@@ -50,6 +50,8 @@ The split files under `docs/` are the normative PRD source. `docs/concept.md` re
 ## Build and validate
 
 ```bash
-python3 scripts/check_docs.py
 python3 scripts/build_prd.py
+python3 scripts/check_docs.py
 ```
+
+Build after editing canonical sources, then validate. The integrity check verifies Acceptance Criteria numbering and that the compiled PRD is current without changing files. To check only the compiled snapshot, run `python3 scripts/build_prd.py --check`.

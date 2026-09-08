@@ -37,8 +37,13 @@ for p in section_files:
         errors.append(f"Missing numeric H1 in {p}")
         continue
     sec = int(m.group(1))
-    ac = [int(x) for x in re.findall(rf"### AC-{sec}\.(\d+)\b", txt)]
-    if ac and ac != list(range(1, max(ac)+1)):
+    criteria = re.findall(r"^(?:-\s+\*\*|###\s+)AC-(\d+)\.(\d+)\b", txt, re.MULTILINE)
+    ac = [int(number) for _, number in criteria]
+    if not ac:
+        errors.append(f"Missing Acceptance Criteria in §{sec}")
+    if any(int(section) != sec for section, _ in criteria):
+        errors.append(f"Acceptance Criteria reference the wrong section in §{sec}")
+    if ac != list(range(1, len(ac)+1)):
         errors.append(f"Non-sequential AC numbering in §{sec}: {ac}")
 
 # Critical cross-section invariants
@@ -52,11 +57,14 @@ if "PENDING | RUNNING" not in s17:
 if "422" not in s17 or "PARTIAL" not in s17:
     errors.append("§17 must explicitly reject PARTIAL with all three categories via 422")
 
-# Ensure generated snapshot matches canonical sources.
-subprocess.run([sys.executable, str(ROOT / "scripts" / "build_prd.py")], check=True, stdout=subprocess.DEVNULL)
-compiled = (ROOT / "dist" / "2check_MVP_1.0_PRD.md").read_text(encoding="utf-8")
-if not compiled.startswith("# 2check.uz"):
-    errors.append("Compiled PRD has unexpected header")
+# Ensure generated snapshot matches canonical sources without silently rebuilding it.
+snapshot_check = subprocess.run(
+    [sys.executable, str(ROOT / "scripts" / "build_prd.py"), "--check"],
+    capture_output=True,
+    text=True,
+)
+if snapshot_check.returncode:
+    errors.append((snapshot_check.stdout + snapshot_check.stderr).strip())
 
 if errors:
     print("Documentation integrity check FAILED:\n")

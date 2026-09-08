@@ -25,9 +25,11 @@ Acceptance Criteria must remain sequential within each section. New criteria are
 Do not edit `dist/2check_MVP_1.0_PRD.md` directly. Edit canonical files under `docs/`, then run:
 
 ```bash
-python scripts/check_docs.py
-python scripts/build_prd.py
+python3 scripts/build_prd.py
+python3 scripts/check_docs.py
 ```
+
+The integrity check is read-only: it fails if the generated PRD is missing or differs from the canonical sources. Rebuild before validating and include the generated snapshot in the same change.
 
 ## 7. Pull requests
 

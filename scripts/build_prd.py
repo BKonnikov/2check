@@ -1,4 +1,9 @@
 from pathlib import Path
+import argparse
+
+parser = argparse.ArgumentParser(description="Build or verify the compiled PRD.")
+parser.add_argument("--check", action="store_true", help="Verify the snapshot without writing files.")
+args = parser.parse_args()
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -24,7 +29,15 @@ missing = [p for p in ORDER if not p.exists()]
 if missing:
     raise SystemExit("Missing canonical files:\n" + "\n".join(map(str, missing)))
 
-OUT.parent.mkdir(parents=True, exist_ok=True)
 content = "\n\n".join(p.read_text(encoding="utf-8").strip() for p in ORDER) + "\n"
-OUT.write_text(content, encoding="utf-8")
-print(f"Built {OUT.relative_to(ROOT)} from {len(ORDER)} canonical files")
+if args.check:
+    if not OUT.is_file() or OUT.read_bytes() != content.encode("utf-8"):
+        raise SystemExit(
+            f"{OUT.relative_to(ROOT)} is missing or out of date; "
+            "run python3 scripts/build_prd.py"
+        )
+    print(f"Compiled PRD is up to date ({len(ORDER)} canonical files)")
+else:
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(content, encoding="utf-8")
+    print(f"Built {OUT.relative_to(ROOT)} from {len(ORDER)} canonical files")
