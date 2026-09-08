@@ -1,20 +1,19 @@
-## Documentation change
+## Изменение документации
 
-### Normative owner(s) changed
-- 
+Шаблон используется только при отдельном запросе владельца на PR. Обычная работа ведётся в `main`.
 
-### Scope impact
-- [ ] No MVP scope change
-- [ ] MVP scope change (explain below)
+### Изменённые разделы
 
-### Contract impact
-- [ ] DTO / API
-- [ ] status / reasonCode / retryability
-- [ ] cache / version compatibility
-- [ ] security / privacy
-- [ ] none
+Укажите разделы и причину изменения.
 
-### Validation
-- [ ] `python scripts/check_docs.py` passes
-- [ ] `python scripts/build_prd.py` was run
-- [ ] Acceptance Criteria remain sequential
+### Влияние на продукт
+
+- [ ] Границы MVP и зафиксированная концепция сохранены.
+- [ ] Изменение продуктового решения явно согласовано.
+
+### Проверка
+
+- [ ] Русская и английская версии обновлены и прочитаны параллельно.
+- [ ] Контракты, числа, ссылки и критерии приёмки согласованы.
+- [ ] Обе сборки PRD обновлены.
+- [ ] `python3 scripts/check_docs.py` проходит.

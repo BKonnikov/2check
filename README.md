@@ -1,57 +1,49 @@
-# 2check.uz — Product Documentation
+# 2check.uz
 
-**2check.uz — проверка технического здоровья домена простым языком.**
+**Русский** · [English](README.en.md)
 
-## Project status
+Проверка технического здоровья домена простым языком. Репозиторий содержит концепцию и требования к MVP 1.0; реализация продукта — следующий этап.
 
-MVP 1.0 product concept is frozen and the consolidated MVP 1.0 PRD is final. The repository is currently documentation-first; product implementation is the next stage.
+## 01. Концепция продукта
 
-## Where to start
+### [Начать с концепции →](docs/ru/01-concept.md)
 
-1. [Frozen Product Concept](docs/concept.md) — immutable product boundary already maintained in this repository.
-2. [PRD navigation](docs/README.md) — canonical section-by-section specification.
-3. [Compiled PRD](dist/2check_MVP_1.0_PRD.md) — generated single-file snapshot for review/export.
-4. [Contribution rules](CONTRIBUTING.md) — how to change the specification without creating duplicate sources of truth.
+Назначение продукта, аудитория, принципы и границы MVP. Это исходный документ проекта, с которого начинается чтение.
 
-## Repository structure
+## 02. Требования к продукту — PRD
+
+| Как читать | Документ |
+|---|---|
+| По разделам | [Оглавление PRD: 28 разделов](docs/ru/02-prd.md) |
+| Последовательно | [Полный PRD одним файлом](dist/ru/2check_MVP_1.0_PRD.md) |
+| На английском | [Concept and PRD in English](docs/en/README.md) |
+
+PRD конкретизирует концепцию: описывает контракты данных, проверки DNS/регистрации/TLS, интерфейс, безопасность и 218 критериев приёмки.
+
+## Где находятся документы
 
 ```text
-.
-├── README.md
-├── CONTRIBUTING.md
-├── docs/
-│   ├── concept.md
-│   ├── README.md
-│   ├── _meta/
-│   ├── 00-foundation/
-│   ├── 01-domain-checks/
-│   ├── 02-health-model/
-│   ├── 03-runtime/
-│   ├── 04-platform/
-│   ├── 05-product-experience/
-│   ├── 06-quality-operations/
-│   └── appendices/
-├── scripts/
-│   ├── build_prd.py
-│   └── check_docs.py
-├── dist/
-│   └── 2check_MVP_1.0_PRD.md
-└── .github/
-    ├── workflows/
-    └── PULL_REQUEST_TEMPLATE/
+docs/
+├── ru/                  Русская версия
+│   ├── 01-concept.md    1. Концепция
+│   ├── 02-prd.md        2. Оглавление требований
+│   └── prd/             Разделы и приложения PRD
+└── en/                  Английская версия с той же структурой
+
+dist/
+├── ru/                  Полный PRD на русском
+└── en/                  Полный PRD на английском
 ```
 
-## Source-of-truth rule
+## Языки и порядок обновления
 
-Each requirement, schema, policy, code catalog, metric name or numeric rule has exactly one normative owner. Other sections reference that owner instead of redefining the same semantics.
+Русская и английская версии обновляются вместе. Имена полей, коды состояний, формулы и номера критериев одинаковы в обеих версиях. Два языка документации не меняют требование продукта поддерживать RU/UZ/EN.
 
-The split files under `docs/` are the normative PRD source. `docs/concept.md` remains the frozen product boundary. `dist/2check_MVP_1.0_PRD.md` is generated and must not be edited manually.
-
-## Build and validate
+Все изменения ведутся в **`main`**. Перед отправкой проверяются обе версии и их сборки:
 
 ```bash
 python3 scripts/build_prd.py
 python3 scripts/check_docs.py
 ```
 
-Build after editing canonical sources, then validate. The integrity check verifies Acceptance Criteria numbering and that the compiled PRD is current without changing files. To check only the compiled snapshot, run `python3 scripts/build_prd.py --check`.
+[Правила изменения документов](CONTRIBUTING.md) описывают редактуру и подтверждение соответствия переводов. Исходный зафиксированный [файл концепции](docs/concept.md) сохранён по прежнему адресу. Русская и английская редакции для чтения уточняют изложение и сохраняют продуктовые решения оригинала.

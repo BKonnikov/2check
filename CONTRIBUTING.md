@@ -1,42 +1,44 @@
-# Contributing to the 2check.uz PRD
+# Правила изменения документации
 
-## 1. Single source of truth
+**Русский** · [English](CONTRIBUTING.en.md) · [На главную](README.md)
 
-Before adding or changing a requirement, identify its normative owner. Do not duplicate the same rule in multiple sections.
+## 1. Одна рабочая ветка
 
-## 2. Frozen product boundary
+Работа ведётся непосредственно в `main`. Новые ветки и PR не создаются без отдельного запроса владельца. Перед началом проверяются рабочая папка и состояние `origin/main`; чужие изменения не перезаписываются.
 
-The file `docs/concept.md` is the immutable frozen product boundary. A PRD change must not silently expand MVP scope beyond it.
+## 2. Концепция и требования
 
-## 3. Canonical contracts
+Концепция — первый документ в навигации обеих версий. Исходный `docs/concept.md` зафиксирован и не редактируется без явного решения об изменении концепции. Редакции для чтения находятся в `docs/ru/01-concept.md` и `docs/en/01-concept.md`. Их изложение можно уточнять совместно, сверяя продуктовые решения и ограничения с оригиналом.
 
-When renaming or replacing a DTO, field, reason code, version identifier, metric name or status, remove the obsolete form from normative text instead of keeping both names alive.
+Требования редактируются в `docs/ru/prd/` и `docs/en/prd/`. Для каждого правила определён один ответственный раздел. Между разделами используются ссылки; повторные формулировки не создают дополнительных контрактов.
 
-## 4. Cross-references
+## 3. Две согласованные версии
 
-A section may restate context only when needed to explain its own responsibility. The actual semantic rule stays with its normative owner (see Appendix A).
+Каждое изменение текста, структуры или ссылки вносится в русскую и английскую версии одной правкой. Сравниваются смысл, обязательность требований, исключения, числа, единицы измерения, коды, ссылки и критерии приёмки. Ключи DTO, enum, API-маршруты и идентификаторы не переводятся.
 
-## 5. Acceptance Criteria
+Проверка хэшей обнаруживает изменения после последней сверки переводов. Она не доказывает смысловую эквивалентность: обе редакции необходимо прочитать и сопоставить. Подтверждение записывается только после этой сверки.
 
-Acceptance Criteria must remain sequential within each section. New criteria are added to the end of the section and renumbered when necessary during consolidation.
+## 4. Редакционный стиль
 
-## 6. Generated file
+Используется точный, сдержанный технический язык. Описываются конкретное поведение, условия и ограничения. Исключаются рекламные заявления, шаблонные вводные фразы, риторические вопросы, избыточные повторы и необоснованные причинные выводы. Русские предложения не смешиваются с английскими словами там, где есть точный русский термин.
 
-Do not edit `dist/2check_MVP_1.0_PRD.md` directly. Edit canonical files under `docs/`, then run:
+Не добавляются вымышленные личный опыт, исследования или утверждения от имени автора. Редактура улучшает ясность текста и не меняет продуктовые решения.
 
-```bash
-python3 scripts/build_prd.py
-python3 scripts/check_docs.py
-```
+## 5. Порядок проверки
 
-The integrity check is read-only: it fails if the generated PRD is missing or differs from the canonical sources. Rebuild before validating and include the generated snapshot in the same change.
+1. Обновить обе языковые версии и их навигацию.
+2. Прочитать их параллельно и проверить смысловое соответствие.
+3. Собрать документы и зафиксировать результат сверки переводов:
 
-## 7. Pull requests
+   ```bash
+   python3 scripts/build_prd.py
+   python3 scripts/update_translation_state.py --reviewed
+   python3 scripts/check_docs.py
+   ```
 
-A documentation PR should state:
+4. Просмотреть итоговые изменения и убедиться, что зафиксированный оригинал концепции не изменён.
+5. Сохранить проверенную правку в `main` и отправить её в `origin`.
 
-- normative owner(s) changed;
-- whether MVP scope changes;
-- whether any DTO/API/version/cache compatibility changes;
-- whether Acceptance Criteria or tests must change;
-- whether the generated PRD was rebuilt.
+Сборка создаёт PRD для RU и EN и совместимую копию русского PRD по прежнему адресу. Эти файлы не редактируются вручную. Обе страницы концепции являются исходными документами и редактируются парой. Обычная проверка не записывает файлы и завершается ошибкой при неподтверждённом изменении перевода, расхождении контрактов, нарушении нумерации, неработающей ссылке или устаревшей сборке.
+
+При изменении сборки или правил проверки также выполняется `python3 scripts/test_docs.py`. Этот набор проверяет обнаружение ошибок на временных копиях документов.

@@ -1,43 +1,33 @@
-from pathlib import Path
+"""Build both language editions and the legacy Russian output."""
+
 import argparse
+import sys
 
-parser = argparse.ArgumentParser(description="Build or verify the compiled PRD.")
-parser.add_argument("--check", action="store_true", help="Verify the snapshot without writing files.")
-args = parser.parse_args()
+sys.dont_write_bytecode = True
+from docs_common import ROOT, generated_outputs
 
-ROOT = Path(__file__).resolve().parents[1]
-DOCS = ROOT / "docs"
-OUT = ROOT / "dist" / "2check_MVP_1.0_PRD.md"
 
-ORDER = [DOCS / "_meta" / "preamble.md"]
-for folder in [
-    "00-foundation",
-    "01-domain-checks",
-    "02-health-model",
-    "03-runtime",
-    "04-platform",
-    "05-product-experience",
-    "06-quality-operations",
-]:
-    ORDER.extend(sorted((DOCS / folder).glob("*.md")))
-ORDER.extend([
-    DOCS / "appendices" / "A-normative-ownership-map.md",
-    DOCS / "appendices" / "B-consolidation-invariants.md",
-])
+def main():
+    parser = argparse.ArgumentParser(description='Build or verify both PRD language editions.')
+    parser.add_argument('--check', action='store_true', help='Verify generated files without writing them.')
+    args = parser.parse_args()
+    outputs = generated_outputs()
+    stale = []
+    for path, content in outputs.items():
+        data = content.encode('utf-8')
+        if args.check:
+            if not path.is_file() or path.read_bytes() != data:
+                stale.append(str(path.relative_to(ROOT)))
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+    if stale:
+        raise SystemExit('Missing or outdated generated files: ' + ', '.join(stale) + '; run python3 scripts/build_prd.py')
+    print('Generated documents are up to date: RU + EN.' if args.check else 'Built RU + EN PRDs from 31 canonical files each; legacy Russian copy updated.')
 
-missing = [p for p in ORDER if not p.exists()]
-if missing:
-    raise SystemExit("Missing canonical files:\n" + "\n".join(map(str, missing)))
 
-content = "\n\n".join(p.read_text(encoding="utf-8").strip() for p in ORDER) + "\n"
-if args.check:
-    if not OUT.is_file() or OUT.read_bytes() != content.encode("utf-8"):
-        raise SystemExit(
-            f"{OUT.relative_to(ROOT)} is missing or out of date; "
-            "run python3 scripts/build_prd.py"
-        )
-    print(f"Compiled PRD is up to date ({len(ORDER)} canonical files)")
-else:
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(content, encoding="utf-8")
-    print(f"Built {OUT.relative_to(ROOT)} from {len(ORDER)} canonical files")
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError) as error:
+        raise SystemExit(str(error))

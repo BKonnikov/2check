@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "pairs": {
+    "docs/01-concept.md": {
+      "ru": "84517fe2a9782eda60c5a9c0cc567af46fe6efcdedb57c7695cb73d9f7d4e798",
+      "en": "142e78c42ab2d6f6bf52b1ddc31fb4978d2b4ab52038fe72c2ae0a52864ef4f9"
+    },
+    "docs/02-prd.md": {
+      "ru": "afa362c1e8961e8c7f521704d82b6b382df375493dd3f06eae59352df2c7c86f",
+      "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
+    },
+    "docs/README.md": {
+      "ru": "789c3e41969724aa480af00671b55ec02a35cb17b1169a78981279f8bc56e66a",
+      "en": "258e437c0fd69d54bf5db13f9547b409521bf5ceb0b4015b67b3f9ee1fc9ea17"
+    },
+    "docs/prd/01-product-goal-positioning.md": {
+      "ru": "8a2b95b1fecd6ae532d7355656aee6ad0cffa86d0800813459572dae874ea34c",
+      "en": "d52b18cae73f46dff804a2779a97f35684aa72ba47a1bdabd10dcccffb30523e"
+    },
+    "docs/prd/02-mvp-scope-roadmap.md": {
+      "ru": "daabbefb95cf8dbfbe263be15f828b07ea6b885430aa9ad3348cefc71d8e9ea6",
+      "en": "03bedc63f0f1f1829e4dc91dd5bf7ac02094e6203828712d03ab1c8b47c4b3d6"
+    },
+    "docs/prd/03-user-scenarios-scan-modes.md": {
+      "ru": "f4ef514c744fc794e5d0b2d7d5bf1d01ec83b86765ce46a3f9b1c931e35b5075",
+      "en": "74ac8e8b88d42213be60f6504ce0d8417d50b79ee6a0a65233f79c80de519362"
+    },
+    "docs/prd/04-technical-architecture-system-boundaries.md": {
+      "ru": "0740d27bc669dbaed3b7130f924b83b41c5373dd13aeb18a256a96a0aa6ec823",
+      "en": "224a2140fd4178f45c5babb98ba6143e88ada97ecaa5176fd6eb9eb1fc02b202"
+    },
+    "docs/prd/05-input-canonical-domain.md": {
+      "ru": "f04fedd8b4bf2a8ee6da3e597c719feab75236257a90b317b8de73f870f89d71",
+      "en": "826cb99322d78ad830de5e9d43399a4aa4082d9c5d2e36e3ebd0d9021d524313"
+    },
+    "docs/prd/06-common-data-contracts-exposure.md": {
+      "ru": "5f850bd9b040f70b171b7dab672208dec257dbe11fc11cffa4b8bc902fcd5a77",
+      "en": "995bd7f833b1137f3d1a8df1000d7f6f4b2accce87991a0f1cf91bfd10e784b2"
+    },
+    "docs/prd/07-shared-status-dependency-category-scan-semantics.md": {
+      "ru": "8dc63c3242d6b4edee19d0511a52cd1d9260b1919bcc8ca5f3230f87979e6679",
+      "en": "49468addc85bed9aeb5738d2398e1bc4331d134ec543574963479c9a0e20f024"
+    },
+    "docs/prd/08-dns.md": {
+      "ru": "bffca904f5fefc906e699fb9caaedbe08095396a13e57aa76b1b8b70effd7032",
+      "en": "802abe6e3b857fc2418621ea16b61869a34683103cbabb3497b4c4ad0f184cd6"
+    },
+    "docs/prd/09-registry.md": {
+      "ru": "0f7e61ea0dd6eb70250746831f73a0b6a20fc7fe9a2a7fed370d13ebb066c0ff",
+      "en": "4264ffe7343480e14642df1abb08fb0c2036ebcaeade0df9919d8cc1974b5d21"
+    },
+    "docs/prd/10-ssl-tls.md": {
+      "ru": "f0e8382d5eeb9b3e4841d8a3f69ffec687b4531713df5889b50264f43aba7cf6",
+      "en": "5d45380730c2ace1e7f36c46edc260bd101d29830f07d129c7634b5c95a4cdc5"
+    },
+    "docs/prd/11-domain-health-summary-issues.md": {
+      "ru": "4b93d9c6258eb7436cb8afc7c5325f0ebd93af204242390eb6d5bae2ab0d64c6",
+      "en": "b19cf38d5f96990f97e15337920475faf6204e7c044c1aaa0f8e110ab546fa7f"
+    },
+    "docs/prd/12-domain-health-score.md": {
+      "ru": "ba350562d4736d2cfcb1ffcf5175bbeb16c11b39a26084c58a596b284dadb112",
+      "en": "54881bc34700bcbdf23ffad44d159d9f4545fa5560e003bc3eb960ac5e066025"
+    },
+    "docs/prd/13-human-readable-messages-localization.md": {
+      "ru": "1cae7f38a55e65f829c2f215ab8d2bb83d43814489fb3bdbf10f135ae5c33e2c",
+      "en": "a119bc8e440e5e2e4795e0ea14ea4f6535f56ff939bb3ba76afa72a8582f96c0"
+    },
+    "docs/prd/14-cache-freshness.md": {
+      "ru": "238bdbc587ed5edee5aee37caa58cd4b2c2e495ee23af2178079be0cc196513f",
+      "en": "8f65493e27823bb04e7a1da1c72b633e9f5ebb41c4c0f55ffebab76d71a11f4b"
+    },
+    "docs/prd/15-security-ssrf.md": {
+      "ru": "ffcc217185f320b1b33971bd3bd07a4e9759ec116670670886de1e2fbc1f7739",
+      "en": "5e10ee8d7d4b3f97f6944d9f04479595086f7625768c9fb18581610a6f426ac7"
+    },
+    "docs/prd/16-scan-orchestration-execution-model.md": {
+      "ru": "17a9981ff04ff4fa6d733dcf7fe6e90e2be8b9bb4b4fc3d0763674b8c69fb1a2",
+      "en": "2be1e6ca1d9278299d39c381319c066849dd4430e18cd0f18638a6689d3118dd"
+    },
+    "docs/prd/17-internal-web-api-contract.md": {
+      "ru": "ea4c6d918154408320e9e82e2bb60ae84a6d02b19b8a25ad7b854f08fd72c42c",
+      "en": "992b7139eb7323271d8a17f1c7011dcafdda4235c68b795b677c0b1a0eb4795d"
+    },
+    "docs/prd/18-error-taxonomy-failure-handling.md": {
+      "ru": "5548f48a9c31f526a720065a357c85bf08da9ebc59fcd38ea50223c8a3c6cff8",
+      "en": "4c2725b5b62f6c9a47df93bc941a45e0a92b4dbaf24aad6a95c371c0f8a0668c"
+    },
+    "docs/prd/19-data-model-persistence.md": {
+      "ru": "3c379509ad64335d3e3544cb92ff6ff8315cd98ed007e68df017a178588c76de",
+      "en": "837313e6ae8846848e629863a9f07463a51d67c263416438af1e1b601cfc6d08"
+    },
+    "docs/prd/20-configuration-policy-management.md": {
+      "ru": "c47c0badddddbe8f589f2d142e3b47f81a341f5d98deb5db5e76380215f109c6",
+      "en": "99c7c1ffc6aacfa1b7fa0cf32a3b5c5e081897e734c4e961e0d8b198f8cc1e44"
+    },
+    "docs/prd/21-observability-logging-operational-monitoring.md": {
+      "ru": "a7a7a9a5aaf7cd2382a3f2d70f952c35d68ea43bdb35d7c6d950c26cf10ec251",
+      "en": "c5867ef16560d595481a285c18ffbbde783b7afbefbcd50f62bc024c36ff2e44"
+    },
+    "docs/prd/22-performance-resource-limits-nfr.md": {
+      "ru": "73b5be1ef4e32f09e497ae925edabc968e0956e5d183eb6879e41c9b2d230689",
+      "en": "1d676e66e341e487433e8d0a93b563e005a1263272e4dc55f876094cd32fdd15"
+    },
+    "docs/prd/23-frontend-ux-result-presentation.md": {
+      "ru": "e3602dfc619aa6a8604763ebc76825a9f725b86bd6b97fda22e023b9d21da8fc",
+      "en": "8d14b287c0156b6a06592f65612215442dbe45dbcb75013e577560abe03ffc28"
+    },
+    "docs/prd/24-seo-routing-public-tool-pages.md": {
+      "ru": "2329c0c9bd1ad292561364948c82ce41c01ed0c07bbfff30626606a17192363f",
+      "en": "ab3c1280e76d97b1477dd95e36f15b47e58694c84d604698ccf56e47cce2c882"
+    },
+    "docs/prd/25-privacy-data-protection-abuse-boundaries.md": {
+      "ru": "63550c43d3a77e02cf45e14795c2df3b2e19e3ee29d94da800ba544ac55f3bfa",
+      "en": "b02caadcda927edc43a940a535c961fca4ffc79f57c5b3bdc0099b9093061602"
+    },
+    "docs/prd/26-testing-quality-gates-acceptance-strategy.md": {
+      "ru": "9447285b06a4a1e39996aa4ff3293946bedd1cd83b8ac4ec2260ddac22b3a0b2",
+      "en": "5d49c957d7e5abb0112d80349692dba705eb511c05527d60d9a62ea4191b4b95"
+    },
+    "docs/prd/27-deployment-environments-release-management.md": {
+      "ru": "3cd479ce95935002c18031ba4b10e0cad68c356b8982cdc9d3593841d059f0d0",
+      "en": "4ba602f76abb367e3c62b13cc7b1c0eba174fa7a78ee474ef8d03eec8ea32ac6"
+    },
+    "docs/prd/28-product-analytics-success-metrics.md": {
+      "ru": "9f8c6bccafed557f6c85a90a0812b2cf34b59d6d7e70b3dc9bdfed481447efea",
+      "en": "ea3be3198adbc5fa84d9681152e88c5ea46a8ca90b703f7555c3ea5179bcd44c"
+    },
+    "docs/prd/appendix-a.md": {
+      "ru": "5a0a73bad1aeef12ef10440b7eb5a45953561665c1a20bca02c5f04590cea22b",
+      "en": "27cda9e8e1ba29d1b0d96abb128b16a8a115229ee813c8f1b703a07d050dfc13"
+    },
+    "docs/prd/appendix-b.md": {
+      "ru": "898aa1e2609a58f76a173939efa9116e107bd87bd2a914337eb798cbc0c9d590",
+      "en": "db0b84bc0ac10c326d52676c65987e2d198900a4a8eb11700e96d7a69d51d288"
+    },
+    "docs/prd/preamble.md": {
+      "ru": "7f68159aa2c59d291632d14d6039e237b1b8af42c1394cfd12afd85dd99b224b",
+      "en": "d84d54b3c8a1f524c33e651dc503d7989e914b3a920a825d75555014b0f1ed25"
+    },
+    "README": {
+      "ru": "d98b01edbea33a1e3cd347903018e313d8472d4f9e6846bd5cf11ed11600eac3",
+      "en": "77e072f6987a0056f4140ee8f1748c49799fdb32f98e9b1f7a9f47d78211550e"
+    },
+    "CONTRIBUTING": {
+      "ru": "40563e9cd2e272c8f6a11a2e2082fdfc2b1820fec1bb57c07f5f0036cd088659",
+      "en": "7a25384bc4ed1ae031fe70cbfb82dd5dcb4ab8feb97bb660b2fd952c5412222a"
+    },
+    "PR-template": {
+      "ru": "65586214858c4635efbc39ee012e2de264ba0214ba6a58ca65df4f99b336afe9",
+      "en": "63bcec14f941715873ff5ffaae8d5fde88e434e93e11c91790f9c0260593b476"
+    }
+  }
+}
