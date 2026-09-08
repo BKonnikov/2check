@@ -1,64 +1,57 @@
-# 2check.uz
+# 2check.uz — Product Documentation
 
-**Проверка технического здоровья домена простым языком.**
-DNS, домен (WHOIS/RDAP), SSL и (начиная с MVP 1.1) почта — в одном месте. Для специалиста — точные данные и raw-вывод. Для владельца сайта — понятный вердикт на человеческом языке и подсказка, что чинить.
+**2check.uz — проверка технического здоровья домена простым языком.**
 
-> Статус проекта: **концепт / pre-development**. Код ещё не написан, стек финально не зафиксирован (см. раздел «Открытые вопросы»).
+## Project status
 
-## Идея
+MVP 1.0 product concept is frozen and the consolidated MVP 1.0 PRD is final. The repository is currently documentation-first; product implementation is the next stage.
 
-```
-Проверьте домен
-[ example.uz________________ ] [ Проверить ]
-```
+## Where to start
 
-Результат — **Domain Health Summary**: не голое число, а текстовый вердикт ("Есть проблемы: 1 критическая, 1 рекомендация"), а числовой score — вспомогательная визуализация рядом с ним, не наоборот.
+1. [Frozen Product Concept](docs/concept.md) — immutable product boundary already maintained in this repository.
+2. [PRD navigation](docs/README.md) — canonical section-by-section specification.
+3. [Compiled PRD](dist/2check_MVP_1.0_PRD.md) — generated single-file snapshot for review/export.
+4. [Contribution rules](CONTRIBUTING.md) — how to change the specification without creating duplicate sources of truth.
 
-Полная продуктовая концепция, зафиксированные архитектурные решения, модель данных и границы MVP — в [`docs/concept.md`](./docs/concept.md).
+## Repository structure
 
-## Аудитория
-
-- **Технические специалисты** — точные данные, raw-вывод (RDAP/WHOIS), экспорт
-- **Новички / владельцы бизнеса** — понятные вердикты и гайды «как исправить»
-
-## Границы MVP 1.0
-
-Зафиксировано и не расширяется на этом этапе:
-
-- IDN pipeline + канонический объект домена
-- DNS lookup (resolver comparison через независимые DoH-резолверы)
-- Registry lookup через `registryProvider` (первый адаптер — `.uz`, WHOIS/RDAP)
-- SSL/TLS check (фиксированный список проверок)
-- Domain Health Summary (модель `status`/`severity`, зависимости между чеками)
-- SSRF-guard (resolve-then-connect на зафиксированный IP)
-- Локализация RU / UZ / EN
-
-Email Health (SPF/DMARC/DKIM, STARTTLS, PTR/Blacklist) — уже спроектирован, но это следующий шаг, **MVP 1.1**, не часть MVP 1.0.
-
-Подробная дорожная карта (MVP 1.1 → Фаза 2 → Фаза 3) — в разделе 13 [`docs/concept.md`](./docs/concept.md).
-
-## Стек (предварительно)
-
-- **Фронт:** Next.js (SSR/ISR, минимум клиентского JS)
-- **Бэк:** Node.js/Fastify **или** Python/FastAPI — финальный выбор ещё не зафиксирован
-- **Кэш:** Redis, адаптивный TTL
-- **Хостинг MVP:** один VPS
-
-## Открытые вопросы
-
-- [ ] Финальный выбор бэкенд-стека (Node.js/Fastify vs Python/FastAPI)
-- [ ] Структура репозитория под выбранный стек (monorepo vs отдельные frontend/backend)
-- [ ] PRD с точной формулой Health Score и конфигом весов severity
-
-## Структура репозитория
-
-```
+```text
 .
-├── README.md          — этот файл
-└── docs/
-    └── concept.md      — полная продуктовая концепция (v1.0, frozen)
+├── README.md
+├── CONTRIBUTING.md
+├── docs/
+│   ├── concept.md
+│   ├── README.md
+│   ├── _meta/
+│   ├── 00-foundation/
+│   ├── 01-domain-checks/
+│   ├── 02-health-model/
+│   ├── 03-runtime/
+│   ├── 04-platform/
+│   ├── 05-product-experience/
+│   ├── 06-quality-operations/
+│   └── appendices/
+├── scripts/
+│   ├── build_prd.py
+│   └── check_docs.py
+├── dist/
+│   └── 2check_MVP_1.0_PRD.md
+└── .github/
+    ├── workflows/
+    └── PULL_REQUEST_TEMPLATE/
 ```
 
-## Лицензия
+## Source-of-truth rule
 
-Пока не определена.
+Each requirement, schema, policy, code catalog, metric name or numeric rule has exactly one normative owner. Other sections reference that owner instead of redefining the same semantics.
+
+The split files under `docs/` are the normative PRD source. `docs/concept.md` remains the frozen product boundary. `dist/2check_MVP_1.0_PRD.md` is generated and must not be edited manually.
+
+## Build and validate
+
+```bash
+python3 scripts/build_prd.py
+python3 scripts/check_docs.py
+```
+
+Build after editing canonical sources, then validate. The integrity check verifies Acceptance Criteria numbering and that the compiled PRD is current without changing files. To check only the compiled snapshot, run `python3 scripts/build_prd.py --check`.
