@@ -204,11 +204,11 @@ PARTIAL shows the selected category results without a global domain health score
 ## 4.1. MVP Technology Stack
 
 - Frontend: Next.js.
-- Backend: Node.js/Fastify **or** Python/FastAPI.
+- Backend: Node.js/Fastify.
 - Redis: mandatory.
 - MVP hosting: one VPS.
 
-The backend language and runtime are selected by the technical architecture without changing the product contract.
+The concept allows two backend runtimes; the MVP fixes one — Node.js/Fastify. The choice keeps a single runtime shared with the frontend and one definition of the internal web API DTOs. The product contract does not depend on the backend language or runtime.
 
 ## 4.2. Runtime Components
 
@@ -243,6 +243,7 @@ The 2check web interface and API use a trusted HTTPS certificate. Managing the p
 - **AC-4.3** MVP correctness does not depend on Kubernetes, multiple regions, or a distributed scheduler.
 - **AC-4.4** Network modules do not bypass security validation.
 - **AC-4.5** The public 2check web interface and API are served over trusted HTTPS.
+- **AC-4.6** The MVP backend is implemented on Node.js/Fastify.
 
 ---
 
