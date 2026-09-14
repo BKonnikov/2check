@@ -2,7 +2,7 @@
 
 [Русский](README.md) · **English**
 
-Domain technical health explained in plain language. This repository contains the concept and requirements for MVP 1.0; product implementation is the next stage.
+Domain technical health explained in plain language. This repository contains the concept, the MVP 1.0 requirements, and the implementation code.
 
 ## 01. Product Concept
 
@@ -18,7 +18,7 @@ The product purpose, audiences, principles, and MVP boundaries. This is the proj
 | In sequence | [Complete single-file PRD](dist/en/2check_MVP_1.0_PRD.md) |
 | In Russian | [Концепция и PRD на русском](docs/ru/README.md) |
 
-The PRD develops the concept into data contracts, DNS/registration/TLS checks, interface requirements, security rules, and 218 acceptance criteria.
+The PRD develops the concept into data contracts, DNS/registration/TLS checks, interface requirements, security rules, and 220 acceptance criteria.
 
 ## Document Locations
 
@@ -33,6 +33,38 @@ docs/
 dist/
 ├── ru/                  Complete Russian PRD
 └── en/                  Complete English PRD
+```
+
+## Development
+
+The MVP code lives in a pnpm monorepo:
+
+```text
+apps/
+├── api/                 Internal web API on Fastify
+└── web/                 Web interface on Next.js
+
+packages/
+├── contracts/           Shared API enumerations and constants
+└── domain/              Status, severity, and aggregation rules
+```
+
+Local startup:
+
+```bash
+docker compose up -d
+cp .env.example .env
+pnpm install
+pnpm build
+pnpm dev
+```
+
+Compose starts Redis and PostgreSQL: Redis serves the reusable result cache, PostgreSQL is the authoritative scan store. Code changes are checked with the same commands CI runs:
+
+```bash
+pnpm lint
+pnpm build
+pnpm test
 ```
 
 ## Languages and Updates

@@ -1,2 +1,10 @@
 __pycache__/
 .DS_Store
+node_modules/
+.env
+.env.local
+.next/
+next-env.d.ts
+apps/*/dist/
+packages/*/dist/
+*.tsbuildinfo
