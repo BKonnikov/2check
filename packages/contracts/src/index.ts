@@ -121,3 +121,112 @@ export interface SecurityValidationResult {
   readonly blockedAddressCount: number;
   readonly reasonCode?: SecurityReasonCode;
 }
+
+/** PRD 6.1 — the single message DTO handed to the browser. */
+export interface MessageDescriptor {
+  readonly titleCode: string;
+  readonly explanationCode?: string;
+  readonly impactCode?: string;
+  readonly recommendationCode?: string;
+  readonly params?: Readonly<Record<string, string | number | boolean>>;
+}
+
+/** PRD 6.3 — checkedAt is the time of the original observation, never of the cache read. */
+export interface CheckFreshness {
+  readonly checkedAt: string;
+  readonly cached: boolean;
+  readonly cacheAge: number;
+  readonly sourceUpdatedAt?: string;
+}
+
+/** PRD 7 and 6.2 — dependencyMode defaults to ALL. */
+export const DEPENDENCY_MODES = ["ALL", "ANY"] as const;
+export type DependencyMode = (typeof DEPENDENCY_MODES)[number];
+
+/** PRD 8.2 — query types asked of every resolver. */
+export const DNS_QTYPES = ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "SOA"] as const;
+export type DnsQType = (typeof DNS_QTYPES)[number];
+
+/** PRD 8.3 */
+export const DNS_TRANSPORT_STATUSES = [
+  "SUCCESS",
+  "TIMEOUT",
+  "NETWORK_ERROR",
+  "PROTOCOL_ERROR",
+] as const;
+export type DnsTransportStatus = (typeof DNS_TRANSPORT_STATUSES)[number];
+
+export const DNS_RCODES = [
+  "NOERROR",
+  "NXDOMAIN",
+  "SERVFAIL",
+  "REFUSED",
+  "FORMERR",
+  "NOTIMP",
+  "OTHER",
+] as const;
+export type DnsRcode = (typeof DNS_RCODES)[number];
+
+/** PRD 8.3 — NXDOMAIN and NODATA are distinct outcomes. */
+export const DNS_OUTCOMES = ["ANSWER", "NODATA", "NXDOMAIN"] as const;
+export type DnsOutcome = (typeof DNS_OUTCOMES)[number];
+
+/** PRD 8.4 — per-provider record state. */
+export const DNS_RECORD_STATES = ["PRESENT", "ABSENT", "NAME_NOT_FOUND", "INDETERMINATE"] as const;
+export type DnsRecordState = (typeof DNS_RECORD_STATES)[number];
+
+export interface DnsAnswer {
+  readonly type: DnsQType;
+  readonly value: string;
+  /** PRD 8.3 — TTL is shown per provider and never participates in RRset equality. */
+  readonly ttl?: number;
+}
+
+/** PRD 8.3 */
+export interface DnsProviderResult {
+  readonly provider: string;
+  readonly qname: string;
+  readonly qtype: DnsQType;
+  readonly transportStatus: DnsTransportStatus;
+  readonly rcode?: DnsRcode;
+  readonly outcome?: DnsOutcome;
+  readonly answers: readonly DnsAnswer[];
+  readonly authority: readonly DnsAnswer[];
+  readonly latencyMs?: number;
+  readonly receivedAt: string;
+}
+
+/** PRD 8.3 — qtype is absent on whole-name checks such as dns.name.existence. */
+export interface DnsCheckTarget {
+  readonly kind: "DNS_NAME";
+  readonly qname: string;
+  readonly qtype?: DnsQType;
+}
+
+/** PRD 8.3 — stable identifiers of the resolvers whose observations produced the result. */
+export interface DnsCheckSource {
+  readonly kind: "DNS_RESOLVER_SET";
+  readonly resolverSetVersion: string;
+  readonly providers: readonly string[];
+}
+
+/** PRD 6.2 — registry and TLS variants join these once their modules exist. */
+export type ModuleCheckTarget = DnsCheckTarget;
+export type ModuleCheckSource = DnsCheckSource;
+
+/** PRD 6.2 */
+export interface CheckResult<TDetails = unknown> {
+  readonly checkId: string;
+  readonly category: ScanCategory;
+  readonly status: CheckStatus;
+  readonly severity: Severity;
+  readonly target: ModuleCheckTarget;
+  readonly reasonCode?: string;
+  readonly dependsOn?: readonly string[];
+  readonly dependencyMode?: DependencyMode;
+  readonly blockedBy?: string;
+  readonly message: MessageDescriptor;
+  readonly details?: TDetails;
+  readonly source?: ModuleCheckSource;
+  readonly freshness: CheckFreshness;
+}

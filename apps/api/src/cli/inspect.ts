@@ -1,12 +1,24 @@
 /**
- * Development inspector. Not product surface: it prints what the preprocessing and security
- * modules currently produce for one input, so their behaviour can be looked at directly.
- *
- * Name resolution here is a plain node:dns lookup. The DNS module of PRD 8 — resolver comparison,
- * quorum, disagreement — is a separate component and is not what this calls.
+ * Development inspector. Not product surface: it runs the modules that exist today against one
+ * input and prints what they produce, so their behaviour can be looked at directly rather than
+ * only through tests.
  */
-import { Resolver } from "node:dns/promises";
-import { canonicalizeDomain, validateTarget } from "@2check/domain";
+import type { CheckResult, DnsProviderResult, DnsQType } from "@2check/contracts";
+import {
+  canonicalizeDomain,
+  collectAddressCandidates,
+  type DnsResolveDetails,
+  evaluateNameExistence,
+  evaluateResolveCheck,
+  evaluateResolverConsistency,
+  validateTarget,
+} from "@2check/domain";
+import {
+  DEFAULT_QTYPES,
+  DEFAULT_RESOLVER_SET_VERSION,
+  DEFAULT_RESOLVERS,
+  queryResolverSet,
+} from "../dns/resolver-set.js";
 
 const POLICY_VERSION = "dev-inspector";
 
@@ -15,28 +27,16 @@ function line(label: string, value: unknown): void {
   process.stdout.write(`  ${label.padEnd(22)}${printable}\n`);
 }
 
-async function resolveAddresses(hostname: string): Promise<{ addresses: string[]; note?: string }> {
-  const resolver = new Resolver();
-  const collected: string[] = [];
-  const failures: string[] = [];
-
-  for (const [family, resolve] of [
-    ["A", () => resolver.resolve4(hostname)],
-    ["AAAA", () => resolver.resolve6(hostname)],
-  ] as const) {
-    try {
-      collected.push(...(await resolve()));
-    } catch (error) {
-      failures.push(`${family}: ${error instanceof Error ? error.message : "failed"}`);
-    }
-  }
-
-  return collected.length > 0
-    ? { addresses: collected }
-    : { addresses: [], note: failures.join("; ") };
+function checkLine(check: CheckResult<DnsResolveDetails>, extra = ""): void {
+  const severity = check.severity === "none" ? "" : ` ${check.severity}`;
+  const reason = check.reasonCode === undefined ? "" : ` (${check.reasonCode})`;
+  const state = check.details?.state ?? "";
+  process.stdout.write(
+    `  ${check.checkId.padEnd(24)}${(check.status + severity).padEnd(18)}${state.padEnd(16)}${extra}${reason}\n`,
+  );
 }
 
-/** --address may be repeated to judge specific candidates instead of resolving the name. */
+/** --address may be repeated to judge specific candidates instead of the resolved ones. */
 function readOverrides(argv: readonly string[]): string[] {
   const overrides: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -48,6 +48,19 @@ function readOverrides(argv: readonly string[]): string[] {
     }
   }
   return overrides;
+}
+
+function summarizeAnswers(results: readonly DnsProviderResult[], qtype: DnsQType): string {
+  const values = new Set<string>();
+  for (const result of results) {
+    if (result.qtype === qtype) {
+      for (const record of result.answers) {
+        values.add(record.value);
+      }
+    }
+  }
+  const listed = [...values].slice(0, 3).join(", ");
+  return values.size > 3 ? `${listed}, …` : listed;
 }
 
 async function main(): Promise<number> {
@@ -74,21 +87,39 @@ async function main(): Promise<number> {
   line("publicSuffix", domain.publicSuffix);
   line("publicSuffixType", domain.publicSuffixType);
   line("registrableDomain", domain.registrableDomain);
-  line("labels", domain.labels.join(" · "));
   line("isIdn", domain.isIdn);
-  line("hadTrailingDot", domain.hadTrailingDot);
 
-  process.stdout.write("\nSecurity Validation (PRD 15)\n");
-  const { addresses, note } =
-    overrides.length > 0
-      ? { addresses: overrides, note: "supplied with --address" }
-      : await resolveAddresses(domain.asciiHostname);
-  line("candidates", addresses.length > 0 ? addresses.join(", ") : `none (${note ?? "no answer"})`);
-  if (overrides.length > 0) {
-    line("candidate source", "--address (name not resolved)");
+  process.stdout.write("\nDNS (PRD 8)\n");
+  line("resolvers", DEFAULT_RESOLVERS.map((entry) => entry.provider).join(", "));
+  const results = await queryResolverSet(domain.asciiHostname);
+  const options = {
+    qname: domain.asciiHostname,
+    resolverSetVersion: DEFAULT_RESOLVER_SET_VERSION,
+  };
+
+  process.stdout.write("\n");
+  checkLine(evaluateNameExistence(results, options));
+  for (const qtype of DEFAULT_QTYPES) {
+    const forType = results.filter((entry) => entry.qtype === qtype);
+    checkLine(evaluateResolveCheck(qtype, forType, options), summarizeAnswers(forType, qtype));
+  }
+  process.stdout.write("\n");
+  for (const qtype of DEFAULT_QTYPES) {
+    const forType = results.filter((entry) => entry.qtype === qtype);
+    const consistency = evaluateResolverConsistency(qtype, forType, options);
+    if (consistency.status !== "PASS" || consistency.details?.valueVariation === true) {
+      checkLine(consistency, `valueVariation=${String(consistency.details?.valueVariation)}`);
+    }
   }
 
-  const validation = validateTarget(addresses, { policyVersion: POLICY_VERSION });
+  process.stdout.write("\nSecurity Validation (PRD 15)\n");
+  const candidates = overrides.length > 0 ? overrides : collectAddressCandidates(results);
+  line("candidates", candidates.length > 0 ? candidates.join(", ") : "none observed");
+  if (overrides.length > 0) {
+    line("candidate source", "--address (observed set ignored)");
+  }
+
+  const validation = validateTarget(candidates, { policyVersion: POLICY_VERSION });
   line("decision", validation.decision);
   line("checkedAddresses", validation.checkedAddressCount);
   line("blockedAddresses", validation.blockedAddressCount);
