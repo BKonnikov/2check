@@ -82,6 +82,9 @@ importers:
       '@2check/contracts':
         specifier: workspace:*
         version: link:../contracts
+      ipaddr.js:
+        specifier: ^2.5.0
+        version: 2.5.0
       parse-domain:
         specifier: ^8.4.0
         version: 8.4.0

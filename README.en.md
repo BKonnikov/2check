@@ -67,6 +67,13 @@ pnpm build
 pnpm test
 ```
 
+A developer inspector prints what the finished modules produce for one input:
+
+```bash
+pnpm inspect example.uz
+pnpm inspect example.uz --address 169.254.169.254
+```
+
 ## Languages and Updates
 
 The Russian and English editions are updated together. Field names, status codes, formulas, and acceptance criterion identifiers match. Two documentation languages do not change the product's RU/UZ/EN requirement.

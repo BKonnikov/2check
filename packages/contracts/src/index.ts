@@ -87,3 +87,37 @@ export const INPUT_REJECTION_CODES = [
   "input_hostname_invalid",
 ] as const;
 export type InputRejectionCode = (typeof INPUT_REJECTION_CODES)[number];
+
+/** PRD 15.2 — outcome of security validation for a whole target. */
+export const SECURITY_DECISIONS = ["ALLOW", "BLOCK", "INDETERMINATE"] as const;
+export type SecurityDecision = (typeof SECURITY_DECISIONS)[number];
+
+/** PRD 15.4 — minimum address classification. Everything but PUBLIC_ALLOWED forbids the target. */
+export const ADDRESS_CLASSES = [
+  "PUBLIC_ALLOWED",
+  "FORBIDDEN_PRIVATE",
+  "FORBIDDEN_LOOPBACK",
+  "FORBIDDEN_LINK_LOCAL",
+  "FORBIDDEN_SHARED",
+  "FORBIDDEN_SPECIAL",
+  "FORBIDDEN_MULTICAST",
+  "FORBIDDEN_METADATA",
+  "FORBIDDEN_INTERNAL_INFRASTRUCTURE",
+] as const;
+export type AddressClass = (typeof ADDRESS_CLASSES)[number];
+
+/** PRD 15.6–15.8 — the two security reason codes, separated by execution stage. */
+export const SECURITY_REASON_CODES = [
+  "ssrf_policy_block",
+  "security_validation_incomplete",
+] as const;
+export type SecurityReasonCode = (typeof SECURITY_REASON_CODES)[number];
+
+/** PRD 15.2 */
+export interface SecurityValidationResult {
+  readonly decision: SecurityDecision;
+  readonly policyVersion: string;
+  readonly checkedAddressCount: number;
+  readonly blockedAddressCount: number;
+  readonly reasonCode?: SecurityReasonCode;
+}

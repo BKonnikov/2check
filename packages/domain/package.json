@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@2check/contracts": "workspace:*",
+    "ipaddr.js": "^2.5.0",
     "parse-domain": "^8.4.0",
     "tr46": "^6.0.0"
   },
