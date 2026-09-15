@@ -35,6 +35,16 @@ const app = buildApp({
   ],
 });
 
+/**
+ * PRD 21.6 — an unavailable cache is a degraded state, not a crash.
+ * ioredis emits "error" on every failed reconnection attempt, and an unhandled error event
+ * terminates the process, which would take the whole instance down exactly when the PRD requires
+ * it to keep serving. The readiness probe is what reports the degradation.
+ */
+redis.on("error", (error: unknown) => {
+  app.log.warn({ error: error instanceof Error ? error.message : error }, "reusable cache error");
+});
+
 // PRD 27.5 — deployment stops accepting work and shuts down in an orderly way.
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {

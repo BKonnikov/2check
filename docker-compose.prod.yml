@@ -1,0 +1,91 @@
+# Production deployment. PRD 4.1 — the MVP runs on a single VPS.
+#
+# HTTPS for 2check.uz is terminated upstream by HAProxy, which already exists in this deployment
+# (PRD 4.4 — the platform's own certificate is an operational dependency, wherever it lives).
+# So nothing here publishes 443: the web interface is bound to the loopback address and HAProxy
+# proxies to it. The database, the cache and the API stay on the internal network and are not
+# published at all.
+name: 2check
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: 2check/web:${APPLICATION_RELEASE_VERSION:-dev}
+    restart: unless-stopped
+    ports:
+      # Loopback only — HAProxy is the sole way in from outside the host.
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    environment:
+      API_ORIGIN: http://api:3001
+      # Canonical URLs, hreflang and the sitemap are built from this (PRD 24.3).
+      SITE_ORIGIN: https://${SITE_DOMAIN:?set SITE_DOMAIN, for example 2check.uz}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: 2check/api:${APPLICATION_RELEASE_VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 3001
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-twocheck}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-twocheck}
+      APPLICATION_RELEASE_VERSION: ${APPLICATION_RELEASE_VERSION:?set APPLICATION_RELEASE_VERSION}
+      REGISTRY_RDAP_BASE: ${REGISTRY_RDAP_BASE:-https://rdap.cctld.uz}
+      REGISTRY_WHOIS_HOST: ${REGISTRY_WHOIS_HOST:-whois.cctld.uz}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # PRD 27.4 — migrations are an explicit step, not a side effect of the service starting.
+  # Run with: docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate
+  migrate:
+    image: 2check/api:${APPLICATION_RELEASE_VERSION:-dev}
+    profiles: ["migrate"]
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-twocheck}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-twocheck}
+      APPLICATION_RELEASE_VERSION: ${APPLICATION_RELEASE_VERSION:?}
+    command: ["node", "dist/cli/migrate.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-twocheck}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-twocheck}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-twocheck} -d ${POSTGRES_DB:-twocheck}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    # PRD 27.8 — the reusable cache is not an authoritative backup object, so it is not persisted.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

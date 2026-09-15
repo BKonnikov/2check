@@ -115,6 +115,7 @@ export const ru: Catalogue = {
   "web.error.scan_scope_not_available": {
     title: "Эта установка пока не выполняет запрошенные проверки",
   },
+  "web.error.gated_access_denied": { title: "Доступ к этим данным не предоставлен" },
   "web.error.scan_not_found": { title: "Сканирование неизвестно или срок его хранения истёк" },
   "web.error.input_empty": { title: "Введите домен" },
   "web.error.input_scheme_unsupported": { title: "Принимаются только адреса http и https" },

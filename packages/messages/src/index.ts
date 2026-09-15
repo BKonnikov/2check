@@ -77,6 +77,23 @@ export interface CatalogueGap {
 }
 
 /**
+ * PRD 13.6 — completeness and review are different things.
+ *
+ * A complete catalogue unblocks a production configuration; whether a person who speaks the
+ * language has read it is tracked separately, so filling a catalogue never quietly erases the
+ * fact that nobody has checked the wording.
+ */
+export const CATALOGUE_REVIEW: Readonly<Record<Language, { reviewedByNativeSpeaker: boolean }>> = {
+  ru: { reviewedByNativeSpeaker: true },
+  en: { reviewedByNativeSpeaker: true },
+  uz: { reviewedByNativeSpeaker: false },
+};
+
+export function unreviewedLanguages(): Language[] {
+  return LANGUAGES.filter((language) => !CATALOGUE_REVIEW[language].reviewedByNativeSpeaker);
+}
+
+/**
  * PRD 13.6 and AC-13.7 — a missing mandatory translation is a configuration or build error.
  * This is what a production readiness check calls; it does not paper over a gap.
  */

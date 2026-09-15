@@ -1,3 +1,4 @@
+import type { ExecutionContext } from "@2check/contracts";
 import type { FastifyInstance } from "fastify";
 import type { Env } from "../config/env.js";
 import type { Metrics } from "../observability/metrics.js";
@@ -23,11 +24,17 @@ interface ProbeResult {
   readonly error?: string;
 }
 
+export interface ReleaseManifestSource {
+  readonly storageSchemaVersion: number;
+  readonly executionContext: ExecutionContext;
+}
+
 export function registerHealthRoutes(
   app: FastifyInstance,
   env: Env,
   probes: readonly ReadinessProbe[],
   metrics?: Metrics,
+  release?: ReleaseManifestSource,
 ): void {
   app.get("/healthz", async () => ({
     status: "ok",
@@ -62,6 +69,19 @@ export function registerHealthRoutes(
       checks,
     });
   });
+
+  if (release !== undefined) {
+    /**
+     * PRD 27.2 — the release manifest lets a deployed combination be reconstructed: the
+     * application release, the storage schema version, and the scoring, security, orchestration,
+     * cache, module and trust anchor versions. It contains no secrets (PRD 20.7).
+     */
+    app.get("/release", async () => ({
+      applicationReleaseVersion: env.APPLICATION_RELEASE_VERSION,
+      storageSchemaVersion: release.storageSchemaVersion,
+      ...release.executionContext,
+    }));
+  }
 
   if (metrics !== undefined) {
     // PRD 21.1 — platform signals only; nothing here describes the health of a scanned domain.

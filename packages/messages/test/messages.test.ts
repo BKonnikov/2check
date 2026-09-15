@@ -5,6 +5,7 @@ import {
   findCatalogueGaps,
   LANGUAGES,
   resolveMessage,
+  unreviewedLanguages,
 } from "../src/index.js";
 
 describe("AC-13.6 and AC-13.7 — mandatory languages", () => {
@@ -17,14 +18,17 @@ describe("AC-13.6 and AC-13.7 — mandatory languages", () => {
     expect(gaps).toEqual([]);
   });
 
-  it("reports Uzbek as incomplete rather than pretending it is translated", () => {
-    const gap = findCatalogueGaps().find((entry) => entry.language === "uz");
-    expect(gap).toBeDefined();
-    expect(gap?.missing.length).toBeGreaterThan(0);
+  it("has a complete Uzbek catalogue", () => {
+    const gaps = findCatalogueGaps().filter((gap) => gap.language === "uz");
+    expect(gaps).toEqual([]);
   });
 
-  it("blocks a production configuration while a mandatory translation is missing", () => {
-    expect(() => assertCatalogueComplete()).toThrow(/translations are incomplete/i);
+  it("does not block a production configuration once every language is present", () => {
+    expect(() => assertCatalogueComplete()).not.toThrow();
+  });
+
+  it("still records that the Uzbek wording has not been read by a native speaker", () => {
+    expect(unreviewedLanguages()).toEqual(["uz"]);
   });
 });
 
@@ -44,7 +48,7 @@ describe("AC-13.4 — PASS states the fact instead of a stock reassurance", () =
   });
 
   it("does not promise that everything is configured correctly", () => {
-    for (const language of ["ru", "en"] as const) {
+    for (const language of LANGUAGES) {
       for (const [code, entry] of Object.entries(CATALOGUES[language])) {
         if (code.endsWith(".pass")) {
           expect(entry.title.toLowerCase()).not.toMatch(
@@ -58,7 +62,7 @@ describe("AC-13.4 — PASS states the fact instead of a stock reassurance", () =
 
 describe("AC-13.2 — fact, then impact, then recommendation", () => {
   it("adds impact and recommendation only where a failure was confirmed", () => {
-    for (const language of ["ru", "en"] as const) {
+    for (const language of LANGUAGES) {
       for (const [code, entry] of Object.entries(CATALOGUES[language])) {
         if (entry.impact !== undefined || entry.recommendation !== undefined) {
           expect(code).toMatch(/\.fail$/);
@@ -125,11 +129,11 @@ describe("AC-13.5 — no unproven causation", () => {
   });
 
   it("never suggests a missing name means the domain can be bought", () => {
-    for (const language of ["ru", "en"] as const) {
+    for (const language of LANGUAGES) {
       const joined = Object.values(CATALOGUES[language])
         .map((entry) => `${entry.title} ${entry.explanation ?? ""}`)
         .join(" ");
-      expect(joined).not.toMatch(/купить|свободен|available to buy|for sale/i);
+      expect(joined).not.toMatch(/купить|свободен|available to buy|for sale|sotib olish|bo'sh/i);
     }
   });
 });
@@ -152,9 +156,15 @@ describe("AC-13.8 — parameters are plain, escaped text", () => {
 
 describe("PRD 13.6 — runtime fallback", () => {
   it("falls back to English when the requested language lacks the message", () => {
-    const message = resolveMessage({ titleCode: "verdict.HEALTHY" }, "uz");
+    // Every mandatory language is complete now, so the fallback is exercised through a code that
+    // only the reference catalogue defines.
+    (CATALOGUES.en as Record<string, { title: string }>)["test.fallback.only"] = {
+      title: "Reference wording",
+    };
+    const message = resolveMessage({ titleCode: "test.fallback.only" }, "uz");
     expect(message.language).toBe("en");
-    expect(message.title).toBe("No problems found");
+    expect(message.title).toBe("Reference wording");
+    delete (CATALOGUES.en as Record<string, unknown>)["test.fallback.only"];
   });
 
   it("returns a safe empty message for an unknown code, claiming nothing", () => {
@@ -162,5 +172,29 @@ describe("PRD 13.6 — runtime fallback", () => {
     expect(message.language).toBe("none");
     expect(message.title).toBe("");
     expect(message.titleCode).toBe("nothing.like.this");
+  });
+});
+
+describe("PRD 13.6 — the Uzbek catalogue", () => {
+  it("is written in Latin script, as used officially in Uzbekistan", () => {
+    const joined = Object.values(CATALOGUES.uz)
+      .map((entry) => entry.title)
+      .join(" ");
+    expect(joined).not.toMatch(/[\u0400-\u04FF]/);
+  });
+
+  it("says a check could not be completed without accusing the target", () => {
+    const message = resolveMessage(
+      { titleCode: "dns.record.resolve.unknown", params: { recordType: "A" } },
+      "uz",
+    );
+    expect(message.language).toBe("uz");
+    expect(message.title.toLowerCase()).toContain("bo'lmadi");
+  });
+
+  it("explains provider_not_supported as a limit of the service", () => {
+    const message = resolveMessage({ titleCode: "registry.lookup.provider_not_supported" }, "uz");
+    expect(message.title).toContain("2check");
+    expect(message.explanation).toContain("cheklovi");
   });
 });

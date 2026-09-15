@@ -6,7 +6,9 @@ import { createMetrics, type Metrics } from "./observability/metrics.js";
 import { type ReadinessProbe, registerHealthRoutes } from "./routes/health.js";
 import { registerScanRoutes } from "./routes/scans.js";
 import type { ScanDependencies } from "./scan/orchestrator.js";
+import { buildExecutionContext } from "./scan/orchestrator.js";
 import { createInMemoryScanStore, type ScanStore } from "./scan/store.js";
+import { STORAGE_SCHEMA_VERSION } from "./storage/migrate.js";
 
 export interface AppOptions extends ScanDependencies {
   readonly env: Env;
@@ -43,7 +45,10 @@ export function buildApp({
     return payload;
   });
 
-  registerHealthRoutes(app, env, probes, metrics);
+  registerHealthRoutes(app, env, probes, metrics, {
+    storageSchemaVersion: STORAGE_SCHEMA_VERSION,
+    executionContext: buildExecutionContext(),
+  });
   registerScanRoutes(app, {
     store: store ?? createInMemoryScanStore(),
     metrics,

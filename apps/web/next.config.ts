@@ -15,6 +15,12 @@ const config: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
+          // TLS is terminated by the reverse proxy, so the application declares HSTS itself
+          // rather than relying on the proxy configuration to remember it (PRD 4.4).
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
+          },
           // AC-25.5 — no third-party analytics can load, so no scanId or domain can reach one.
           {
             key: "Content-Security-Policy",

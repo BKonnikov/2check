@@ -117,6 +117,7 @@ export const en: Catalogue = {
   "web.error.scan_scope_not_available": {
     title: "This deployment cannot run the requested checks yet",
   },
+  "web.error.gated_access_denied": { title: "Access to this data is not granted" },
   "web.error.scan_not_found": { title: "This scan is unknown or has expired" },
   "web.error.input_empty": { title: "Enter a domain" },
   "web.error.input_scheme_unsupported": { title: "Only http and https addresses are accepted" },

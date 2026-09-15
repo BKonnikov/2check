@@ -9,3 +9,4 @@ apps/*/dist/
 packages/*/dist/
 *.tsbuildinfo
 .pnpm-store/
+.env.production
