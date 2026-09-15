@@ -230,3 +230,91 @@ export interface CheckResult<TDetails = unknown> {
   readonly source?: ModuleCheckSource;
   readonly freshness: CheckFreshness;
 }
+
+/** PRD 7.4 — the aggregated result of one category. */
+export interface CategoryResult<TDetails = unknown> {
+  readonly category: ScanCategory;
+  readonly status: CheckStatus;
+  readonly severity: Severity;
+  readonly completeness: Completeness;
+  readonly checks: readonly CheckResult<TDetails>[];
+}
+
+/** PRD 17.5 — the public view of CanonicalDomain never includes originalInput. */
+export interface PublicCanonicalDomain {
+  readonly unicodeHostname: string;
+  readonly asciiHostname: string;
+  readonly publicSuffix: string | null;
+  readonly publicSuffixType: PublicSuffixType;
+  readonly registrableDomain: string | null;
+  readonly isIdn: boolean;
+}
+
+/** PRD 17.2 */
+export interface CreateScanRequest {
+  readonly input: string;
+  readonly mode: ScanMode;
+  readonly selectedCategories?: readonly ScanCategory[];
+  readonly cacheMode?: CacheMode;
+}
+
+/** PRD 17.3 — acceptance only; the authoritative terminal state is read through GET. */
+export interface CreateScanResponse {
+  readonly scanId: string;
+  readonly executionState: AcceptanceState;
+  readonly pollAfterMs?: number;
+}
+
+/** PRD 16.9 */
+export const SCAN_FAILURE_CODES = [
+  "orchestration_error",
+  "execution_state_unrecoverable",
+  "result_integrity_error",
+  "configuration_incompatible",
+  "internal_platform_error",
+] as const;
+export type ScanFailureCode = (typeof SCAN_FAILURE_CODES)[number];
+
+export interface ScanExecutionFailure {
+  readonly failureCode: ScanFailureCode;
+  readonly occurredAt: string;
+}
+
+/** PRD 17.5 */
+export interface WebScanResponse {
+  readonly scanId: string;
+  readonly executionState: ExecutionState;
+  readonly mode: ScanMode;
+  readonly canonicalDomain: PublicCanonicalDomain;
+  readonly selectedCategories: readonly ScanCategory[];
+  readonly progress?: number;
+  readonly categories: readonly CategoryResult[];
+  readonly summary?: unknown;
+  readonly startedAt: string;
+  readonly completedAt?: string;
+  readonly pollAfterMs?: number;
+  readonly failure?: ScanExecutionFailure;
+}
+
+/** PRD 17.4 — errorCode lives in a different namespace from a check reasonCode. */
+export interface WebApiError {
+  readonly errorCode: string;
+  readonly message: MessageDescriptor;
+  readonly field?: string;
+  readonly retryable: boolean;
+  readonly retryAfterSeconds?: number;
+  readonly requestId?: string;
+}
+
+/** PRD 16.4 — pinned for the whole scan; mixing configurations within one scan is prohibited. */
+export interface ExecutionContext {
+  readonly healthPolicyVersion: string;
+  readonly securityPolicyVersion: string;
+  readonly orchestrationConfigVersion: string;
+  readonly cacheContractVersion: string;
+  readonly resolverSetVersion: string;
+  readonly dnsModuleConfigVersion: string;
+  readonly registryModuleConfigVersion: string;
+  readonly tlsModuleConfigVersion: string;
+  readonly trustStoreVersion: string;
+}

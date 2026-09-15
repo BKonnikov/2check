@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "2check.uz",
-  description: "Domain technical health explained in plain language",
+  description: "Проверка технического здоровья домена простым языком",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

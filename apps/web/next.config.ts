@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   reactStrictMode: true,
-  // The shared package ships TypeScript-compatible ESM from the workspace.
   transpilePackages: ["@2check/contracts"],
+  // The internal web API is reached through app/api/web/[...path], which reads its origin at
+  // request time so one built artifact can be promoted between environments (PRD 27.3).
 };
 
 export default config;
