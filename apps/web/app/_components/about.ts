@@ -70,14 +70,16 @@ export const ABOUT: Readonly<Record<Locale, About>> = {
       {
         heading: "Кто его сделал",
         paragraphs: [
-          "Проект создал Борис Конников. Это личный проект. Он не связан ни с одним регистратором, хостинг-провайдером, удостоверяющим центром или государственным органом и не выступает от их имени.",
+          "Проект сделан одним автором. Ему принадлежат замысел, продуктовые решения и, что важнее всего для такого сервиса, границы: что 2check обещает, а чего сознательно не делает.",
+          "Это независимый личный проект. Он не связан ни с одним регистратором, хостинг-провайдером, удостоверяющим центром или государственным органом, не выступает от их имени и ничего не продаёт.",
         ],
       },
       {
         heading: "Как он сделан",
         paragraphs: [
-          "Значительная часть кода, интерфейсных текстов и документации этого проекта написана с помощью инструментов искусственного интеллекта — ChatGPT (OpenAI) и Claude (Anthropic). Автор проверял и принимал результат их работы и отвечает за него.",
-          "ChatGPT и OpenAI — товарные знаки OpenAI. Claude и Anthropic — товарные знаки Anthropic. Названия приведены здесь только для того, чтобы честно указать использованные инструменты. Проект не связан с этими компаниями, не поддерживается и не одобрен ими.",
+          "Сначала спецификация, потом код. Прежде чем была написана первая строка, автор описал продукт целиком: 28 разделов и 218 критериев приёмки, от правил разбора доменного имени до того, какими словами сервису позволено говорить о чужом домене. Каждое поведение, которое вы видите на экране, отвечает конкретному пункту этого документа.",
+          "Реализация написана по этой спецификации с помощью инструментов искусственного интеллекта — ChatGPT (OpenAI) и Claude (Anthropic). Так делается всё больше современного софта, и здесь об этом сказано прямо, а не умолчено. Постановка задач, архитектурные решения, приёмка каждого изменения и ответственность за результат остаются за автором.",
+          "ChatGPT и OpenAI — товарные знаки OpenAI, Claude и Anthropic — товарные знаки Anthropic. Названия указаны, чтобы честно назвать использованные инструменты. Проект не связан с этими компаниями, не поддерживается и не одобрен ими.",
         ],
       },
       {
@@ -119,14 +121,16 @@ export const ABOUT: Readonly<Record<Locale, About>> = {
       {
         heading: "Who made it",
         paragraphs: [
-          "The project was created by Boris Konnikov. It is a personal project. It is not affiliated with, and does not speak for, any registrar, hosting provider, certificate authority or public body.",
+          "The project is the work of a single author. The idea, the product decisions and — most important for a service like this — the boundaries are the author's: what 2check promises, and what it deliberately does not do.",
+          "It is an independent personal project. It is not affiliated with, and does not speak for, any registrar, hosting provider, certificate authority or public body, and it sells nothing.",
         ],
       },
       {
         heading: "How it was made",
         paragraphs: [
-          "A substantial part of this project's code, interface copy and documentation was written with the help of artificial-intelligence tools — ChatGPT (OpenAI) and Claude (Anthropic). The author reviewed and accepted their output and is responsible for it.",
-          "ChatGPT and OpenAI are trademarks of OpenAI. Claude and Anthropic are trademarks of Anthropic. The names appear here only to state honestly which tools were used. The project is not affiliated with, endorsed by or sponsored by either company.",
+          "Specification first, code second. Before the first line was written, the author described the whole product: 28 sections and 218 acceptance criteria, from how a domain name is parsed to the words the service is allowed to use about somebody else's domain. Every behaviour you see on screen answers to a specific clause of that document.",
+          "The implementation was written against that specification with the help of artificial-intelligence tools — ChatGPT (OpenAI) and Claude (Anthropic). More and more software is built this way; here it is stated plainly rather than left unsaid. Setting the problems, the architectural decisions, accepting every change and the responsibility for the result remain with the author.",
+          "ChatGPT and OpenAI are trademarks of OpenAI; Claude and Anthropic are trademarks of Anthropic. The names appear here to state honestly which tools were used. The project is not affiliated with, endorsed by or sponsored by either company.",
         ],
       },
       {
@@ -168,14 +172,16 @@ export const ABOUT: Readonly<Record<Locale, About>> = {
       {
         heading: "Uni kim yaratgan",
         paragraphs: [
-          "Loyihani Boris Konnikov yaratgan. Bu shaxsiy loyiha. U biror registrator, hosting provayderi, sertifikat markazi yoki davlat organi bilan bog'liq emas va ular nomidan chiqmaydi.",
+          "Loyiha bitta muallif tomonidan yaratilgan. G'oya, mahsulot bo'yicha qarorlar va bunday xizmat uchun eng muhimi — chegaralar muallifga tegishli: 2check nimani va'da qiladi va nimani ataylab qilmaydi.",
+          "Bu mustaqil shaxsiy loyiha. U biror registrator, hosting provayderi, sertifikat markazi yoki davlat organi bilan bog'liq emas, ular nomidan chiqmaydi va hech narsa sotmaydi.",
         ],
       },
       {
         heading: "U qanday yaratilgan",
         paragraphs: [
-          "Loyihaning kodi, interfeys matnlari va hujjatlarining katta qismi sun'iy intellekt vositalari — ChatGPT (OpenAI) va Claude (Anthropic) yordamida yozilgan. Muallif ularning natijasini tekshirib qabul qilgan va uning uchun javobgar.",
-          "ChatGPT va OpenAI — OpenAI kompaniyasining tovar belgilari. Claude va Anthropic — Anthropic kompaniyasining tovar belgilari. Nomlar bu yerda faqat qaysi vositalar ishlatilganini halol ko'rsatish uchun keltirilgan. Loyiha bu kompaniyalar bilan bog'liq emas, ular tomonidan qo'llab-quvvatlanmaydi va ma'qullanmagan.",
+          "Avval spetsifikatsiya, keyin kod. Birinchi satr yozilishidan oldin muallif mahsulotni to'liq tavsiflagan: 28 bo'lim va 218 ta qabul qilish mezoni — domen nomini tahlil qilish qoidalaridan tortib, xizmat birovning domeni haqida qanday so'zlar bilan gapirishi mumkinligigacha. Ekranda ko'rayotgan har bir xatti-harakat shu hujjatning aniq bandiga javob beradi.",
+          "Amalga oshirish shu spetsifikatsiya asosida sun'iy intellekt vositalari — ChatGPT (OpenAI) va Claude (Anthropic) yordamida yozilgan. Zamonaviy dasturiy ta'minotning tobora ko'p qismi shunday yaratiladi; bu yerda bu haqda yashirmasdan ochiq aytilgan. Vazifalarni qo'yish, arxitektura qarorlari, har bir o'zgarishni qabul qilish va natija uchun javobgarlik muallifda qoladi.",
+          "ChatGPT va OpenAI — OpenAI kompaniyasining tovar belgilari, Claude va Anthropic — Anthropic kompaniyasining tovar belgilari. Nomlar qaysi vositalar ishlatilganini halol ko'rsatish uchun keltirilgan. Loyiha bu kompaniyalar bilan bog'liq emas, ular tomonidan qo'llab-quvvatlanmaydi va ma'qullanmagan.",
         ],
       },
       {

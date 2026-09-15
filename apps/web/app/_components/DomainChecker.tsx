@@ -1,9 +1,9 @@
 "use client";
 
-import type { ScanCategory } from "@2check/contracts";
+import type { ScanCategory, TechnicalCheckDetail } from "@2check/contracts";
 import { WEB_API_BASE_PATH } from "@2check/contracts";
 import { type Language, resolveMessage } from "@2check/messages";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import type { Ui } from "./chrome";
 
 /** PRD 13.1 — an input rejection is a message like any other: what, why, and what to do. */
@@ -119,6 +119,132 @@ function message(descriptor: MessageDescriptorView, language: Language) {
       ? { titleCode: descriptor.titleCode }
       : { titleCode: descriptor.titleCode, params: descriptor.params },
     language,
+  );
+}
+
+/**
+ * PRD 23.6 — the Technical exposure level, fetched from /details when the reader opens it.
+ *
+ * The public result says which checks ran and how they came out; this says what was actually
+ * seen — the name that was queried, what each resolver answered, the certificate's issuer and
+ * dates, the registration record. It is fetched on first open rather than with the result,
+ * because most readers never ask for it.
+ */
+function renderValue(value: unknown, ui: Ui): ReactNode {
+  if (value === null || value === undefined || value === "") {
+    return ui.none;
+  }
+  if (typeof value === "boolean") {
+    return value ? ui.yes : ui.no;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0 ? ui.none : value.map((entry) => String(entry)).join(", ");
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    // PRD 9.4 — a registrant field carries a state and never a value, so it reads as one word.
+    if (entries.length === 1 && entries[0]?.[0] === "state") {
+      const state = String(entries[0][1]);
+      return ui.detailLabels[state] ?? state;
+    }
+    return (
+      <ul className="detail-sub">
+        {entries.map(([key, nested]) => (
+          <li key={key}>
+            <span className="detail-key">{ui.detailLabels[key] ?? key}</span>
+            <span>{renderValue(nested, ui)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return String(value);
+}
+
+function DetailRows({ source, ui }: { source: Record<string, unknown>; ui: Ui }) {
+  const rows = Object.entries(source).filter(([key]) => key !== "kind");
+  if (rows.length === 0) {
+    return null;
+  }
+  return (
+    <dl>
+      {rows.map(([key, value]) => (
+        <div className="detail-row" key={key}>
+          <dt>{ui.detailLabels[key] ?? key}</dt>
+          <dd>{renderValue(value, ui)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function TechnicalDetails({
+  scanId,
+  named,
+  ui,
+}: {
+  scanId: string;
+  named: ReadonlyMap<string, { title: string; status: string }>;
+  ui: Ui;
+}) {
+  const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [checks, setChecks] = useState<readonly TechnicalCheckDetail[]>([]);
+
+  async function load(): Promise<void> {
+    if (phase !== "idle") {
+      return;
+    }
+    setPhase("loading");
+    try {
+      const response = await fetch(`${WEB_API_BASE_PATH}/scans/${scanId}/details`);
+      if (!response.ok) {
+        setPhase("error");
+        return;
+      }
+      const body = (await response.json()) as { checks?: readonly TechnicalCheckDetail[] };
+      setChecks(body.checks ?? []);
+      setPhase("ready");
+    } catch {
+      setPhase("error");
+    }
+  }
+
+  return (
+    <details
+      className="section"
+      onToggle={(event) => {
+        if (event.currentTarget.open) {
+          void load();
+        }
+      }}
+    >
+      <summary>{ui.technicalHeading}</summary>
+      <div className="technical">
+        <p className="technical-note">{ui.technicalNote}</p>
+        {phase === "loading" && <p className="muted">{ui.technicalLoading}</p>}
+        {phase === "error" && <p className="error">{ui.technicalError}</p>}
+        {phase === "ready" &&
+          checks.map((check) => {
+            const known = named.get(check.checkId);
+            return (
+              <div className="detail" key={check.checkId}>
+                <div className="detail-head">
+                  <span className="check-name">{known?.title ?? check.checkId}</span>
+                  {known !== undefined && <StatusMark status={known.status} ui={ui} />}
+                </div>
+                <span className="check-id">{check.checkId}</span>
+                <DetailRows source={check.target as unknown as Record<string, unknown>} ui={ui} />
+                {check.source !== undefined && (
+                  <DetailRows source={check.source as unknown as Record<string, unknown>} ui={ui} />
+                )}
+                {check.details !== undefined && (
+                  <DetailRows source={check.details as Record<string, unknown>} ui={ui} />
+                )}
+              </div>
+            );
+          })}
+      </div>
+    </details>
   );
 }
 
@@ -375,64 +501,23 @@ export default function DomainChecker({
 
       {/* PRD 23.6 — technical detail is a disclosure, closed by default and keyboard operable. */}
       {scan !== null && scan.executionState === "COMPLETED" && domain !== undefined && (
-        <details className="section">
-          <summary>{ui.technicalHeading}</summary>
-          <div className="technical">
-            <p className="technical-note">{ui.technicalNote}</p>
-            <dl>
-              <dt>{ui.technicalFields.name}</dt>
-              <dd>{domain.unicodeHostname}</dd>
-              <dt>{ui.technicalFields.ascii}</dt>
-              <dd>{domain.asciiHostname}</dd>
-              <dt>{ui.technicalFields.suffix}</dt>
-              <dd>
-                {domain.publicSuffix ?? "—"} ({domain.publicSuffixType})
-              </dd>
-              <dt>{ui.technicalFields.registrable}</dt>
-              <dd>{domain.registrableDomain ?? "—"}</dd>
-            </dl>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{ui.tableHeads.check}</th>
-                    <th scope="col">{ui.tableHeads.status}</th>
-                    <th scope="col">{ui.tableHeads.reason}</th>
-                    <th scope="col">{ui.tableHeads.observed}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scan.categories.flatMap((category) =>
-                    category.checks.map((check) => (
-                      <tr key={check.checkId}>
-                        <td>
-                          <span className="check-name">
-                            {message(check.message, language).title || check.checkId}
-                          </span>
-                          <span className="check-id">{check.checkId}</span>
-                        </td>
-                        <td>
-                          <StatusMark status={check.status} ui={ui} />
-                        </td>
-                        <td className="mono">{check.reasonCode ?? "—"}</td>
-                        <td>
-                          <time
-                            className="mono"
-                            dateTime={check.freshness.checkedAt}
-                            title={check.freshness.checkedAt}
-                            suppressHydrationWarning
-                          >
-                            {moment(check.freshness.checkedAt, language)}
-                          </time>
-                        </td>
-                      </tr>
-                    )),
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </details>
+        <TechnicalDetails
+          scanId={scan.scanId}
+          named={
+            new Map(
+              scan.categories.flatMap((category) =>
+                category.checks.map((check) => [
+                  check.checkId,
+                  {
+                    title: message(check.message, language).title || check.checkId,
+                    status: check.status,
+                  },
+                ]),
+              ),
+            )
+          }
+          ui={ui}
+        />
       )}
 
       {/* PRD 23.8 — refreshing creates a new FORCE_REFRESH scan, never patches this one. */}

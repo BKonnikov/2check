@@ -743,27 +743,70 @@ details.section[open] > summary {
   word-break: break-all;
 }
 
-.technical dl {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 7px 16px;
-  margin: 0 0 24px;
-  font-size: 14px;
+.detail {
+  padding: 16px 0;
+  border-top: 1px solid var(--rule-2);
 }
-.technical dt {
+.detail:first-of-type {
+  border-top: none;
+}
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.detail .check-name {
+  font-weight: 650;
+}
+.detail dl {
+  margin: 10px 0 0;
+}
+.detail-row {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 4px 16px;
+  padding: 4px 0;
+}
+.detail-row dt {
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);
-  padding-top: 2px;
+  padding-top: 3px;
 }
-.technical dd {
+.detail-row dd {
   margin: 0;
   font-family: var(--mono);
-  font-size: 13px;
-  word-break: break-all;
+  font-size: 12.5px;
+  line-height: 1.7;
+  word-break: break-word;
 }
+.detail-sub {
+  display: grid;
+  gap: 2px;
+}
+.detail-sub li {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px;
+}
+.detail-key {
+  color: var(--ink-3);
+}
+
+@media (max-width: 680px) {
+  .detail-row,
+  .detail-sub li {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .detail-row dt {
+    padding-top: 8px;
+  }
+}
+
 .mono {
   font-family: var(--mono);
   font-size: 12px;
@@ -851,13 +894,6 @@ td {
   .verdict {
     grid-template-columns: 1fr;
     gap: 24px;
-  }
-  .technical dl {
-    grid-template-columns: 1fr;
-    gap: 2px 0;
-  }
-  .technical dt {
-    margin-top: 12px;
   }
   .tiles {
     gap: 22px;

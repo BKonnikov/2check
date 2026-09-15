@@ -144,8 +144,9 @@ describe("AC-13.7 — the interface is translated, not duplicated", () => {
     const en = strings("en");
     for (const locale of LOCALES.filter((value) => value !== "en")) {
       const shared = strings(locale).filter((value, index) => value === en[index]);
-      // Only strings that are the same word in every language may coincide.
-      expect(shared).toEqual(shared.filter((value) => /^[A-Za-z0-9./ ]+$/.test(value)));
+      // Only strings with nothing to translate may coincide: a placeholder, a punctuation
+      // mark, or a term that is the same word in every language (ASCII, Port, TLS).
+      expect(shared).toEqual(shared.filter((value) => /^[A-Za-z0-9./\s\u2014-]+$/.test(value)));
     }
   });
 });
