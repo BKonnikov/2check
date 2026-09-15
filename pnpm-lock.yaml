@@ -23,6 +23,9 @@ importers:
       '@2check/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@2check/messages':
+        specifier: workspace:*
+        version: link:../../packages/messages
       fastify:
         specifier: ^5.2.0
         version: 5.12.4
@@ -60,6 +63,9 @@ importers:
       '@2check/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@2check/messages':
+        specifier: workspace:*
+        version: link:../../packages/messages
       next:
         specifier: ^15.1.0
         version: 15.5.25(@types/node@22.20.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -110,6 +116,19 @@ importers:
       '@types/tr46':
         specifier: ^5.0.1
         version: 5.0.1
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.2)(tsx@4.23.13)
+
+  packages/messages:
+    dependencies:
+      '@2check/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
       typescript:
         specifier: ^5.9.0
         version: 5.9.3

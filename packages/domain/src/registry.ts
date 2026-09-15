@@ -338,7 +338,7 @@ export function evaluateRegistryLookup(
       severity: "none" as Severity,
       target,
       reasonCode: "provider_not_supported",
-      message: { titleCode: `${checkId}.provider_not_supported` },
+      message: { titleCode: "registry.lookup.provider_not_supported" },
       freshness: options.freshness,
     };
   }
@@ -356,7 +356,7 @@ export function evaluateRegistryLookup(
       status: "PASS",
       severity: "none" as Severity,
       target,
-      message: { titleCode: `${checkId}.registered` },
+      message: { titleCode: "registry.lookup.registered" },
       details: resolution.registration,
       source,
       freshness: options.freshness,
@@ -370,7 +370,7 @@ export function evaluateRegistryLookup(
       status: "FAIL",
       severity: "critical" as Severity,
       target,
-      message: { titleCode: `${checkId}.not_registered` },
+      message: { titleCode: "registry.lookup.not_registered" },
       source,
       freshness: options.freshness,
     };
@@ -383,7 +383,7 @@ export function evaluateRegistryLookup(
     severity: "none" as Severity,
     target,
     reasonCode: "registry_lookup_indeterminate",
-    message: { titleCode: `${checkId}.indeterminate` },
+    message: { titleCode: "registry.lookup.indeterminate" },
     source,
     freshness: options.freshness,
   };

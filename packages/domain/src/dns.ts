@@ -180,7 +180,11 @@ export function evaluateResolveCheck(
     status: determined ? ("PASS" as const) : ("UNKNOWN" as const),
     severity: "none" as Severity,
     target: target(options.qname, qtype),
-    message: { titleCode: `${checkId}.${determined ? "pass" : "unknown"}` },
+    message: {
+      // PRD 13.4 — the wording states what was found, so the code carries the state itself.
+      titleCode: `dns.record.resolve.${determined ? quorum.state.toLowerCase() : "unknown"}`,
+      params: { recordType: qtype },
+    },
     details,
     source: sourceOf(results, options.resolverSetVersion),
     freshness: freshnessOf(results),
@@ -239,7 +243,7 @@ export function evaluateNameExistence(
     // A name that does not resolve at all is the strongest DNS finding there is.
     severity: (missing ? "critical" : "none") as Severity,
     target: target(options.qname),
-    message: { titleCode: `${checkId}.${status.toLowerCase()}` },
+    message: { titleCode: `dns.name.existence.${status.toLowerCase()}` },
     details,
     source: sourceOf(results, options.resolverSetVersion),
     freshness: freshnessOf(results),
@@ -289,7 +293,10 @@ export function evaluateResolverConsistency(
     status,
     severity: (disagrees ? "warning" : "none") as Severity,
     target: target(options.qname, qtype),
-    message: { titleCode: `${checkId}.${status.toLowerCase()}` },
+    message: {
+      titleCode: `dns.record.consistency.${status.toLowerCase()}`,
+      params: { recordType: qtype },
+    },
     details,
     source: sourceOf(results, options.resolverSetVersion),
     freshness: freshnessOf(results),

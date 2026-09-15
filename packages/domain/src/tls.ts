@@ -38,6 +38,9 @@ export interface TlsEvaluationOptions {
 
 const SOURCE: TlsCheckSource = { kind: "DIRECT_TLS_PROBE", endpointCoverage: "REPRESENTATIVE" };
 
+/** The machine value stays IPV4/IPV6 in target.ipFamily; message parameters read naturally. */
+const FAMILY_LABEL: Readonly<Record<TlsIpFamily, string>> = { IPV4: "IPv4", IPV6: "IPv6" };
+
 function target(hostname: string, ipFamily?: TlsIpFamily): TlsCheckTarget {
   return ipFamily === undefined
     ? { kind: "TLS_HOST", hostname, port: 443 }
@@ -119,14 +122,20 @@ export function evaluateConnectionCheck(
         ...base,
         status: "NOT_APPLICABLE",
         severity: "none" as Severity,
-        message: { titleCode: `${checkId}.not_applicable` },
+        message: {
+          titleCode: "tls.connection.not_applicable",
+          params: { ipFamily: FAMILY_LABEL[family] },
+        },
       };
     case "CONNECTED":
       return {
         ...base,
         status: "PASS",
         severity: "none" as Severity,
-        message: { titleCode: `${checkId}.pass` },
+        message: {
+          titleCode: "tls.connection.pass",
+          params: { ipFamily: FAMILY_LABEL[family], protocol: outcome.protocol },
+        },
         details: { address: outcome.address, protocol: outcome.protocol },
       };
     case "TARGET_FAILURE":
@@ -135,7 +144,7 @@ export function evaluateConnectionCheck(
         ...base,
         status: "FAIL",
         severity: "critical" as Severity,
-        message: { titleCode: `${checkId}.fail` },
+        message: { titleCode: "tls.connection.fail", params: { ipFamily: FAMILY_LABEL[family] } },
         details: { address: outcome.address, failureCode: outcome.failureCode },
       };
     case "SCANNER_FAILURE":
@@ -145,7 +154,10 @@ export function evaluateConnectionCheck(
         status: "UNKNOWN",
         severity: "none" as Severity,
         reasonCode: outcome.reasonCode,
-        message: { titleCode: `${checkId}.unknown` },
+        message: {
+          titleCode: "tls.connection.unknown",
+          params: { ipFamily: FAMILY_LABEL[family] },
+        },
         details: { address: outcome.address },
       };
   }
@@ -301,7 +313,7 @@ export function evaluateTlsBlockedChecks(
       severity: "none" as Severity,
       target: target(options.hostname, family),
       reasonCode,
-      message: { titleCode: `${checkId}.unknown` },
+      message: { titleCode: "tls.connection.unknown", params: { ipFamily: FAMILY_LABEL[family] } },
       source: SOURCE,
       freshness: options.freshness,
     };

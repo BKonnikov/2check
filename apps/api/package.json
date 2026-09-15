@@ -14,6 +14,7 @@
   "dependencies": {
     "@2check/contracts": "workspace:*",
     "@2check/domain": "workspace:*",
+    "@2check/messages": "workspace:*",
     "fastify": "^5.2.0",
     "ioredis": "^6.0.0",
     "pg": "^8.23.0",

@@ -14,20 +14,23 @@ let pool: Pool;
 let store: ScanStore;
 let dataDir: string;
 
+// A fixed port makes the suite flaky when a previous run has not released it yet.
+const port = 55_000 + Math.floor(Math.random() * 9_000);
+
 beforeAll(async () => {
   dataDir = mkdtempSync(join(tmpdir(), "2check-pg-"));
   postgres = new EmbeddedPostgres({
     databaseDir: dataDir,
     user: "twocheck",
     password: "twocheck",
-    port: 55433,
+    port,
     persistent: false,
   });
   await postgres.initialise();
   await postgres.start();
   await postgres.createDatabase("twocheck");
   // The same pg Pool the server uses, so the tests exercise the production client.
-  pool = createPool("postgres://twocheck:twocheck@127.0.0.1:55433/twocheck");
+  pool = createPool(`postgres://twocheck:twocheck@127.0.0.1:${port}/twocheck`);
   await migrate(pool);
   store = createPostgresScanStore(pool);
 }, 180_000);
