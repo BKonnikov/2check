@@ -22,7 +22,10 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      # PostgreSQL 18 images keep data in a version-named subdirectory, so the mount belongs at
+      # /var/lib/postgresql rather than /var/lib/postgresql/data. Mounting the old path makes the
+      # image refuse to start. See docker-library/postgres#1259.
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-twocheck} -d ${POSTGRES_DB:-twocheck}"]
       interval: 5s
