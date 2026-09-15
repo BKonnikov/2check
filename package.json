@@ -15,7 +15,8 @@
     "format": "biome check --write .",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "inspect": "pnpm --filter @2check/api inspect"
+    "inspect": "pnpm --filter @2check/api inspect",
+    "migrate": "pnpm --filter @2check/api migrate"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

@@ -56,6 +56,7 @@ docker compose up -d
 cp .env.example .env
 pnpm install
 pnpm build
+pnpm migrate
 pnpm dev
 ```
 

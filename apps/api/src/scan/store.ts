@@ -10,15 +10,16 @@ import type {
 } from "@2check/contracts";
 
 /**
- * The internal record of one scan. It holds more than the browser ever sees: the full
- * CanonicalDomain including originalInput (PRD 19.6) and the security validation that TLS will
- * consume as an internal prerequisite (PRD 16.3).
+ * PRD 19.6 and AC-19.4 — originalInput is not part of the stored domain. Dropping it from the
+ * record itself makes that structural: no code path can persist it by accident.
  */
+export type StoredCanonicalDomain = Omit<CanonicalDomain, "originalInput">;
+
 export interface ScanRecord {
   readonly scanId: string;
   readonly mode: ScanMode;
   readonly visibleCategories: readonly ScanCategory[];
-  readonly canonicalDomain: CanonicalDomain;
+  readonly canonicalDomain: StoredCanonicalDomain;
   readonly executionContext: ExecutionContext;
   readonly startedAt: string;
   executionState: ExecutionState;
@@ -29,23 +30,40 @@ export interface ScanRecord {
   failure?: ScanExecutionFailure;
 }
 
-export interface ScanStore {
-  create(record: ScanRecord): void;
-  get(scanId: string): ScanRecord | undefined;
+export function isTerminal(state: ExecutionState): boolean {
+  return state === "COMPLETED" || state === "FAILED";
 }
 
-/**
- * In-memory stand-in for the scan store of PRD 19. It is deliberately not the durable store:
- * historical scans, retention and storageSchemaVersion belong to PostgreSQL and are not here yet.
- */
+export interface ScanStore {
+  create(record: ScanRecord): Promise<void>;
+  get(scanId: string): Promise<ScanRecord | undefined>;
+  /** PRD 19.10 and AC-19.9 — a terminal snapshot is written once, atomically, and never rewritten. */
+  save(record: ScanRecord): Promise<void>;
+}
+
+/** Non-durable store for tests and for running without a database. */
 export function createInMemoryScanStore(): ScanStore {
-  const records = new Map<string, ScanRecord>();
+  const records = new Map<string, { record: ScanRecord; finalized: boolean }>();
+
   return {
-    create(record) {
-      records.set(record.scanId, record);
+    async create(record) {
+      records.set(record.scanId, { record, finalized: false });
     },
-    get(scanId) {
-      return records.get(scanId);
+    async get(scanId) {
+      return records.get(scanId)?.record;
+    },
+    async save(record) {
+      const existing = records.get(record.scanId);
+      if (existing === undefined) {
+        throw new Error(`Unknown scan ${record.scanId}`);
+      }
+      if (existing.finalized) {
+        throw new Error(`Scan ${record.scanId} is finalized and its snapshot is immutable`);
+      }
+      records.set(record.scanId, {
+        record,
+        finalized: isTerminal(record.executionState),
+      });
     },
   };
 }

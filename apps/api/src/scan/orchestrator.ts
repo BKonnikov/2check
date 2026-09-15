@@ -20,7 +20,7 @@ import {
   REGISTRY_PROVIDER,
   type RegistryLookup,
 } from "../registry/uz-provider.js";
-import type { ScanRecord } from "./store.js";
+import type { ScanRecord, ScanStore } from "./store.js";
 
 /** Injectable so tests run against golden fixtures rather than the public internet (AC-26.2). */
 export type DnsQuery = (qname: string) => Promise<readonly DnsProviderResult[]>;
@@ -93,8 +93,13 @@ async function runRegistryCategory(
  * Runs the visible categories of the scan. Security validation runs as an internal prerequisite
  * (PRD 16.3): it produces no visible category, no issue and no score.
  */
-export async function runScan(record: ScanRecord, deps: ScanDependencies = {}): Promise<void> {
+export async function runScan(
+  record: ScanRecord,
+  store: ScanStore,
+  deps: ScanDependencies = {},
+): Promise<void> {
   record.executionState = "RUNNING";
+  await store.save(record);
 
   try {
     const categories: CategoryResult[] = [];
@@ -118,4 +123,7 @@ export async function runScan(record: ScanRecord, deps: ScanDependencies = {}): 
     record.completedAt = new Date().toISOString();
     record.failure = { failureCode: "orchestration_error", occurredAt: new Date().toISOString() };
   }
+
+  // AC-19.9 — the terminal snapshot is published in one write, after which it is immutable.
+  await store.save(record);
 }

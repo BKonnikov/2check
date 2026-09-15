@@ -40,7 +40,7 @@ function apiError(
 }
 
 /** PRD 17.5 — the public view never carries originalInput. */
-function publicDomain(domain: CanonicalDomain): PublicCanonicalDomain {
+function publicDomain(domain: Omit<CanonicalDomain, "originalInput">): PublicCanonicalDomain {
   return {
     unicodeHostname: domain.unicodeHostname,
     asciiHostname: domain.asciiHostname,
@@ -139,26 +139,23 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       });
     }
 
+    // PRD 19.6 — originalInput is dropped here and never reaches the store.
+    const { originalInput: _originalInput, ...storedDomain } = canonical.domain;
+
     const record: ScanRecord = {
       scanId: randomUUID(),
       mode,
       visibleCategories: requested,
-      canonicalDomain: canonical.domain,
+      canonicalDomain: storedDomain,
       executionContext: buildExecutionContext(),
       startedAt: new Date().toISOString(),
       executionState: "PENDING",
       categories: [],
     };
-    deps.store.create(record);
+    await deps.store.create(record);
 
     // PRD 17.3 — POST acknowledges acceptance; it never terminalizes, even on a full cache hit.
-    void runScan(record, deps).catch(() => {
-      record.executionState = "FAILED";
-      record.failure = {
-        failureCode: "orchestration_error",
-        occurredAt: new Date().toISOString(),
-      };
-    });
+    void runScan(record, deps.store, deps).catch(() => undefined);
 
     const body: CreateScanResponse = {
       scanId: record.scanId,
@@ -171,7 +168,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
   app.get<{ Params: { scanId: string } }>(
     `${WEB_API_BASE_PATH}/scans/:scanId`,
     async (request, reply) => {
-      const record = deps.store.get(request.params.scanId);
+      const record = await deps.store.get(request.params.scanId);
       if (record === undefined) {
         return apiError(reply, 404, {
           errorCode: "scan_not_found",
