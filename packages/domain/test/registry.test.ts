@@ -61,7 +61,7 @@ describe("AC-9.4 — canonical lifecycle normalization", () => {
   it.each([
     [["active"], "ACTIVE"],
     [["ok"], "ACTIVE"],
-    [["inactive"], "DEACTIVATED"],
+    [["inactive"], "UNKNOWN"],
     [["client hold"], "DEACTIVATED"],
     [["redemption period"], "REDEMPTION_PERIOD"],
     [["pending delete"], "CANCELLED"],
@@ -78,6 +78,22 @@ describe("AC-9.4 — canonical lifecycle normalization", () => {
 
   it("describes a domain by its most specific status rather than by active", () => {
     expect(normalizeRegistrationStatus(["active", "redemption period"])).toBe("REDEMPTION_PERIOD");
+  });
+
+  it('matches whole words, so "inactive" is never read as "active"', () => {
+    // Substring matching would find "active" inside "inactive" and report a healthy domain.
+    expect(normalizeRegistrationStatus(["inactive"])).not.toBe("ACTIVE");
+    expect(normalizeRegistrationStatus(["active"])).toBe("ACTIVE");
+    expect(normalizeRegistrationStatus(["clienthold"])).toBe("UNKNOWN");
+    expect(normalizeRegistrationStatus(["client hold"])).toBe("DEACTIVATED");
+  });
+
+  it('does not read the ambiguous RDAP word "inactive" as a deactivated domain', () => {
+    // Observed on cctld.uz: the .uz registry returns "inactive" for a domain that is delegated,
+    // resolving and serving a valid certificate. Claiming DEACTIVATED there would be a false
+    // alarm, so the status stays UNKNOWN and the registry's own word is preserved.
+    expect(normalizeRegistrationStatus(["inactive"])).toBe("UNKNOWN");
+    expect(normalizeRegistrationStatus(["client hold"])).toBe("DEACTIVATED");
   });
 });
 

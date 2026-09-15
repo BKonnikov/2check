@@ -24,15 +24,31 @@ const STATUS_RULES: readonly (readonly [RegistrationStatus, readonly string[]])[
   ["REGISTRATION_INITIATED", ["pending create", "pendingcreate", "registration initiated"]],
   ["PENDING_ACTIVATION", ["pending activation", "pendingactivation", "pending transfer"]],
   ["FREE", ["free", "available", "not registered", "no object found"]],
-  ["DEACTIVATED", ["inactive", "hold", "suspended", "deactivated"]],
+  // "inactive" is deliberately absent. RDAP defines it only as "not in use", and the .uz registry
+  // returns it for domains that are delegated, resolving and serving TLS — cctld.uz itself does.
+  // Mapping an ambiguous word to a definite lifecycle state would assert something the data does
+  // not support (PRD 13.5), so it falls through to UNKNOWN and survives in rawStatus.
+  ["DEACTIVATED", ["hold", "suspended", "deactivated"]],
   ["ACTIVE", ["active", "ok", "connected", "clientupdateprohibited", "client update prohibited"]],
 ];
+
+/**
+ * Whole-word matching, not substring matching.
+ *
+ * A registry status is a phrase of words, and looking for one inside another silently misreads
+ * them: "inactive" contains "active", which would turn an undelegated domain into a healthy one.
+ * Needles must therefore sit on word boundaries.
+ */
+function containsPhrase(value: string, needle: string): boolean {
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  return new RegExp(String.raw`(^|[^a-z])` + escaped + String.raw`([^a-z]|$)`).test(value);
+}
 
 /** PRD 9.4 — an unrecognized status is UNKNOWN, never guessed into a neighbouring one. */
 export function normalizeRegistrationStatus(rawStatus: readonly string[]): RegistrationStatus {
   const normalized = rawStatus.map((value) => value.trim().toLowerCase()).filter((v) => v !== "");
   for (const [status, needles] of STATUS_RULES) {
-    if (normalized.some((value) => needles.some((needle) => value.includes(needle)))) {
+    if (normalized.some((value) => needles.some((needle) => containsPhrase(value, needle)))) {
       return status;
     }
   }
