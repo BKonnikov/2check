@@ -1,4 +1,8 @@
-import type { CategoryResult, SecurityValidationResult } from "@2check/contracts";
+import type {
+  CategoryResult,
+  SecurityValidationResult,
+  TlsExecutionMetadata,
+} from "@2check/contracts";
 import type { Pool } from "pg";
 import { STORAGE_SCHEMA_VERSION } from "../storage/migrate.js";
 import {
@@ -18,6 +22,7 @@ interface ScanRow {
   readonly categories: CategoryResult[];
   readonly sealed_dns_candidates: string[] | null;
   readonly security_validation: SecurityValidationResult | null;
+  readonly tls_execution_metadata: TlsExecutionMetadata | null;
   readonly failure: ScanRecord["failure"] | null;
   readonly started_at: Date;
   readonly completed_at: Date | null;
@@ -37,6 +42,9 @@ function toRecord(row: ScanRow): ScanRecord {
       ? {}
       : { sealedDnsAddressCandidates: row.sealed_dns_candidates }),
     ...(row.security_validation === null ? {} : { securityValidation: row.security_validation }),
+    ...(row.tls_execution_metadata === null
+      ? {}
+      : { tlsExecutionMetadata: row.tls_execution_metadata }),
     ...(row.completed_at === null ? {} : { completedAt: row.completed_at.toISOString() }),
     ...(row.failure === null || row.failure === undefined ? {} : { failure: row.failure }),
   };
@@ -84,9 +92,10 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
            categories = $3,
            sealed_dns_candidates = $4,
            security_validation = $5,
-           failure = $6,
-           completed_at = $7,
-           finalized = $8
+           tls_execution_metadata = $6,
+           failure = $7,
+           completed_at = $8,
+           finalized = $9
          where scan_id = $1`,
         [
           record.scanId,
@@ -98,6 +107,9 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
           record.securityValidation === undefined
             ? null
             : JSON.stringify(record.securityValidation),
+          record.tlsExecutionMetadata === undefined
+            ? null
+            : JSON.stringify(record.tlsExecutionMetadata),
           record.failure === undefined ? null : JSON.stringify(record.failure),
           record.completedAt ?? null,
           isTerminal(record.executionState),

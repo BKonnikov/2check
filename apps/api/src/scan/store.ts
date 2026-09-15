@@ -7,6 +7,7 @@ import type {
   ScanExecutionFailure,
   ScanMode,
   SecurityValidationResult,
+  TlsExecutionMetadata,
 } from "@2check/contracts";
 
 /**
@@ -26,6 +27,7 @@ export interface ScanRecord {
   categories: readonly CategoryResult[];
   sealedDnsAddressCandidates?: readonly string[];
   securityValidation?: SecurityValidationResult;
+  tlsExecutionMetadata?: TlsExecutionMetadata;
   completedAt?: string;
   failure?: ScanExecutionFailure;
 }

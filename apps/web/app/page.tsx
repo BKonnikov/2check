@@ -62,7 +62,7 @@ export default function HomePage() {
       const created = await fetch(`${WEB_API_BASE_PATH}/scans`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ input, mode: "PARTIAL", selectedCategories: ["dns", "registry"] }),
+        body: JSON.stringify({ input, mode: "FULL" }),
       });
       const acceptance = await created.json();
       if (!created.ok) {
@@ -94,7 +94,7 @@ export default function HomePage() {
     <main>
       <h1>2check.uz</h1>
       <p className="lede">
-        Проверка технического здоровья домена. Пока доступны категории DNS и регистрация.
+        Проверка технического здоровья домена. Проверяются DNS, регистрация домена и SSL/TLS.
       </p>
 
       <form onSubmit={submit}>

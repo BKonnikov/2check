@@ -54,8 +54,32 @@ async function fixtureRegistry(registryDomain: string) {
   ];
 }
 
+/** Golden fixture: one IPv4 endpoint answering with a valid certificate. */
+async function fixtureTlsProbe(address: string) {
+  return {
+    kind: "CONNECTED" as const,
+    address,
+    protocol: "TLSv1.3",
+    certificate: {
+      subject: "example.uz",
+      issuer: "Test CA",
+      validFrom: "2026-01-01T00:00:00.000Z",
+      validTo: "2027-01-01T00:00:00.000Z",
+      subjectAltNames: ["DNS:example.uz"],
+      fingerprint256: "AA:BB",
+      selfSigned: false,
+      chainTrusted: true,
+    },
+  };
+}
+
 function app() {
-  return buildApp({ env, dnsQuery: fixtureQuery, registryLookup: fixtureRegistry });
+  return buildApp({
+    env,
+    dnsQuery: fixtureQuery,
+    registryLookup: fixtureRegistry,
+    tlsProbe: fixtureTlsProbe,
+  });
 }
 
 async function createScan(instance: ReturnType<typeof app>, payload: unknown) {
@@ -140,11 +164,10 @@ describe("PRD 17.2 and 17.9 — request validation", () => {
     await instance.close();
   });
 
-  it("refuses a scope this deployment cannot execute instead of narrowing it", async () => {
+  it("accepts FULL now that every category is implemented", async () => {
     const instance = app();
     const response = await createScan(instance, { input: "example.uz", mode: "FULL" });
-    expect(response.statusCode).toBe(503);
-    expect(response.json().errorCode).toBe("scan_scope_not_available");
+    expect(response.statusCode).toBe(202);
     await instance.close();
   });
 });
@@ -262,6 +285,71 @@ describe("PRD 9 — the registry category through the API", () => {
     expect(check?.status).toBe("UNKNOWN");
     expect(check?.reasonCode).toBe("provider_not_supported");
     expect(check?.source).toBeUndefined();
+    await instance.close();
+  });
+});
+
+describe("PRD 10 and 16 — the TLS category through the API", () => {
+  async function complete(instance: ReturnType<typeof app>, payload: unknown) {
+    const created = await createScan(instance, payload);
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const response = await instance.inject({
+        method: "GET",
+        url: `/api/web/v1/scans/${created.json().scanId}`,
+      });
+      const body: WebScanResponse = response.json();
+      if (body.executionState === "COMPLETED" || body.executionState === "FAILED") {
+        return body;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error("scan did not terminate");
+  }
+
+  it("runs all three categories on a FULL scan", async () => {
+    const instance = app();
+    const body = await complete(instance, { input: "example.uz", mode: "FULL" });
+    expect(body.executionState).toBe("COMPLETED");
+    expect(body.categories.map((category) => category.category)).toEqual([
+      "dns",
+      "registry",
+      "tls",
+    ]);
+    const tls = body.categories.find((category) => category.category === "tls");
+    expect(tls?.status).toBe("PASS");
+    expect(tls?.checks.map((check) => check.checkId)).toEqual([
+      "tls.connection.ipv4",
+      "tls.connection.ipv6",
+      "tls.certificate.validity",
+      "tls.certificate.hostname",
+      "tls.certificate.chain",
+    ]);
+    await instance.close();
+  });
+
+  it("AC-16.3 — a TLS-only PARTIAL scan runs its DNS prerequisite without a visible DNS category", async () => {
+    const instance = app();
+    const body = await complete(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["tls"],
+    });
+    expect(body.categories.map((category) => category.category)).toEqual(["tls"]);
+    expect(body.categories[0]?.status).toBe("PASS");
+    await instance.close();
+  });
+
+  it("AC-10.5 — the absent IPv6 family is N/A rather than a failure", async () => {
+    const instance = app();
+    const body = await complete(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["tls"],
+    });
+    const ipv6 = body.categories[0]?.checks.find(
+      (check) => check.checkId === "tls.connection.ipv6",
+    );
+    expect(ipv6?.status).toBe("NOT_APPLICABLE");
     await instance.close();
   });
 });

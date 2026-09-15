@@ -272,9 +272,51 @@ export interface RegistryCheckSource {
   readonly transportsUsed: readonly RegistryTransport[];
 }
 
-/** PRD 6.2 — the TLS variant joins these once its module exists. */
-export type ModuleCheckTarget = DnsCheckTarget | RegistryCheckTarget;
-export type ModuleCheckSource = DnsCheckSource | RegistryCheckSource;
+/** PRD 10.7 — after the shared security decision the families are handled independently. */
+export const TLS_IP_FAMILIES = ["IPV4", "IPV6"] as const;
+export type TlsIpFamily = (typeof TLS_IP_FAMILIES)[number];
+
+/** PRD 10.3 */
+export interface TlsCheckTarget {
+  readonly kind: "TLS_HOST";
+  readonly hostname: string;
+  readonly port: 443;
+  readonly ipFamily?: TlsIpFamily;
+}
+
+/** PRD 10.1 and 10.3 — at most one representative endpoint per family. */
+export interface TlsCheckSource {
+  readonly kind: "DIRECT_TLS_PROBE";
+  readonly endpointCoverage: "REPRESENTATIVE";
+}
+
+/** PRD 10.5 — the certificate facts the MVP evaluates. */
+export interface TlsCertificate {
+  readonly subject: string;
+  readonly issuer: string;
+  readonly validFrom: string;
+  readonly validTo: string;
+  readonly subjectAltNames: readonly string[];
+  readonly fingerprint256: string;
+  readonly selfSigned: boolean;
+  readonly chainTrusted: boolean;
+  readonly chainErrorCode?: string;
+}
+
+/** PRD 19.4 — the canonical audit record of the TLS prerequisites. */
+export interface TlsExecutionMetadata {
+  readonly selectedIPv4?: string;
+  readonly selectedIPv6?: string;
+  readonly dependencyFingerprint: string;
+  readonly securityPolicyVersion: string;
+  readonly tlsModuleConfigVersion: string;
+  readonly trustStoreVersion: string;
+  readonly resultSource: "FRESH" | "CACHE";
+}
+
+/** PRD 6.2 */
+export type ModuleCheckTarget = DnsCheckTarget | RegistryCheckTarget | TlsCheckTarget;
+export type ModuleCheckSource = DnsCheckSource | RegistryCheckSource | TlsCheckSource;
 
 /** PRD 6.2 */
 export interface CheckResult<TDetails = unknown> {

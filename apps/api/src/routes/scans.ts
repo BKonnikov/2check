@@ -27,7 +27,7 @@ const createScanSchema = z
 const POLL_AFTER_MS = 400;
 
 /** Categories this deployment can actually execute. Registry and TLS are not implemented yet. */
-const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry"];
+const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls"];
 
 function apiError(
   reply: FastifyReply,

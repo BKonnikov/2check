@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { Pool } from "pg";
 
 /** PRD 19.10 — the storage representation is versioned through storageSchemaVersion. */
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
 
 /** Keeps two instances from migrating at the same time during a rolling deployment (PRD 27.5). */
 const ADVISORY_LOCK_KEY = 2_744_301;
