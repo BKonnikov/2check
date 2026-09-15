@@ -18,9 +18,19 @@ interface CheckView {
   } | null;
 }
 
+interface SummaryView {
+  state: string;
+  verdictCode?: string;
+  score?: number;
+  confidence: { level: string; unknownChecksCount: number; affectedCategories: string[] };
+  issueCounts: { critical: number; warning: number; informational: number };
+  issues: { issueId: string; category: string; severity: string; primaryCheckId: string }[];
+}
+
 interface ScanView {
   scanId: string;
   executionState: string;
+  summary?: SummaryView;
   canonicalDomain: {
     unicodeHostname: string;
     asciiHostname: string;
@@ -32,6 +42,23 @@ interface ScanView {
   categories: { category: string; status: string; completeness: string; checks: CheckView[] }[];
   pollAfterMs?: number;
 }
+
+/** Placeholder wording. PRD 13 replaces this with message codes resolved per language. */
+const VERDICT_LABELS: Record<string, string> = {
+  HEALTHY: "Здоров",
+  RECOMMENDATIONS: "Есть рекомендации",
+  PROBLEMS: "Есть проблемы",
+  CRITICAL_PROBLEM: "Критическая проблема",
+  NO_CONFIRMED_ISSUES_INCOMPLETE: "Подтверждённых проблем нет, картина неполная",
+};
+
+const VERDICT_TONE: Record<string, string> = {
+  HEALTHY: "PASS",
+  RECOMMENDATIONS: "NOT_APPLICABLE",
+  PROBLEMS: "UNKNOWN",
+  CRITICAL_PROBLEM: "FAIL",
+  NO_CONFIRMED_ISSUES_INCOMPLETE: "UNKNOWN",
+};
 
 function observedValues(check: CheckView): string {
   const details = check.details;
@@ -113,6 +140,41 @@ export default function HomePage() {
         <div className="panel">
           <h2>Ошибка</h2>
           <p className="error">{error}</p>
+        </div>
+      )}
+
+      {scan?.summary !== undefined && scan.summary.verdictCode !== undefined && (
+        <div className="panel verdict">
+          <div>
+            <div className={`verdict-line status ${VERDICT_TONE[scan.summary.verdictCode] ?? ""}`}>
+              {VERDICT_LABELS[scan.summary.verdictCode] ?? scan.summary.verdictCode}
+            </div>
+            <div className="muted">
+              Уверенность: {scan.summary.confidence.level === "HIGH" ? "высокая" : "сниженная"}
+              {scan.summary.confidence.unknownChecksCount > 0 &&
+                ` · не определено проверок: ${scan.summary.confidence.unknownChecksCount}`}
+            </div>
+            {scan.summary.issues.length > 0 && (
+              <ul className="issues">
+                {scan.summary.issues.map((issue) => (
+                  <li key={issue.issueId}>
+                    <span
+                      className={`status ${issue.severity === "critical" ? "FAIL" : "UNKNOWN"}`}
+                    >
+                      {issue.severity}
+                    </span>{" "}
+                    <span className="check-id">{issue.primaryCheckId}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {scan.summary.score !== undefined && (
+            <div className="score">
+              <div className="score-value">{scan.summary.score}</div>
+              <div className="muted">из 100</div>
+            </div>
+          )}
         </div>
       )}
 

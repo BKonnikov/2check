@@ -60,6 +60,7 @@ function toResponse(record: ScanRecord): WebScanResponse {
     canonicalDomain: publicDomain(record.canonicalDomain),
     selectedCategories: record.visibleCategories,
     categories: record.categories,
+    ...(record.summary === undefined ? {} : { summary: record.summary }),
     startedAt: record.startedAt,
     ...(record.completedAt === undefined ? {} : { completedAt: record.completedAt }),
     ...(record.failure === undefined ? {} : { failure: record.failure }),

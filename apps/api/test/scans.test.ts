@@ -353,3 +353,70 @@ describe("PRD 10 and 16 — the TLS category through the API", () => {
     await instance.close();
   });
 });
+
+describe("PRD 11 and 12 — the summary through the API", () => {
+  async function complete(instance: ReturnType<typeof app>, payload: unknown) {
+    const created = await createScan(instance, payload);
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const response = await instance.inject({
+        method: "GET",
+        url: `/api/web/v1/scans/${created.json().scanId}`,
+      });
+      const body: WebScanResponse = response.json();
+      if (body.executionState === "COMPLETED" || body.executionState === "FAILED") {
+        return body;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error("scan did not terminate");
+  }
+
+  it("carries a verdict, a confidence level and a score on a FULL scan", async () => {
+    const instance = app();
+    const body = await complete(instance, { input: "example.uz", mode: "FULL" });
+    expect(body.summary?.state).toBe("FINAL");
+    expect(body.summary?.verdictCode).toBeDefined();
+    expect(body.summary?.confidence.level).toBeDefined();
+    expect(typeof body.summary?.score).toBe("number");
+    await instance.close();
+  });
+
+  it("AC-12.1 — a PARTIAL scan gets a verdict but no numeric score", async () => {
+    const instance = app();
+    const body = await complete(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["dns"],
+    });
+    expect(body.summary?.verdictCode).toBeDefined();
+    expect(body.summary?.score).toBeUndefined();
+    await instance.close();
+  });
+
+  it("AC-11.2 — checks that are UNKNOWN produce no issues", async () => {
+    const instance = buildApp({
+      env,
+      dnsQuery: async (qname: string) =>
+        (["A", "AAAA", "MX", "TXT", "NS", "CNAME", "SOA"] as const).map((qtype) => ({
+          provider: "google",
+          qname,
+          qtype,
+          transportStatus: "NETWORK_ERROR" as const,
+          answers: [],
+          authority: [],
+          receivedAt: "2026-09-15T00:00:00.000Z",
+        })),
+      registryLookup: fixtureRegistry,
+      tlsProbe: fixtureTlsProbe,
+    });
+    const body = await complete(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["dns"],
+    });
+    expect(body.summary?.issues).toEqual([]);
+    expect(body.summary?.confidence.level).toBe("REDUCED");
+    expect(body.summary?.verdictCode).toBe("NO_CONFIRMED_ISSUES_INCOMPLETE");
+    await instance.close();
+  });
+});

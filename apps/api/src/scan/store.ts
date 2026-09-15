@@ -1,6 +1,7 @@
 import type {
   CanonicalDomain,
   CategoryResult,
+  DomainHealthSummary,
   ExecutionContext,
   ExecutionState,
   ScanCategory,
@@ -25,6 +26,7 @@ export interface ScanRecord {
   readonly startedAt: string;
   executionState: ExecutionState;
   categories: readonly CategoryResult[];
+  summary?: DomainHealthSummary;
   sealedDnsAddressCandidates?: readonly string[];
   securityValidation?: SecurityValidationResult;
   tlsExecutionMetadata?: TlsExecutionMetadata;

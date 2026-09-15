@@ -1,5 +1,6 @@
 import type {
   CategoryResult,
+  DomainHealthSummary,
   SecurityValidationResult,
   TlsExecutionMetadata,
 } from "@2check/contracts";
@@ -23,6 +24,7 @@ interface ScanRow {
   readonly sealed_dns_candidates: string[] | null;
   readonly security_validation: SecurityValidationResult | null;
   readonly tls_execution_metadata: TlsExecutionMetadata | null;
+  readonly summary: DomainHealthSummary | null;
   readonly failure: ScanRecord["failure"] | null;
   readonly started_at: Date;
   readonly completed_at: Date | null;
@@ -45,6 +47,7 @@ function toRecord(row: ScanRow): ScanRecord {
     ...(row.tls_execution_metadata === null
       ? {}
       : { tlsExecutionMetadata: row.tls_execution_metadata }),
+    ...(row.summary === null ? {} : { summary: row.summary }),
     ...(row.completed_at === null ? {} : { completedAt: row.completed_at.toISOString() }),
     ...(row.failure === null || row.failure === undefined ? {} : { failure: row.failure }),
   };
@@ -93,9 +96,10 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
            sealed_dns_candidates = $4,
            security_validation = $5,
            tls_execution_metadata = $6,
-           failure = $7,
-           completed_at = $8,
-           finalized = $9
+           summary = $7,
+           failure = $8,
+           completed_at = $9,
+           finalized = $10
          where scan_id = $1`,
         [
           record.scanId,
@@ -110,6 +114,7 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
           record.tlsExecutionMetadata === undefined
             ? null
             : JSON.stringify(record.tlsExecutionMetadata),
+          record.summary === undefined ? null : JSON.stringify(record.summary),
           record.failure === undefined ? null : JSON.stringify(record.failure),
           record.completedAt ?? null,
           isTerminal(record.executionState),

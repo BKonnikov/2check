@@ -393,7 +393,7 @@ export interface WebScanResponse {
   readonly selectedCategories: readonly ScanCategory[];
   readonly progress?: number;
   readonly categories: readonly CategoryResult[];
-  readonly summary?: unknown;
+  readonly summary?: DomainHealthSummary;
   readonly startedAt: string;
   readonly completedAt?: string;
   readonly pollAfterMs?: number;
@@ -421,4 +421,67 @@ export interface ExecutionContext {
   readonly registryModuleConfigVersion: string;
   readonly tlsModuleConfigVersion: string;
   readonly trustStoreVersion: string;
+}
+
+/** PRD 11.1 — an Issue is never "none": it exists only where a check confirmed a problem. */
+export type IssueSeverity = Exclude<Severity, "none">;
+
+export interface Issue {
+  readonly issueId: string;
+  readonly category: ScanCategory;
+  readonly severity: IssueSeverity;
+  readonly primaryCheckId: string;
+  readonly relatedCheckIds: readonly string[];
+  readonly message: MessageDescriptor;
+}
+
+/** PRD 11.4 */
+export const CONFIDENCE_LEVELS = ["HIGH", "REDUCED"] as const;
+export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
+
+export interface Confidence {
+  readonly level: ConfidenceLevel;
+  readonly unknownChecksCount: number;
+  readonly affectedCategories: readonly ScanCategory[];
+}
+
+/** PRD 11.5 */
+export const VERDICT_CODES = [
+  "HEALTHY",
+  "RECOMMENDATIONS",
+  "PROBLEMS",
+  "CRITICAL_PROBLEM",
+  "NO_CONFIRMED_ISSUES_INCOMPLETE",
+] as const;
+export type VerdictCode = (typeof VERDICT_CODES)[number];
+
+/** PRD 16 and 17 — a scan result is provisional until the scan terminalizes. */
+export const SCAN_STATES = ["PROVISIONAL", "FINAL"] as const;
+export type ScanState = (typeof SCAN_STATES)[number];
+
+/** PRD 12.5 */
+export interface ScorePenalty {
+  readonly issueId: string;
+  readonly severity: IssueSeverity;
+  readonly points: number;
+}
+
+export interface ScoreBreakdown {
+  readonly baseScore: number;
+  readonly penalties: readonly ScorePenalty[];
+  readonly totalPenalty: number;
+  readonly finalScore: number;
+}
+
+/** PRD 11.3 */
+export interface DomainHealthSummary {
+  readonly state: ScanState;
+  readonly verdictCode?: VerdictCode;
+  readonly score?: number;
+  readonly scoreBreakdown?: ScoreBreakdown;
+  readonly confidence: Confidence;
+  readonly issueCounts: Readonly<Record<IssueSeverity, number>>;
+  readonly issues: readonly Issue[];
+  readonly categories: readonly ScanCategory[];
+  readonly generatedAt: string;
 }

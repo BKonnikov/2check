@@ -180,3 +180,49 @@ td.values {
     flex-direction: column;
   }
 }
+
+.verdict {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.verdict-line {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.score {
+  text-align: right;
+  flex-shrink: 0;
+}
+.score-value {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.issues {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 4px;
+}
+.issues li {
+  font-size: 13px;
+}
+.check-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+}
+
+@media (max-width: 620px) {
+  .verdict {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .score {
+    text-align: left;
+  }
+}

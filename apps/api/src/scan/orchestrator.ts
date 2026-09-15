@@ -6,6 +6,7 @@ import type {
 } from "@2check/contracts";
 import {
   buildCategoryResult,
+  buildSummary,
   collectAddressCandidates,
   evaluateNameExistence,
   evaluateRegistryLookup,
@@ -202,6 +203,9 @@ export async function runScan(
     }
 
     record.categories = categories;
+    // PRD 16.8 — the deterministic server-side order: checks, categories, issues, confidence,
+    // verdict, score. The client never assembles the authoritative result.
+    record.summary = buildSummary(categories, { mode: record.mode, state: "FINAL" });
     record.executionState = "COMPLETED";
     record.completedAt = new Date().toISOString();
   } catch {
