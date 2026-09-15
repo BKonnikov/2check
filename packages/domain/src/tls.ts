@@ -165,6 +165,7 @@ export function evaluateConnectionCheck(
 
 export interface TlsCertificateDetails {
   readonly evaluatedFamilies: readonly TlsIpFamily[];
+  readonly chainErrorCode?: string;
   readonly daysRemaining?: number;
   readonly validFrom?: string;
   readonly validTo?: string;
@@ -251,12 +252,23 @@ export function evaluateCertificateChecks(
   const nameMismatch = assessments.some(
     (entry) => !certificateCoversHostname(options.hostname, entry.certificate),
   );
+  /**
+   * AC-11.4 — one root defect, one finding. A certificate that fails on its name or its dates
+   * never got as far as chain verification, so the chain check reports UNKNOWN rather than
+   * turning a single defect into two critical issues and two score penalties.
+   */
   const chainBroken = assessments.some(
-    (entry) => !entry.certificate.chainTrusted || entry.certificate.selfSigned,
+    (entry) => entry.certificate.chainVerification === "UNTRUSTED" || entry.certificate.selfSigned,
   );
+  const chainUnverified =
+    !chainBroken &&
+    assessments.some((entry) => entry.certificate.chainVerification === "NOT_VERIFIED");
+  const chainErrorCode = assessments.find((entry) => entry.certificate.chainErrorCode !== undefined)
+    ?.certificate.chainErrorCode;
 
   const details: TlsCertificateDetails = {
     evaluatedFamilies: families,
+    ...(chainErrorCode === undefined ? {} : { chainErrorCode }),
     daysRemaining,
     validFrom: soonest.certificate.validFrom,
     validTo: soonest.certificate.validTo,
@@ -266,20 +278,33 @@ export function evaluateCertificateChecks(
     fingerprintVariation,
   };
 
-  const verdicts: readonly (readonly [string, boolean])[] = [
-    ["tls.certificate.validity", expired],
-    ["tls.certificate.hostname", nameMismatch],
-    ["tls.certificate.chain", chainBroken],
+  const verdicts: readonly (readonly [string, boolean, boolean])[] = [
+    ["tls.certificate.validity", expired, false],
+    ["tls.certificate.hostname", nameMismatch, false],
+    ["tls.certificate.chain", chainBroken, chainUnverified],
   ];
 
-  return verdicts.map(([checkId, failed]) => ({
-    ...shared,
-    checkId,
-    status: failed ? ("FAIL" as const) : ("PASS" as const),
-    severity: (failed ? "critical" : "none") as Severity,
-    message: { titleCode: `${checkId}.${failed ? "fail" : "pass"}` },
-    details,
-  }));
+  return verdicts.map(([checkId, failed, unverified]) => {
+    if (unverified) {
+      return {
+        ...shared,
+        checkId,
+        status: "UNKNOWN" as const,
+        severity: "none" as Severity,
+        reasonCode: "chain_not_verified",
+        message: { titleCode: `${checkId}.unknown` },
+        details,
+      };
+    }
+    return {
+      ...shared,
+      checkId,
+      status: failed ? ("FAIL" as const) : ("PASS" as const),
+      severity: (failed ? "critical" : "none") as Severity,
+      message: { titleCode: `${checkId}.${failed ? "fail" : "pass"}` },
+      details,
+    };
+  });
 }
 
 /** PRD 10.1 — the whole TLS category for one host. */
@@ -300,7 +325,7 @@ export function evaluateTlsChecks(
  * reason code, the certificate checks follow by dependency, and no failure is invented.
  */
 export function evaluateTlsBlockedChecks(
-  reasonCode: "ssrf_policy_block" | "security_validation_incomplete",
+  reasonCode: "ssrf_policy_block" | "security_validation_incomplete" | "dns_quorum_not_reached",
   options: TlsEvaluationOptions,
 ): CheckResult<TlsConnectionDetails | TlsCertificateDetails>[] {
   const dependsOn = ["tls.connection.ipv4", "tls.connection.ipv6"];

@@ -32,10 +32,57 @@ export interface IssueGroup {
   readonly checkIds: readonly string[];
 }
 
+/**
+ * PRD 11.2, AC-11.4 and §26.8 — the default grouping.
+ *
+ * Without it every FAIL becomes its own Issue and its own penalty, and one root defect is
+ * counted several times: a host that refuses TLS on both address families loses fifty points
+ * for one fault, and a zone caught mid-change loses eight for every record type that differs.
+ * Each group here is one defect seen from several angles, and never reaches across a category
+ * (AC-11.3). The certificate checks are deliberately absent: an expired certificate, a name it
+ * does not cover and an untrusted chain are three different faults, not three views of one.
+ */
+export const DEFAULT_ISSUE_GROUPS: readonly IssueGroup[] = [
+  {
+    issueId: "tls.connection",
+    category: "tls",
+    primaryCheckId: "tls.connection.ipv4",
+    checkIds: ["tls.connection.ipv4", "tls.connection.ipv6"],
+  },
+  {
+    issueId: "dns.record.consistency",
+    category: "dns",
+    primaryCheckId: "dns.a.consistency",
+    checkIds: [
+      "dns.a.consistency",
+      "dns.aaaa.consistency",
+      "dns.mx.consistency",
+      "dns.txt.consistency",
+      "dns.ns.consistency",
+      "dns.cname.consistency",
+      "dns.soa.consistency",
+    ],
+  },
+];
+
 export function validateIssueGroups(groups: readonly IssueGroup[]): void {
   for (const group of groups) {
     if (!group.checkIds.includes(group.primaryCheckId)) {
       throw new Error(`Issue group ${group.issueId} does not contain its primary check`);
+    }
+  }
+  /**
+   * AC-11.3 — grouping across categories is rejected at configuration validation. A checkId is
+   * prefixed with its category, so a member that does not carry the group's category prefix
+   * belongs to another one; narrowing it silently would emit the same issueId twice.
+   */
+  for (const group of groups) {
+    for (const checkId of group.checkIds) {
+      if (!checkId.startsWith(`${group.category}.`)) {
+        throw new Error(
+          `Issue group ${group.issueId} of category ${group.category} claims ${checkId}`,
+        );
+      }
     }
   }
   const seen = new Map<string, string>();
@@ -203,8 +250,13 @@ export function buildSummary(
 ): DomainHealthSummary {
   const issues = buildIssues(categories, options.groups ?? []);
   const confidence = buildConfidence(categories);
-  const scored = options.mode === "FULL" && options.state === "FINAL";
-  const breakdown = scored ? calculateScore(issues, options.penalties) : undefined;
+  /**
+   * AC-3.5 and AC-12.1 — an overall verdict and an overall score are statements about the whole
+   * domain, so both belong to a FULL scan that has reached FINAL. A PARTIAL scan has looked at
+   * one category; calling that "healthy" would be a claim about the two it never ran.
+   */
+  const overall = options.mode === "FULL" && options.state === "FINAL";
+  const breakdown = overall ? calculateScore(issues, options.penalties) : undefined;
 
   const issueCounts = {
     critical: issues.filter((issue) => issue.severity === "critical").length,
@@ -214,7 +266,7 @@ export function buildSummary(
 
   return {
     state: options.state,
-    ...(options.state === "FINAL" ? { verdictCode: determineVerdict(issues, confidence) } : {}),
+    ...(overall ? { verdictCode: determineVerdict(issues, confidence) } : {}),
     ...(breakdown === undefined ? {} : { score: breakdown.finalScore, scoreBreakdown: breakdown }),
     confidence,
     issueCounts,

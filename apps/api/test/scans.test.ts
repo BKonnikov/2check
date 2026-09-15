@@ -28,6 +28,9 @@ async function fixtureQuery(qname: string): Promise<DnsProviderResult[]> {
   );
 }
 
+/** The four resolvers the default set queries (PRD 8.1). */
+const RESOLVERS = ["google", "cloudflare", "yandex-basic", "quad9-unfiltered"] as const;
+
 /** Golden fixture: RDAP answers determinately, so WHOIS is never consulted (AC-9.1). */
 async function fixtureRegistry(registryDomain: string) {
   return [
@@ -68,7 +71,7 @@ async function fixtureTlsProbe(address: string) {
       subjectAltNames: ["DNS:example.uz"],
       fingerprint256: "AA:BB",
       selfSigned: false,
-      chainTrusted: true,
+      chainVerification: "TRUSTED",
     },
   };
 }
@@ -381,15 +384,19 @@ describe("PRD 11 and 12 — the summary through the API", () => {
     await instance.close();
   });
 
-  it("AC-12.1 — a PARTIAL scan gets a verdict but no numeric score", async () => {
+  it("AC-3.5 and AC-12.1 — a PARTIAL scan gets neither an overall verdict nor a score", async () => {
     const instance = app();
     const body = await complete(instance, {
       input: "example.uz",
       mode: "PARTIAL",
       selectedCategories: ["dns"],
     });
-    expect(body.summary?.verdictCode).toBeDefined();
+    // Both are statements about the whole domain, and a PARTIAL scan looked at one category.
+    expect(body.summary?.verdictCode).toBeUndefined();
     expect(body.summary?.score).toBeUndefined();
+    // The category it did run is still reported in full.
+    expect(body.summary?.state).toBe("FINAL");
+    expect(body.categories.map((category) => category.category)).toEqual(["dns"]);
     await instance.close();
   });
 
@@ -409,14 +416,179 @@ describe("PRD 11 and 12 — the summary through the API", () => {
       registryLookup: fixtureRegistry,
       tlsProbe: fixtureTlsProbe,
     });
-    const body = await complete(instance, {
-      input: "example.uz",
-      mode: "PARTIAL",
-      selectedCategories: ["dns"],
-    });
+    // FULL, because AC-3.5 keeps the overall verdict out of a PARTIAL scan entirely.
+    const body = await complete(instance, { input: "example.uz", mode: "FULL" });
     expect(body.summary?.issues).toEqual([]);
     expect(body.summary?.confidence.level).toBe("REDUCED");
     expect(body.summary?.verdictCode).toBe("NO_CONFIRMED_ISSUES_INCOMPLETE");
+    await instance.close();
+  });
+
+  /**
+   * AC-8.8 and PRD 8.9 — insufficient agreement among the resolvers does not permit a TLS
+   * connection, even when one of them did return an address.
+   */
+  it("AC-8.8 — one resolver answering is not enough to open a TLS connection", async () => {
+    let probed = 0;
+    const instance = buildApp({
+      env,
+      dnsQuery: async (qname: string) =>
+        RESOLVERS.map((provider, index) =>
+          index === 0
+            ? {
+                provider,
+                qname,
+                qtype: "A" as const,
+                transportStatus: "SUCCESS" as const,
+                rcode: "NOERROR" as const,
+                answers: [{ name: qname, type: "A" as const, value: "93.184.216.34", ttl: 300 }],
+                authority: [],
+                receivedAt: "2026-09-15T00:00:00.000Z",
+              }
+            : {
+                provider,
+                qname,
+                qtype: "A" as const,
+                transportStatus: "TIMEOUT" as const,
+                answers: [],
+                authority: [],
+                receivedAt: "2026-09-15T00:00:00.000Z",
+              },
+        ),
+      registryLookup: fixtureRegistry,
+      tlsProbe: async (address: string) => {
+        probed += 1;
+        return fixtureTlsProbe(address);
+      },
+    });
+    const body = await complete(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["tls"],
+    });
+    expect(probed).toBe(0);
+    const tls = body.categories.find((category) => category.category === "tls");
+    expect(tls?.status).toBe("UNKNOWN");
+    expect(tls?.checks.every((check) => check.status !== "PASS" && check.status !== "FAIL")).toBe(
+      true,
+    );
+    expect(tls?.checks.some((check) => check.reasonCode === "dns_quorum_not_reached")).toBe(true);
+    await instance.close();
+  });
+});
+
+/**
+ * PRD 6.4 — the two exposure levels. The public result is the ordinary view; the measurements
+ * behind it live at /details, behind an explicit list of permitted fields.
+ */
+describe("PRD 6.4 and 23.6 — Public and Technical exposure", () => {
+  async function scan(instance: ReturnType<typeof app>) {
+    const created = await createScan(instance, { input: "example.uz", mode: "FULL" });
+    const scanId = created.json().scanId as string;
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      const response = await instance.inject({
+        method: "GET",
+        url: `/api/web/v1/scans/${scanId}`,
+      });
+      const body = response.json();
+      if (body.executionState === "COMPLETED" || body.executionState === "FAILED") {
+        return { scanId, body };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error("scan did not finish");
+  }
+
+  it("AC-6.4 — the public result serialises no internal DTO field", async () => {
+    const instance = app();
+    const { body } = await scan(instance);
+    for (const category of body.categories) {
+      for (const check of category.checks) {
+        // target, source and details are the Technical level and must not travel here.
+        expect(Object.keys(check).sort()).toEqual(
+          expect.not.arrayContaining(["details", "source", "target"]),
+        );
+      }
+    }
+    // Nothing in the public payload carries an address the scan observed.
+    expect(JSON.stringify(body)).not.toContain("93.184.216.34");
+    await instance.close();
+  });
+
+  it("PRD 23.6 — /details serves the permitted measurements", async () => {
+    const instance = app();
+    const { scanId } = await scan(instance);
+    const response = await instance.inject({
+      method: "GET",
+      url: `/api/web/v1/scans/${scanId}/details`,
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    const byId = new Map(body.checks.map((check: { checkId: string }) => [check.checkId, check]));
+
+    const resolve = byId.get("dns.a.resolve") as { details?: Record<string, unknown> };
+    expect(resolve?.details?.answersByProvider).toBeDefined();
+
+    const registry = byId.get("registry.lookup") as { details?: Record<string, unknown> };
+    expect(registry?.details?.registrar).toBe("UZINFOCOM");
+    expect(registry?.details?.nameServers).toEqual(["ns.uz"]);
+
+    const certificate = byId.get("tls.certificate.validity") as {
+      details?: Record<string, unknown>;
+    };
+    expect(certificate?.details?.issuer).toBeDefined();
+    expect(certificate?.details?.validTo).toBeDefined();
+    await instance.close();
+  });
+
+  /**
+   * AC-25.1 and PRD 9.4 — a registrant field travels as a state and never as a value, and the
+   * projection rebuilds the subtree rather than copying it, so a value added upstream cannot
+   * ride along.
+   */
+  it("AC-25.1 — /details carries registrant states, never registrant values", async () => {
+    const instance = buildApp({
+      env,
+      dnsQuery: fixtureQuery,
+      tlsProbe: fixtureTlsProbe,
+      registryLookup: async (registryDomain: string) => {
+        const [entry] = await fixtureRegistry(registryDomain);
+        return [
+          {
+            ...entry,
+            registration: {
+              ...entry?.registration,
+              registrant: {
+                name: { state: "value" as const, value: "Ivan Ivanov" },
+                email: { state: "value" as const, value: "ivan@example.uz" },
+                phone: { state: "redacted" as const },
+                address: { state: "unavailable" as const },
+              },
+            },
+          },
+        ] as Awaited<ReturnType<typeof fixtureRegistry>>;
+      },
+    });
+    const { scanId } = await scan(instance);
+    const response = await instance.inject({
+      method: "GET",
+      url: `/api/web/v1/scans/${scanId}/details`,
+    });
+    const serialised = JSON.stringify(response.json());
+    expect(serialised).not.toContain("Ivan Ivanov");
+    expect(serialised).not.toContain("ivan@example.uz");
+    expect(serialised).toContain('"state":"redacted"');
+    await instance.close();
+  });
+
+  it("returns 404 for a scan that does not exist", async () => {
+    const instance = app();
+    const response = await instance.inject({
+      method: "GET",
+      url: "/api/web/v1/scans/00000000-0000-4000-8000-000000000000/details",
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().errorCode).toBe("scan_not_found");
     await instance.close();
   });
 });

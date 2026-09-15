@@ -5,11 +5,13 @@ import type {
   TlsExecutionMetadata,
 } from "@2check/contracts";
 import {
+  addressEvidenceIsSufficient,
   buildCategoryResult,
   buildDnsCacheKey,
   buildRegistryCacheKey,
   buildSummary,
   collectAddressCandidates,
+  DEFAULT_ISSUE_GROUPS,
   dnsCacheTtlSeconds,
   evaluateNameExistence,
   evaluateRegistryLookup,
@@ -198,6 +200,9 @@ export async function runScan(
         });
 
         let registryAge: number | undefined;
+        // PRD 6.3 and AC-6.5 — checkedAt is when the registry was observed, not when the cache
+        // was read. Without this a six-hour-old entry reports "checked just now, age 6 hours".
+        let registryObservedAt: string | undefined;
         let resolution = {
           outcome: "INDETERMINATE" as const,
           registration: null,
@@ -211,6 +216,7 @@ export async function runScan(
           if (hit !== undefined) {
             resolution = hit.value;
             registryAge = hit.ageSeconds;
+            registryObservedAt = hit.checkedAt;
           } else {
             resolution = resolveRegistryLookup(
               await singleFlight(singleFlightKey(registryKey), () =>
@@ -223,6 +229,7 @@ export async function runScan(
                 registryKey,
                 resolution,
                 registrationCacheTtlSeconds(resolution.registration?.status ?? "UNKNOWN"),
+                resolution.registration?.freshness.checkedAt,
               );
             }
           }
@@ -232,7 +239,10 @@ export async function runScan(
           registryDomain,
           registryProvider: REGISTRY_PROVIDER,
           supported,
-          freshness: freshnessNow(),
+          freshness:
+            registryObservedAt === undefined
+              ? freshnessNow()
+              : { checkedAt: registryObservedAt, cached: false, cacheAge: 0 },
         });
 
         categories.push(
@@ -260,6 +270,21 @@ export async function runScan(
                 decision === "BLOCK" ? "ssrf_policy_block" : "security_validation_incomplete",
                 tlsOptions,
               ),
+            ),
+          );
+          continue;
+        }
+
+        /**
+         * PRD 8.9 and AC-8.8 — insufficient agreement among the resolvers does not permit a TLS
+         * connection, even when individual addresses were obtained. This is checked after the
+         * security decision because a BLOCK is the more specific thing to report.
+         */
+        if (!addressEvidenceIsSufficient(results)) {
+          categories.push(
+            buildCategoryResult(
+              "tls",
+              evaluateTlsBlockedChecks("dns_quorum_not_reached", tlsOptions),
             ),
           );
           continue;
@@ -306,7 +331,11 @@ export async function runScan(
     record.categories = categories;
     // PRD 16.8 — the deterministic server-side order: checks, categories, issues, confidence,
     // verdict, score. The client never assembles the authoritative result.
-    record.summary = buildSummary(categories, { mode: record.mode, state: "FINAL" });
+    record.summary = buildSummary(categories, {
+      groups: DEFAULT_ISSUE_GROUPS,
+      mode: record.mode,
+      state: "FINAL",
+    });
     record.executionState = "COMPLETED";
     record.completedAt = new Date().toISOString();
   } catch {

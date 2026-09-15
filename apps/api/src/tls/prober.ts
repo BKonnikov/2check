@@ -25,6 +25,32 @@ interface PeerCertificate {
   raw?: Buffer;
 }
 
+/**
+ * PRD 10.5 — validity, hostname and chain are three separate findings, so the chain verdict must
+ * not absorb the other two. Node reports a single verification failure for the certificate, and
+ * a hostname mismatch or a date outside the validity window sets it exactly as a broken chain
+ * does. Those two are judged on their own from the certificate's fields, so seeing them here
+ * means the chain was never reached — which is NOT_VERIFIED, not UNTRUSTED.
+ */
+const STOPPED_BEFORE_THE_CHAIN = new Set([
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+]);
+
+function verifyChain(
+  authorized: boolean,
+  authorizationError: string | undefined,
+): "TRUSTED" | "UNTRUSTED" | "NOT_VERIFIED" {
+  if (authorized) {
+    return "TRUSTED";
+  }
+  if (authorizationError === undefined) {
+    return "NOT_VERIFIED";
+  }
+  return STOPPED_BEFORE_THE_CHAIN.has(authorizationError) ? "NOT_VERIFIED" : "UNTRUSTED";
+}
+
 function describe(name: { CN?: string; O?: string } | undefined): string {
   return name?.CN ?? name?.O ?? "";
 }
@@ -54,7 +80,7 @@ function toCertificate(
     subjectAltNames,
     fingerprint256: peer.fingerprint256 ?? "",
     selfSigned,
-    chainTrusted: authorized,
+    chainVerification: verifyChain(authorized, authorizationError),
     ...(authorizationError === undefined ? {} : { chainErrorCode: authorizationError }),
   };
 }
@@ -65,7 +91,7 @@ function toCertificate(
  * (AC-10.2) and the rebinding window stays closed. No HTTP request is ever made.
  *
  * Certificate validation is not delegated to the socket: rejectUnauthorized stays false so an
- * invalid certificate can still be described, and trust is reported through chainTrusted.
+ * invalid certificate can still be described, and trust is reported through chainVerification.
  */
 export function probeEndpoint(
   address: string,

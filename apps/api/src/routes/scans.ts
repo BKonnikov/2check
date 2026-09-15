@@ -4,6 +4,7 @@ import type {
   CreateScanResponse,
   PublicCanonicalDomain,
   ScanCategory,
+  ScanDetailsResponse,
   WebApiError,
   WebScanResponse,
 } from "@2check/contracts";
@@ -12,6 +13,7 @@ import { canonicalizeDomain } from "@2check/domain";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Metrics } from "../observability/metrics.js";
+import { toPublicCategories, toTechnicalDetails } from "../scan/exposure.js";
 import { buildExecutionContext, runScan, type ScanDependencies } from "../scan/orchestrator.js";
 import type { ScanRecord, ScanStore } from "../scan/store.js";
 
@@ -60,7 +62,8 @@ function toResponse(record: ScanRecord): WebScanResponse {
     mode: record.mode,
     canonicalDomain: publicDomain(record.canonicalDomain),
     selectedCategories: record.visibleCategories,
-    categories: record.categories,
+    // PRD 6.4 — the internal DTO is never serialised directly.
+    categories: toPublicCategories(record.categories),
     ...(record.summary === undefined ? {} : { summary: record.summary }),
     startedAt: record.startedAt,
     ...(record.completedAt === undefined ? {} : { completedAt: record.completedAt }),
@@ -193,6 +196,34 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
         deps.metrics?.increment("scan_failed_total");
       }
       return reply.code(200).send(toResponse(record));
+    },
+  );
+
+  /**
+   * PRD 17.1, 6.4 and 23.6 — the Technical exposure level.
+   *
+   * It carries the same checks the public response already named, with the measurements behind
+   * them: what each resolver answered, the certificate facts, the registration record. Every
+   * field is taken from an explicit permitted list (see exposure.ts); registrant values are not
+   * on it, and there is no raw RDAP or WHOIS body here (AC-17.8).
+   */
+  app.get<{ Params: { scanId: string } }>(
+    `${WEB_API_BASE_PATH}/scans/:scanId/details`,
+    async (request, reply) => {
+      const record = await deps.store.get(request.params.scanId);
+      if (record === undefined) {
+        return apiError(reply, 404, {
+          errorCode: "scan_not_found",
+          titleCode: "web.error.scan_not_found",
+          retryable: false,
+        });
+      }
+      const body: ScanDetailsResponse = {
+        scanId: record.scanId,
+        generatedAt: new Date().toISOString(),
+        checks: toTechnicalDetails(record.categories),
+      };
+      return reply.code(200).send(body);
     },
   );
 

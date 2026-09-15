@@ -100,6 +100,11 @@ export const uz: Catalogue = {
     impact: "Bu zanjirga oldindan ishonmaydigan mijozlar ulanishdan bosh tortadi.",
     recommendation: "To'liq zanjirni, shu jumladan oraliq sertifikatlarni ham bering.",
   },
+  "tls.certificate.chain.unknown": {
+    title: "Sertifikat zanjiriga ishonchni tekshirib bo'lmadi",
+    explanation:
+      "Tekshiruv sertifikatdagi boshqa nomuvofiqlikda to'xtadi, shuning uchun zanjirga yetib borilmadi. Bu zanjirda nuqson bor degani emas.",
+  },
   "tls.certificate.chain.blocked": { title: "Sertifikatlar zanjiri baholanmadi" },
 
   "verdict.HEALTHY": { title: "Muammo topilmadi" },

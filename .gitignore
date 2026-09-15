@@ -10,3 +10,6 @@ packages/*/dist/
 *.tsbuildinfo
 .pnpm-store/
 .env.production
+
+# Files Claude delivers into the chat land here when this folder is the connected one.
+/Claude outputs/

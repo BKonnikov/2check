@@ -11,6 +11,7 @@ import {
   buildIssues,
   buildSummary,
   calculateScore,
+  DEFAULT_ISSUE_GROUPS,
   DEFAULT_ISSUE_PENALTIES,
   determineVerdict,
   validateIssueGroups,
@@ -92,11 +93,32 @@ describe("AC-11.3 and AC-11.4 — one root defect, one issue", () => {
     expect(issues.map((issue) => issue.category)).toEqual(["dns", "tls"]);
   });
 
+  /**
+   * AC-11.3 — grouping across categories is rejected at configuration validation, not narrowed
+   * silently at assembly time: a group applied to two categories would emit one issueId twice.
+   */
+  it("rejects a group that claims a check from another category", () => {
+    expect(() =>
+      validateIssueGroups([
+        {
+          issueId: "mixed",
+          category: "dns",
+          primaryCheckId: "dns.a.consistency",
+          checkIds: ["dns.a.consistency", "tls.connection.ipv4"],
+        },
+      ]),
+    ).toThrow(/claims tls\.connection\.ipv4/);
+  });
+
+  it("accepts the grouping the product actually ships", () => {
+    expect(() => validateIssueGroups(DEFAULT_ISSUE_GROUPS)).not.toThrow();
+  });
+
   it("rejects a configuration where one check belongs to two issues", () => {
     expect(() =>
       validateIssueGroups([
-        { issueId: "one", category: "dns", primaryCheckId: "x", checkIds: ["x"] },
-        { issueId: "two", category: "dns", primaryCheckId: "x", checkIds: ["x"] },
+        { issueId: "one", category: "dns", primaryCheckId: "dns.x", checkIds: ["dns.x"] },
+        { issueId: "two", category: "dns", primaryCheckId: "dns.x", checkIds: ["dns.x"] },
       ]),
     ).toThrow(/more than one issue group/);
   });

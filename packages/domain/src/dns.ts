@@ -94,6 +94,30 @@ export function aggregateRecordState(
 }
 
 /**
+ * PRD 8.9 and AC-8.8 — resolver agreement on the address records gates the TLS connection.
+ *
+ * "Insufficient agreement among DNS resolvers does not permit a TLS connection, even when
+ * individual IP addresses were obtained." One resolver answering while three time out is not
+ * evidence of where the domain lives, so a certificate fetched from that one answer would be a
+ * statement about an address nobody else confirmed. A determined state — including a quorum
+ * that agrees the records are absent — is enough; only an undecided one withholds the connection.
+ */
+export function addressEvidenceIsSufficient(
+  results: readonly DnsProviderResult[],
+  minimumQuorum: number = DEFAULT_MINIMUM_QUORUM,
+): boolean {
+  return (["A", "AAAA"] as const).some((qtype) => {
+    const states = results
+      .filter((result) => result.qtype === qtype)
+      .map((result) => deriveRecordState(result));
+    if (states.length === 0) {
+      return false;
+    }
+    return aggregateRecordState(states, minimumQuorum).state !== "INDETERMINATE";
+  });
+}
+
+/**
  * PRD 8.9 — every A/AAAA address any resolver reported, without repetition.
  * An address seen by a minority of resolvers is a candidate too: it still gets validated.
  */

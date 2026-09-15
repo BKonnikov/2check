@@ -290,6 +290,17 @@ export interface TlsCheckSource {
   readonly endpointCoverage: "REPRESENTATIVE";
 }
 
+/**
+ * PRD 10.5 — the outcome of chain verification.
+ *
+ * NOT_VERIFIED is a real third value, not a polite UNTRUSTED. TLS verification stops at the
+ * first fault it finds, and a hostname mismatch or an expired certificate stops it before the
+ * chain has been judged. Saying UNTRUSTED there would invent a second defect out of the first,
+ * and saying TRUSTED would claim a verification that never happened.
+ */
+export const CHAIN_VERIFICATIONS = ["TRUSTED", "UNTRUSTED", "NOT_VERIFIED"] as const;
+export type ChainVerification = (typeof CHAIN_VERIFICATIONS)[number];
+
 /** PRD 10.5 — the certificate facts the MVP evaluates. */
 export interface TlsCertificate {
   readonly subject: string;
@@ -299,7 +310,7 @@ export interface TlsCertificate {
   readonly subjectAltNames: readonly string[];
   readonly fingerprint256: string;
   readonly selfSigned: boolean;
-  readonly chainTrusted: boolean;
+  readonly chainVerification: ChainVerification;
   readonly chainErrorCode?: string;
 }
 
@@ -342,6 +353,55 @@ export interface CategoryResult<TDetails = unknown> {
   readonly severity: Severity;
   readonly completeness: Completeness;
   readonly checks: readonly CheckResult<TDetails>[];
+}
+
+/**
+ * PRD 6.4 — the Public exposure level: the ordinary result view.
+ *
+ * It is a separate type from CheckResult on purpose. The internal DTO is never serialised
+ * directly, so target, source and details — the Technical level — cannot reach a browser by
+ * someone adding a field to CheckResult and forgetting that it is also the wire format.
+ */
+export interface PublicCheckResult {
+  readonly checkId: string;
+  readonly category: ScanCategory;
+  readonly status: CheckStatus;
+  readonly severity: Severity;
+  readonly reasonCode?: string;
+  readonly dependsOn?: readonly string[];
+  readonly dependencyMode?: DependencyMode;
+  readonly blockedBy?: string;
+  readonly message: MessageDescriptor;
+  readonly freshness: CheckFreshness;
+}
+
+/** PRD 7.4 and 6.4 — the public view of one category. */
+export interface PublicCategoryResult {
+  readonly category: ScanCategory;
+  readonly status: CheckStatus;
+  readonly severity: Severity;
+  readonly completeness: Completeness;
+  readonly checks: readonly PublicCheckResult[];
+}
+
+/**
+ * PRD 6.4 and 23.6 — the Technical exposure level, served only by /details and only from an
+ * explicit list of permitted fields. Nothing administrative or internal appears here, and the
+ * registrant subtree carries field states, never field values (PRD 9.4, 25).
+ */
+export interface TechnicalCheckDetail {
+  readonly checkId: string;
+  readonly category: ScanCategory;
+  readonly target: ModuleCheckTarget;
+  readonly source?: ModuleCheckSource;
+  readonly details?: Readonly<Record<string, unknown>>;
+}
+
+/** PRD 17.1 — the response of GET /scans/{scanId}/details. */
+export interface ScanDetailsResponse {
+  readonly scanId: string;
+  readonly generatedAt: string;
+  readonly checks: readonly TechnicalCheckDetail[];
 }
 
 /** PRD 17.5 — the public view of CanonicalDomain never includes originalInput. */
@@ -392,7 +452,7 @@ export interface WebScanResponse {
   readonly canonicalDomain: PublicCanonicalDomain;
   readonly selectedCategories: readonly ScanCategory[];
   readonly progress?: number;
-  readonly categories: readonly CategoryResult[];
+  readonly categories: readonly PublicCategoryResult[];
   readonly summary?: DomainHealthSummary;
   readonly startedAt: string;
   readonly completedAt?: string;

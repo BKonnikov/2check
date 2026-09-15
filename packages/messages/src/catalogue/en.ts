@@ -94,6 +94,11 @@ export const en: Catalogue = {
     impact: "Clients that do not already trust this chain will refuse the connection.",
     recommendation: "Serve the full chain, including the intermediate certificates.",
   },
+  "tls.certificate.chain.unknown": {
+    title: "Chain trust could not be verified",
+    explanation:
+      "Verification stopped at another fault in the certificate, so the chain was never reached. This does not mean the chain is faulty.",
+  },
   "tls.certificate.chain.blocked": { title: "The certificate chain was not evaluated" },
 
   "verdict.HEALTHY": { title: "No problems found" },

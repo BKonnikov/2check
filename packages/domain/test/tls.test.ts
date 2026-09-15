@@ -28,7 +28,7 @@ function certificate(overrides: Partial<TlsCertificate> = {}): TlsCertificate {
     subjectAltNames: ["DNS:example.uz", "DNS:www.example.uz"],
     fingerprint256: "AA:BB",
     selfSigned: false,
-    chainTrusted: true,
+    chainVerification: "TRUSTED",
     ...overrides,
   };
 }
@@ -205,8 +205,45 @@ describe("PRD 10.5 — certificate facts", () => {
     expect(evaluateCertificateChecks(probes, OPTIONS)[0]?.status).toBe("FAIL");
   });
 
+  /**
+   * AC-11.4 — one root defect is one finding. TLS verification stops at the first fault, so a
+   * certificate with the wrong name or the wrong dates never reaches chain verification. The
+   * chain check must say so instead of reporting a second critical failure.
+   */
   it.each([
-    [{ chainTrusted: false }, "untrusted chain"],
+    [
+      "a name that does not match",
+      { subjectAltNames: ["DNS:other.uz"], chainVerification: "NOT_VERIFIED" as const },
+      "tls.certificate.hostname",
+    ],
+    [
+      "an expired certificate",
+      { validTo: "2026-01-02T00:00:00.000Z", chainVerification: "NOT_VERIFIED" as const },
+      "tls.certificate.validity",
+    ],
+  ])("reports the chain as UNKNOWN for %s", (_name, overrides, failing) => {
+    const probes: TlsProbes = {
+      IPV4: {
+        kind: "CONNECTED",
+        address: "1.2.3.4",
+        protocol: "TLSv1.3",
+        certificate: certificate(overrides),
+      },
+      IPV6: { kind: "ABSENT" },
+    };
+    const checks = evaluateCertificateChecks(probes, OPTIONS);
+    const chain = checks.find((check) => check.checkId === "tls.certificate.chain");
+    expect(chain?.status).toBe("UNKNOWN");
+    expect(chain?.reasonCode).toBe("chain_not_verified");
+    expect(chain?.severity).toBe("none");
+    // Exactly one check fails: the one that actually describes the defect.
+    expect(checks.filter((check) => check.status === "FAIL").map((check) => check.checkId)).toEqual(
+      [failing],
+    );
+  });
+
+  it.each([
+    [{ chainVerification: "UNTRUSTED" as const }, "untrusted chain"],
     [{ selfSigned: true }, "self-signed leaf"],
   ])("fails the chain check on %s", (overrides) => {
     const probes: TlsProbes = {
