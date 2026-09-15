@@ -1,8 +1,10 @@
 "use client";
 
+import type { ScanCategory } from "@2check/contracts";
 import { WEB_API_BASE_PATH } from "@2check/contracts";
 import { type Language, resolveMessage } from "@2check/messages";
 import { type FormEvent, useState } from "react";
+import type { Ui } from "./chrome";
 
 interface MessageDescriptorView {
   titleCode: string;
@@ -59,7 +61,7 @@ interface ScanView {
   pollAfterMs?: number;
 }
 
-/** AC-23.9 — status is conveyed by a mark and a word, never by colour alone. */
+/** AC-23.9 — a status is carried by a mark and a word, never by colour alone. */
 const STATUS_MARK: Record<string, string> = {
   PASS: "✓",
   FAIL: "✕",
@@ -67,12 +69,11 @@ const STATUS_MARK: Record<string, string> = {
   NOT_APPLICABLE: "—",
 };
 
-const STATUS_WORD: Record<string, string> = {
-  PASS: "пройдено",
-  FAIL: "проблема",
-  UNKNOWN: "не проверено",
-  NOT_APPLICABLE: "неприменимо",
-};
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? String(values[key]) : match,
+  );
+}
 
 function title(
   titleCode: string,
@@ -95,24 +96,27 @@ function message(descriptor: MessageDescriptorView, language: Language) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusChip({ status, ui }: { status: string; ui: Ui }) {
+  const word = ui.statusWords[status as keyof Ui["statusWords"]] ?? status;
   return (
-    <span className={`status ${status}`}>
-      <span aria-hidden="true">{STATUS_MARK[status] ?? "·"}</span>{" "}
-      <span className="sr-only">{STATUS_WORD[status] ?? status}</span>
+    <span className={`chip chip-${status}`}>
+      <span className="mark" aria-hidden="true">
+        {STATUS_MARK[status] ?? "·"}
+      </span>
+      {word}
     </span>
   );
 }
 
 /** PRD 23.7 — the age of cached data must be visible; completedAt never stands in for checkedAt. */
-function Freshness({ freshness }: { freshness: CheckView["freshness"] }) {
+function Freshness({ freshness, ui }: { freshness: CheckView["freshness"]; ui: Ui }) {
   if (!freshness.cached) {
     return null;
   }
   const minutes = Math.round(freshness.cacheAge / 60);
   return (
-    <span className="freshness" title={`Наблюдение: ${freshness.checkedAt}`}>
-      из кэша{minutes > 0 ? `, ${minutes} мин назад` : ""}
+    <span className="freshness" title={`${ui.observedAt}: ${freshness.checkedAt}`}>
+      {minutes > 0 ? fill(ui.cachedAgo, { minutes }) : ui.cached}
     </span>
   );
 }
@@ -121,21 +125,24 @@ export type { ScanView };
 
 export interface DomainCheckerProps {
   readonly language: Language;
+  readonly ui: Ui;
+  /** PRD 3.3 and 17.2 — a tool page runs PARTIAL over its own category; the home page runs FULL. */
+  readonly categories?: readonly ScanCategory[];
   /** PRD 24.6 and AC-24.6 — a scan already read from the server; nothing is started on load. */
   readonly initialScan?: ScanView | null;
-  readonly startDisabled?: boolean;
 }
 
 export default function DomainChecker({
   language,
+  ui,
+  categories,
   initialScan = null,
-  startDisabled = false,
 }: DomainCheckerProps) {
-  const [input, setInput] = useState("");
+  // PRD 23.8 — re-running a scan read from its own page needs the domain it was run for.
+  const [input, setInput] = useState(initialScan?.canonicalDomain.unicodeHostname ?? "");
   const [scan, setScan] = useState<ScanView | null>(initialScan);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [technical, setTechnical] = useState(false);
 
   async function start(value: string, cacheMode?: "FORCE_REFRESH"): Promise<void> {
     setError(null);
@@ -148,7 +155,10 @@ export default function DomainChecker({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           input: value,
-          mode: "FULL",
+          // PRD 17.2 — FULL carries no selectedCategories; PARTIAL carries a proper subset.
+          ...(categories === undefined || categories.length === 0
+            ? { mode: "FULL" }
+            : { mode: "PARTIAL", selectedCategories: categories }),
           ...(cacheMode === undefined ? {} : { cacheMode }),
         }),
       });
@@ -168,9 +178,9 @@ export default function DomainChecker({
         }
         await new Promise((resolve) => setTimeout(resolve, body.pollAfterMs ?? 400));
       }
-      setError("Проверка не завершилась за отведённое время");
+      setError(ui.errorTimeout);
     } catch {
-      setError("Не удалось связаться с сервисом");
+      setError(ui.errorNetwork);
     } finally {
       setRunning(false);
     }
@@ -188,81 +198,96 @@ export default function DomainChecker({
 
   return (
     <>
-      <form onSubmit={submit}>
+      <form className="search" onSubmit={submit}>
         <label className="sr-only" htmlFor="domain">
-          Домен
+          {ui.inputLabel}
         </label>
         <input
           id="domain"
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="example.uz"
+          placeholder={ui.inputPlaceholder}
           autoComplete="off"
           spellCheck={false}
+          required
         />
-        <button type="submit" disabled={running || startDisabled || input.trim().length === 0}>
-          {running ? "Проверяю…" : "Проверить"}
+        <button type="submit" disabled={running}>
+          {running ? ui.submitBusy : ui.submit}
         </button>
       </form>
+      <p className="hint">{ui.inputHint}</p>
 
       {error !== null && (
-        <div className="panel" role="alert">
+        <div className="card" role="alert">
           <p className="error">{error}</p>
         </div>
       )}
 
       {/* PRD 23.2 — during execution: visible category states, no percentage, no score. */}
       {scan !== null && scan.executionState !== "COMPLETED" && scan.executionState !== "FAILED" && (
-        <div className="panel" aria-live="polite">
-          <h2>Выполняется</h2>
+        <div className="card" aria-live="polite">
+          <h2>{ui.runningHeading}</h2>
           <ul className="running">
             {scan.selectedCategories.map((category) => (
-              <li key={category}>{title(`category.${category}`, language)}</li>
+              <li key={category}>
+                <span className="pulse" aria-hidden="true" />
+                {title(`category.${category}`, language)}
+              </li>
             ))}
           </ul>
         </div>
       )}
 
       {showOverall && summary?.verdictCode !== undefined && (
-        <section className="panel verdict" aria-labelledby="verdict-heading">
-          <div>
+        <section
+          className={`card verdict v-${summary.verdictCode}`}
+          aria-labelledby="verdict-heading"
+        >
+          <div className="verdict-body">
             <h2 id="verdict-heading" className="sr-only">
-              Вердикт
+              {ui.verdictHeading}
             </h2>
             <p className="verdict-line">{title(`verdict.${summary.verdictCode}`, language)}</p>
-            <p className="muted">
-              {title(`confidence.${summary.confidence.level}`, language)}
-              {summary.confidence.unknownChecksCount > 0 &&
-                ` · не удалось проверить: ${summary.confidence.unknownChecksCount}`}
-            </p>
             {message({ titleCode: `verdict.${summary.verdictCode}` }, language).explanation !==
               undefined && (
               <p className="muted">
                 {message({ titleCode: `verdict.${summary.verdictCode}` }, language).explanation}
               </p>
             )}
+            <p className="muted">
+              {title(`confidence.${summary.confidence.level}`, language)}
+              {summary.confidence.unknownChecksCount > 0 &&
+                ` · ${fill(ui.unknownChecks, { count: summary.confidence.unknownChecksCount })}`}
+            </p>
           </div>
           {summary.score !== undefined && (
-            <p className="score">
-              <span className="score-value">{summary.score}</span>
-              <span className="muted"> / 100</span>
-            </p>
+            <div className="score" style={{ ["--value" as string]: summary.score }}>
+              <div className="score-inner">
+                <span className="score-value">{summary.score}</span>
+                <span className="score-label">{ui.scoreLabel}</span>
+              </div>
+            </div>
           )}
         </section>
       )}
 
       {/* AC-23.4 — only confirmed problems appear here; UNKNOWN never does. */}
       {summary !== undefined && summary.issues.length > 0 && (
-        <section className="panel" aria-labelledby="issues-heading">
-          <h2 id="issues-heading">Проблемы</h2>
+        <section className="card" aria-labelledby="issues-heading">
+          <h2 id="issues-heading">{ui.issuesHeading}</h2>
           <ul className="issues">
             {summary.issues.map((issue) => {
               const resolved = message(issue.message, language);
+              const severity = issue.severity as keyof Ui["severityLabels"];
               return (
-                <li key={issue.issueId}>
-                  <p className="issue-title">
-                    <StatusBadge status="FAIL" /> {resolved.title}
-                  </p>
+                <li key={issue.issueId} className={`sev-${issue.severity}`}>
+                  <div className="issue-head">
+                    <p className="issue-title">{resolved.title}</p>
+                    <span className="freshness">
+                      {ui.severityLabels[severity] ?? issue.severity} ·{" "}
+                      {title(`category.${issue.category}`, language)}
+                    </span>
+                  </div>
                   {resolved.explanation !== undefined && (
                     <p className="muted">{resolved.explanation}</p>
                   )}
@@ -279,24 +304,29 @@ export default function DomainChecker({
 
       {scan?.categories.map((category) => (
         <section
-          className="panel"
+          className="card"
           key={category.category}
           aria-labelledby={`cat-${category.category}`}
         >
-          <h2 id={`cat-${category.category}`}>
-            {title(`category.${category.category}`, language)}{" "}
-            {category.completeness === "PARTIAL" && (
-              <span className="muted note">проверено не полностью</span>
-            )}
-          </h2>
+          <div className="cat-head">
+            <h2 className="cat-name" id={`cat-${category.category}`}>
+              {title(`category.${category.category}`, language)}{" "}
+              {category.completeness === "PARTIAL" && (
+                <span className="cat-note">{ui.partialCategory}</span>
+              )}
+            </h2>
+            <StatusChip status={category.status} ui={ui} />
+          </div>
           <ul className="checks">
             {category.checks.map((check) => {
               const resolved = message(check.message, language);
               return (
                 <li key={check.checkId}>
-                  <StatusBadge status={check.status} />
                   <span className="check-title">{resolved.title || check.checkId}</span>
-                  <Freshness freshness={check.freshness} />
+                  <span className="check-meta">
+                    <Freshness freshness={check.freshness} ui={ui} />
+                    <StatusChip status={check.status} ui={ui} />
+                  </span>
                 </li>
               );
             })}
@@ -304,61 +334,51 @@ export default function DomainChecker({
         </section>
       ))}
 
-      {scan !== null && scan.executionState === "COMPLETED" && (
-        <section className="panel">
-          <h2>
-            <button
-              type="button"
-              className="link"
-              aria-expanded={technical}
-              onClick={() => setTechnical((value) => !value)}
-            >
-              Технические подробности
-            </button>
-          </h2>
-          {technical && domain !== undefined && (
-            <div className="technical">
-              <dl>
-                <dt>Имя</dt>
-                <dd>{domain.unicodeHostname}</dd>
-                <dt>ASCII</dt>
-                <dd>{domain.asciiHostname}</dd>
-                <dt>Публичный суффикс</dt>
-                <dd>
-                  {domain.publicSuffix ?? "—"} ({domain.publicSuffixType})
-                </dd>
-                <dt>Регистрируемый домен</dt>
-                <dd>{domain.registrableDomain ?? "—"}</dd>
-              </dl>
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">Проверка</th>
-                      <th scope="col">Статус</th>
-                      <th scope="col">Причина</th>
-                      <th scope="col">Наблюдение</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scan.categories.flatMap((category) =>
-                      category.checks.map((check) => (
-                        <tr key={check.checkId}>
-                          <td className="mono">{check.checkId}</td>
-                          <td>
-                            <StatusBadge status={check.status} /> {check.status}
-                          </td>
-                          <td className="mono">{check.reasonCode ?? "—"}</td>
-                          <td className="mono">{check.freshness.checkedAt}</td>
-                        </tr>
-                      )),
-                    )}
-                  </tbody>
-                </table>
-              </div>
+      {/* PRD 23.6 — technical detail is a disclosure, closed by default and keyboard operable. */}
+      {scan !== null && scan.executionState === "COMPLETED" && domain !== undefined && (
+        <details className="card">
+          <summary>{ui.technicalHeading}</summary>
+          <div className="technical">
+            <dl>
+              <dt>{ui.technicalFields.name}</dt>
+              <dd>{domain.unicodeHostname}</dd>
+              <dt>{ui.technicalFields.ascii}</dt>
+              <dd>{domain.asciiHostname}</dd>
+              <dt>{ui.technicalFields.suffix}</dt>
+              <dd>
+                {domain.publicSuffix ?? "—"} ({domain.publicSuffixType})
+              </dd>
+              <dt>{ui.technicalFields.registrable}</dt>
+              <dd>{domain.registrableDomain ?? "—"}</dd>
+            </dl>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{ui.tableHeads.check}</th>
+                    <th scope="col">{ui.tableHeads.status}</th>
+                    <th scope="col">{ui.tableHeads.reason}</th>
+                    <th scope="col">{ui.tableHeads.observed}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scan.categories.flatMap((category) =>
+                    category.checks.map((check) => (
+                      <tr key={check.checkId}>
+                        <td className="mono">{check.checkId}</td>
+                        <td>
+                          <StatusChip status={check.status} ui={ui} />
+                        </td>
+                        <td className="mono">{check.reasonCode ?? "—"}</td>
+                        <td className="mono">{check.freshness.checkedAt}</td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </section>
+          </div>
+        </details>
       )}
 
       {/* PRD 23.8 — refreshing creates a new FORCE_REFRESH scan, never patches this one. */}
@@ -367,10 +387,10 @@ export default function DomainChecker({
           <button
             type="button"
             className="secondary"
-            disabled={running}
+            disabled={running || input.trim().length === 0}
             onClick={() => void start(input, "FORCE_REFRESH")}
           >
-            Проверить заново
+            {ui.recheck}
           </button>
         </p>
       )}

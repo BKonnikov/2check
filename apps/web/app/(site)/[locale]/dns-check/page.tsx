@@ -5,11 +5,13 @@ import {
   LANGUAGE_OF,
   type Locale,
   localeAlternates,
-} from "../../_components/chrome";
-import DomainChecker from "../../_components/DomainChecker";
+} from "../../../_components/chrome";
+import DomainChecker from "../../../_components/DomainChecker";
 
-const PATH = "/ssl-check";
-const KEY = "ssl" as const;
+const PATH = "/dns-check";
+const KEY = "dns" as const;
+/** PRD 3.3 — this page runs PARTIAL over one category, not a full scan. */
+const CATEGORIES = ["dns"] as const;
 
 export async function generateMetadata({
   params,
@@ -32,13 +34,16 @@ export default async function ToolPage({ params }: { params: Promise<{ locale: s
 
   return (
     <>
-      <section className="panel">
-        <h2>{chrome.toolTitles[KEY]}</h2>
+      <h1>{chrome.toolTitles[KEY]}</h1>
+      <p className="lede">{chrome.toolDescriptions[KEY]}</p>
+      <DomainChecker language={LANGUAGE_OF[key]} ui={chrome.ui} categories={CATEGORIES} />
+      <section className="card">
+        <h2>{chrome.ui.aboutHeading}</h2>
         {chrome.toolBody[KEY].map((paragraph) => (
           <p key={paragraph.slice(0, 32)}>{paragraph}</p>
         ))}
+        <p className="muted">{chrome.ui.scopeNote}</p>
       </section>
-      <DomainChecker language={LANGUAGE_OF[key]} />
     </>
   );
 }

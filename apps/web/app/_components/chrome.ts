@@ -12,6 +12,44 @@ export const LANGUAGE_OF: Readonly<Record<Locale, Language>> = { ru: "ru", uz: "
 
 export const SITE_ORIGIN = process.env.SITE_ORIGIN ?? "https://2check.uz";
 
+/**
+ * PRD 13.6 and AC-13.7 — every interface string exists in every mandatory language.
+ * Keeping it a typed record means a missing translation is a type error, not a silent fallback
+ * to Russian on a page served in Uzbek.
+ */
+export interface Ui {
+  readonly skipToContent: string;
+  readonly navHome: string;
+  readonly homeHeading: string;
+  readonly toolsNav: string;
+  readonly languageNav: string;
+  readonly inputLabel: string;
+  readonly inputPlaceholder: string;
+  readonly inputHint: string;
+  readonly submit: string;
+  readonly submitBusy: string;
+  readonly runningHeading: string;
+  readonly verdictHeading: string;
+  readonly scoreLabel: string;
+  readonly unknownChecks: string;
+  readonly issuesHeading: string;
+  readonly severityLabels: Readonly<Record<"critical" | "warning" | "informational", string>>;
+  readonly statusWords: Readonly<Record<"PASS" | "FAIL" | "UNKNOWN" | "NOT_APPLICABLE", string>>;
+  readonly partialCategory: string;
+  readonly technicalHeading: string;
+  readonly technicalFields: Readonly<Record<"name" | "ascii" | "suffix" | "registrable", string>>;
+  readonly tableHeads: Readonly<Record<"check" | "status" | "reason" | "observed", string>>;
+  readonly recheck: string;
+  readonly cached: string;
+  readonly cachedAgo: string;
+  readonly observedAt: string;
+  readonly errorTimeout: string;
+  readonly errorNetwork: string;
+  readonly aboutHeading: string;
+  readonly scopeNote: string;
+  readonly footerNote: string;
+}
+
 interface Chrome {
   readonly tagline: string;
   readonly homeTitle: string;
@@ -22,6 +60,7 @@ interface Chrome {
   readonly toolBody: Readonly<Record<"dns" | "whois" | "ssl", readonly string[]>>;
   readonly scanTitle: string;
   readonly scanMissing: string;
+  readonly ui: Ui;
 }
 
 /**
@@ -62,6 +101,58 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         "Содержимое страниц не загружается: выполняется только TLS-рукопожатие.",
       ],
     },
+    ui: {
+      skipToContent: "К содержимому",
+      navHome: "Полная проверка",
+      homeHeading: "Проверка домена",
+      toolsNav: "Инструменты",
+      languageNav: "Язык интерфейса",
+      inputLabel: "Домен",
+      inputPlaceholder: "example.uz",
+      inputHint: "Можно вставить адрес целиком — 2check возьмёт из него имя домена.",
+      submit: "Проверить",
+      submitBusy: "Проверяю…",
+      runningHeading: "Выполняется",
+      verdictHeading: "Вердикт",
+      scoreLabel: "из 100",
+      unknownChecks: "не удалось проверить: {count}",
+      issuesHeading: "Что стоит исправить",
+      severityLabels: {
+        critical: "критично",
+        warning: "предупреждение",
+        informational: "к сведению",
+      },
+      statusWords: {
+        PASS: "пройдено",
+        FAIL: "проблема",
+        UNKNOWN: "не проверено",
+        NOT_APPLICABLE: "неприменимо",
+      },
+      partialCategory: "проверено не полностью",
+      technicalHeading: "Технические подробности",
+      technicalFields: {
+        name: "Имя",
+        ascii: "ASCII",
+        suffix: "Публичный суффикс",
+        registrable: "Регистрируемый домен",
+      },
+      tableHeads: {
+        check: "Проверка",
+        status: "Статус",
+        reason: "Причина",
+        observed: "Наблюдение",
+      },
+      recheck: "Проверить заново",
+      cached: "из кэша",
+      cachedAgo: "из кэша, {minutes} мин назад",
+      observedAt: "Наблюдение",
+      errorTimeout: "Проверка не завершилась за отведённое время.",
+      errorNetwork: "Не удалось связаться с сервисом.",
+      aboutHeading: "Что проверяется",
+      scopeNote: "Эта страница запускает только одну проверку. Все три — на главной.",
+      footerNote:
+        "2check показывает то, что видно снаружи: ответы публичных резолверов, данные о регистрации и предъявленный сертификат.",
+    },
     scanTitle: "Результат проверки",
     scanMissing: "Такое сканирование не найдено или срок его хранения истёк.",
   },
@@ -97,43 +188,153 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         "No page content is fetched: only the TLS handshake is performed.",
       ],
     },
+    ui: {
+      skipToContent: "Skip to content",
+      navHome: "Full check",
+      homeHeading: "Domain check",
+      toolsNav: "Tools",
+      languageNav: "Interface language",
+      inputLabel: "Domain",
+      inputPlaceholder: "example.uz",
+      inputHint: "You can paste a whole address — 2check takes the domain name out of it.",
+      submit: "Check",
+      submitBusy: "Checking…",
+      runningHeading: "Running",
+      verdictHeading: "Verdict",
+      scoreLabel: "out of 100",
+      unknownChecks: "could not be checked: {count}",
+      issuesHeading: "What to fix",
+      severityLabels: {
+        critical: "critical",
+        warning: "warning",
+        informational: "for information",
+      },
+      statusWords: {
+        PASS: "passed",
+        FAIL: "problem",
+        UNKNOWN: "not checked",
+        NOT_APPLICABLE: "not applicable",
+      },
+      partialCategory: "not checked in full",
+      technicalHeading: "Technical details",
+      technicalFields: {
+        name: "Name",
+        ascii: "ASCII",
+        suffix: "Public suffix",
+        registrable: "Registrable domain",
+      },
+      tableHeads: {
+        check: "Check",
+        status: "Status",
+        reason: "Reason",
+        observed: "Observed",
+      },
+      recheck: "Check again",
+      cached: "from cache",
+      cachedAgo: "from cache, {minutes} min ago",
+      observedAt: "Observed",
+      errorTimeout: "The check did not finish in the time allowed.",
+      errorNetwork: "Could not reach the service.",
+      aboutHeading: "What is checked",
+      scopeNote: "This page runs a single check. All three are on the home page.",
+      footerNote:
+        "2check reports what is visible from outside: the answers of public resolvers, registration data and the certificate that is presented.",
+    },
     scanTitle: "Scan result",
     scanMissing: "This scan is unknown or has expired.",
   },
+  /**
+   * The Uzbek copy was written by Claude at the owner's request and has NOT been reviewed by a
+   * native speaker — the same caveat CATALOGUE_REVIEW records for the message catalogue.
+   * Until it is read by a person, treat the wording as provisional.
+   */
   uz: {
-    tagline: "Domain technical health explained in plain language.",
-    homeTitle: "2check.uz — domain health check",
+    tagline: "Domenning texnik holatini oddiy til bilan tekshirish.",
+    homeTitle: "2check.uz — domen holatini tekshirish",
     homeDescription:
-      "Check DNS, domain registration and the SSL/TLS certificate, with the result explained plainly.",
+      "DNS, domen ro'yxatdan o'tishi va SSL/TLS sertifikatini tekshirish — natija tushunarli tilda izohlanadi.",
     toolTitles: {
-      dns: "DNS check",
-      whois: "Domain registration check",
-      ssl: "SSL/TLS certificate check",
+      dns: "DNS tekshiruvi",
+      whois: "Domen ro'yxatdan o'tishini tekshirish",
+      ssl: "SSL/TLS sertifikatini tekshirish",
     },
     toolDescriptions: {
-      dns: "Compares the answers of four public resolvers: name existence, records and disagreements.",
-      whois: "Registration data for the .uz zone over RDAP, with a WHOIS fallback.",
-      ssl: "Certificate validity, hostname match and chain trust over IPv4 and IPv6.",
+      dns: "To'rtta ommaviy rezolver javobini solishtirish: nom mavjudligi, yozuvlar va nomuvofiqliklar.",
+      whois:
+        ".uz zonasidagi ro'yxatdan o'tish ma'lumotlari RDAP orqali, zaxira sifatida WHOIS so'rovi.",
+      ssl: "Sertifikat muddati, host nomiga mosligi va zanjir ishonchi — IPv4 va IPv6 manzillari bo'yicha.",
     },
     toolBody: {
       dns: [
-        "2check asks four public resolvers — Google, Cloudflare, Yandex Basic and Quad9 — for the A, AAAA, MX, TXT, NS, CNAME and SOA records, and compares their answers.",
-        "This is a resolver comparison, not a check from several countries: every query leaves from one location. Geographically distributed checking is not part of this version.",
-        "A name that does not exist is reported separately from a name that exists without a record of that type.",
+        "2check A, AAAA, MX, TXT, NS, CNAME va SOA yozuvlarini to'rtta ommaviy rezolverdan — Google, Cloudflare, Yandex Basic va Quad9 — so'raydi va ularning javoblarini o'zaro solishtiradi.",
+        "Bu rezolverlarni solishtirish, turli mamlakatlardan tekshirish emas: barcha so'rovlar bitta joydan yuboriladi. Geografik taqsimlangan tekshiruv bu versiyaga kirmaydi.",
+        "Nom umuman yo'q holati bilan nom bor, ammo shu turdagi yozuv yo'q holati alohida ajratiladi.",
       ],
       whois: [
-        "Registration data is retrieved over RDAP, and where that is not determinate, over WHOIS.",
-        "The .uz zone is supported. For other zones 2check does not check registration and says so, rather than guessing.",
-        "Registrant contact values never reach the result: it shows only whether a field is present, redacted or unavailable.",
+        "Ro'yxatdan o'tish ma'lumotlari RDAP orqali so'raladi, aniq javob bo'lmasa — zaxira WHOIS so'rovi bilan.",
+        ".uz zonasi qo'llab-quvvatlanadi. Boshqa zonadagi domenlarning ro'yxatdan o'tishini 2check tekshirmaydi va taxmin qilish o'rniga buni ochiq aytadi.",
+        "Ro'yxatdan o'tuvchining haqiqiy aloqa ma'lumotlari natijaga tushmaydi: faqat maydon to'ldirilgani, yashirilgani yoki mavjud emasligi ko'rsatiladi.",
       ],
       ssl: [
-        "2check connects to port 443 on one representative address per family — IPv4 and IPv6 — and reads the certificate that is presented.",
-        "It checks validity dates, the hostname against the subject alternative names, and chain trust. Cipher grading, HSTS, OCSP and HTTP checks are not part of this version.",
-        "No page content is fetched: only the TLS handshake is performed.",
+        "2check har bir oila — IPv4 va IPv6 — bo'yicha bitta vakil manzilning 443-portiga ulanadi va taqdim etilgan sertifikatni tahlil qiladi.",
+        "Amal qilish muddati, SAN bo'yicha host nomiga mosligi va zanjir ishonchi tekshiriladi. Shifrlar to'plamini baholash, HSTS, OCSP va HTTP tekshiruvlari bu versiyaga kirmaydi.",
+        "Sahifa mazmuni yuklanmaydi: faqat TLS qo'l siqishi bajariladi.",
       ],
     },
-    scanTitle: "Scan result",
-    scanMissing: "This scan is unknown or has expired.",
+    scanTitle: "Tekshiruv natijasi",
+    scanMissing: "Bunday tekshiruv topilmadi yoki uning saqlash muddati tugagan.",
+    ui: {
+      skipToContent: "Mazmunga o'tish",
+      navHome: "To'liq tekshiruv",
+      homeHeading: "Domen tekshiruvi",
+      toolsNav: "Vositalar",
+      languageNav: "Interfeys tili",
+      inputLabel: "Domen",
+      inputPlaceholder: "example.uz",
+      inputHint: "To'liq manzilni ham qo'yish mumkin — 2check undan domen nomini ajratib oladi.",
+      submit: "Tekshirish",
+      submitBusy: "Tekshirilmoqda…",
+      runningHeading: "Bajarilmoqda",
+      verdictHeading: "Xulosa",
+      scoreLabel: "100 dan",
+      unknownChecks: "tekshirib bo'lmadi: {count}",
+      issuesHeading: "Nimani tuzatish kerak",
+      severityLabels: {
+        critical: "jiddiy",
+        warning: "ogohlantirish",
+        informational: "ma'lumot uchun",
+      },
+      statusWords: {
+        PASS: "o'tdi",
+        FAIL: "muammo",
+        UNKNOWN: "tekshirilmadi",
+        NOT_APPLICABLE: "tegishli emas",
+      },
+      partialCategory: "to'liq tekshirilmadi",
+      technicalHeading: "Texnik tafsilotlar",
+      technicalFields: {
+        name: "Nom",
+        ascii: "ASCII",
+        suffix: "Ommaviy suffiks",
+        registrable: "Ro'yxatga olinadigan domen",
+      },
+      tableHeads: {
+        check: "Tekshiruv",
+        status: "Holat",
+        reason: "Sabab",
+        observed: "Kuzatuv",
+      },
+      recheck: "Qayta tekshirish",
+      cached: "keshdan",
+      cachedAgo: "keshdan, {minutes} daqiqa oldin",
+      observedAt: "Kuzatuv",
+      errorTimeout: "Tekshiruv berilgan vaqt ichida tugamadi.",
+      errorNetwork: "Xizmat bilan bog'lanib bo'lmadi.",
+      aboutHeading: "Nima tekshiriladi",
+      scopeNote: "Bu sahifa faqat bitta tekshiruvni ishga tushiradi. Uchalasi bosh sahifada.",
+      footerNote:
+        "2check tashqaridan ko'rinadigan narsani ko'rsatadi: ommaviy rezolverlar javobi, ro'yxatdan o'tish ma'lumotlari va taqdim etilgan sertifikat.",
+    },
   },
 };
 
@@ -142,17 +343,34 @@ export const INDEXABLE_PATHS = ["", "/dns-check", "/whois", "/ssl-check"] as con
 
 /** PRD 24.3 — each language page is its own canonical and links to the others by hreflang. */
 export function alternates(path: string) {
-  return {
-    canonical: `${SITE_ORIGIN}/ru${path}`,
-    languages: {
-      ru: `${SITE_ORIGIN}/ru${path}`,
-      uz: `${SITE_ORIGIN}/uz${path}`,
-      en: `${SITE_ORIGIN}/en${path}`,
-      "x-default": `${SITE_ORIGIN}${path === "" ? "/" : path}`,
-    },
+  const languages: Record<string, string> = {
+    ru: `${SITE_ORIGIN}/ru${path}`,
+    uz: `${SITE_ORIGIN}/uz${path}`,
+    en: `${SITE_ORIGIN}/en${path}`,
   };
+  /**
+   * PRD 24.1 — "/" may be the neutral entry point and the x-default target, and it is the only
+   * locale-less route that exists. A tool page has no locale-less URL, so naming one as x-default
+   * would publish an hreflang pointing at a 404; those pages simply carry no x-default.
+   */
+  if (path === "") {
+    languages["x-default"] = `${SITE_ORIGIN}/`;
+  }
+  return { canonical: `${SITE_ORIGIN}/ru${path}`, languages };
 }
 
 export function localeAlternates(locale: Locale, path: string) {
   return { ...alternates(path), canonical: `${SITE_ORIGIN}/${locale}${path}` };
 }
+
+/** The same page in another language: only the locale segment changes. */
+export function switchLocale(locale: Locale, path: string): string {
+  return `/${locale}${path}`;
+}
+
+/** PRD 24.1 — the label each locale is offered under, written in that locale. */
+export const LOCALE_NAMES: Readonly<Record<Locale, string>> = {
+  ru: "Рус",
+  uz: "O'zb",
+  en: "Eng",
+};
