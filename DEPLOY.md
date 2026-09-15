@@ -32,8 +32,26 @@ dnf -y remove podman runc buildah
 
 SELinux мешать не будет: в compose используются только именованные тома, bind-mount'ов нет.
 
-Ещё нужен HAProxy, уже обслуживающий `2check.uz` по HTTPS, — этот файл ничего наружу не
-публикует и рассчитывает, что TLS терминируется выше.
+### Как устроен вход
+
+```text
+браузер --HTTPS--> HAProxy (внешний кластер) --HTTP--> nginx :80 --> 127.0.0.1:3000
+```
+
+HTTPS терминируется вне этой ВМ. Compose ничего наружу не публикует: контейнер `web` слушает
+только loopback, а перед ним стоит локальный nginx, который и принимает трафик от HAProxy.
+Образец конфигурации — `deploy/nginx.example.conf`.
+
+Если nginx на ВМ ещё не стоит:
+
+```bash
+dnf -y install nginx
+systemctl enable --now nginx
+```
+
+Что уточнить у команды, обслуживающей HAProxy: на какой адрес и порт ВМ он ходит, какой
+передаёт заголовок `Host` и ставит ли `X-Forwarded-Proto`. Пока это неизвестно, блок nginx
+помечен `default_server` — тогда он отвечает независимо от `Host`.
 
 ## Проверка исходящей сети
 
@@ -104,7 +122,20 @@ docker compose -f docker-compose.prod.yml up -d api web
 Миграции — отдельный шаг, а не побочный эффект запуска сервиса (§27.4). Выполняются под
 advisory-блокировкой, поэтому одновременный запуск двух экземпляров схему не сломает.
 
-Затем добавьте backend в HAProxy — образец в `deploy/haproxy.example.cfg`.
+Затем поднимите nginx перед контейнером — образец в `deploy/nginx.example.conf`:
+
+```bash
+cp deploy/nginx.example.conf /etc/nginx/conf.d/2check.conf
+setsebool -P httpd_can_network_connect 1   # нужно только при SELinux в Enforcing
+nginx -t && systemctl reload nginx
+
+curl -s -H 'Host: 2check.uz' http://127.0.0.1/ru | grep -oE '<title>[^<]*</title>'
+```
+
+Должно вернуть заголовок страницы, а не заглушку nginx. Если видите «Test Page» — запрос до
+контейнера не дошёл: проверьте, что `web` поднят и слушает `127.0.0.1:3000`.
+
+После этого попросите инфраструктуру направить бэкенд HAProxy на эту ВМ по порту 80.
 
 ## Проверка после запуска
 
