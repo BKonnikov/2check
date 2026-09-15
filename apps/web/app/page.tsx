@@ -8,7 +8,14 @@ interface CheckView {
   status: string;
   severity: string;
   reasonCode?: string;
-  details?: { state?: string; answersByProvider?: Record<string, string[]> };
+  details?: {
+    state?: string;
+    answersByProvider?: Record<string, string[]>;
+    status?: string;
+    registrar?: string | null;
+    expiresAt?: string | null;
+    nameServers?: string[];
+  } | null;
 }
 
 interface ScanView {
@@ -27,10 +34,16 @@ interface ScanView {
 }
 
 function observedValues(check: CheckView): string {
-  const byProvider = check.details?.answersByProvider ?? {};
-  const values = new Set(Object.values(byProvider).flat());
-  const listed = [...values].slice(0, 4);
-  return values.size > 4 ? `${listed.join(", ")}, …` : listed.join(", ");
+  const details = check.details;
+  if (details?.answersByProvider !== undefined) {
+    const values = new Set(Object.values(details.answersByProvider).flat());
+    const listed = [...values].slice(0, 4);
+    return values.size > 4 ? `${listed.join(", ")}, …` : listed.join(", ");
+  }
+  if (details?.registrar !== undefined || details?.expiresAt !== undefined) {
+    return [details.registrar, details.expiresAt].filter((part) => part).join(" · ");
+  }
+  return "";
 }
 
 export default function HomePage() {
@@ -49,7 +62,7 @@ export default function HomePage() {
       const created = await fetch(`${WEB_API_BASE_PATH}/scans`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ input, mode: "PARTIAL", selectedCategories: ["dns"] }),
+        body: JSON.stringify({ input, mode: "PARTIAL", selectedCategories: ["dns", "registry"] }),
       });
       const acceptance = await created.json();
       if (!created.ok) {
@@ -80,7 +93,9 @@ export default function HomePage() {
   return (
     <main>
       <h1>2check.uz</h1>
-      <p className="lede">Проверка технического здоровья домена. Пока доступна категория DNS.</p>
+      <p className="lede">
+        Проверка технического здоровья домена. Пока доступны категории DNS и регистрация.
+      </p>
 
       <form onSubmit={submit}>
         <input
@@ -150,7 +165,7 @@ export default function HomePage() {
                       <span className="severity">{check.reasonCode}</span>
                     )}
                   </td>
-                  <td className="muted">{check.details?.state ?? "—"}</td>
+                  <td className="muted">{check.details?.state ?? check.details?.status ?? "—"}</td>
                   <td className="values">{observedValues(check)}</td>
                 </tr>
               ))}

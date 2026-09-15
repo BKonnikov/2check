@@ -28,8 +28,34 @@ async function fixtureQuery(qname: string): Promise<DnsProviderResult[]> {
   );
 }
 
+/** Golden fixture: RDAP answers determinately, so WHOIS is never consulted (AC-9.1). */
+async function fixtureRegistry(registryDomain: string) {
+  return [
+    {
+      transport: "RDAP" as const,
+      registration: {
+        registryDomain,
+        registrar: "UZINFOCOM",
+        createdAt: "2005-05-01T00:00:00Z",
+        expiresAt: "2030-01-01T00:00:00Z",
+        nameServers: ["ns.uz"],
+        status: "ACTIVE" as const,
+        rawStatus: ["active"],
+        registrant: {
+          name: { state: "value" as const },
+          email: { state: "redacted" as const },
+          phone: { state: "unavailable" as const },
+          address: { state: "value" as const },
+        },
+        freshness: { checkedAt: "2026-09-15T00:00:00.000Z", cached: false, cacheAge: 0 },
+      },
+      confirmedNotRegistered: false,
+    },
+  ];
+}
+
 function app() {
-  return buildApp({ env, dnsQuery: fixtureQuery });
+  return buildApp({ env, dnsQuery: fixtureQuery, registryLookup: fixtureRegistry });
 }
 
 async function createScan(instance: ReturnType<typeof app>, payload: unknown) {
@@ -174,6 +200,68 @@ describe("AC-17.2 and AC-17.4 — the authoritative result is read through GET",
       url: "/api/web/v1/scans/00000000-0000-0000-0000-000000000000",
     });
     expect(response.statusCode).toBe(404);
+    await instance.close();
+  });
+});
+
+describe("PRD 9 — the registry category through the API", () => {
+  it("reports registry alongside dns and keeps registrant values out of the response", async () => {
+    const instance = app();
+    const created = await createScan(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["dns", "registry"],
+    });
+    expect(created.statusCode).toBe(202);
+
+    let body: WebScanResponse | undefined;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const response = await instance.inject({
+        method: "GET",
+        url: `/api/web/v1/scans/${created.json().scanId}`,
+      });
+      body = response.json();
+      if (body?.executionState === "COMPLETED" || body?.executionState === "FAILED") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    expect(body?.executionState).toBe("COMPLETED");
+    expect(body?.categories.map((category) => category.category)).toEqual(["dns", "registry"]);
+
+    const registry = body?.categories.find((category) => category.category === "registry");
+    expect(registry?.status).toBe("PASS");
+    expect(registry?.checks[0]?.checkId).toBe("registry.lookup");
+    expect(JSON.stringify(body)).not.toContain("@");
+    await instance.close();
+  });
+
+  it("answers provider_not_supported for a zone outside .uz", async () => {
+    const instance = app();
+    const created = await createScan(instance, {
+      input: "example.com",
+      mode: "PARTIAL",
+      selectedCategories: ["registry"],
+    });
+
+    let body: WebScanResponse | undefined;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const response = await instance.inject({
+        method: "GET",
+        url: `/api/web/v1/scans/${created.json().scanId}`,
+      });
+      body = response.json();
+      if (body?.executionState === "COMPLETED" || body?.executionState === "FAILED") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    const check = body?.categories[0]?.checks[0];
+    expect(check?.status).toBe("UNKNOWN");
+    expect(check?.reasonCode).toBe("provider_not_supported");
+    expect(check?.source).toBeUndefined();
     await instance.close();
   });
 });

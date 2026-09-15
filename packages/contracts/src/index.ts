@@ -210,9 +210,71 @@ export interface DnsCheckSource {
   readonly providers: readonly string[];
 }
 
-/** PRD 6.2 — registry and TLS variants join these once their modules exist. */
-export type ModuleCheckTarget = DnsCheckTarget;
-export type ModuleCheckSource = DnsCheckSource;
+/** PRD 9.2 — the outcome of a registry lookup. */
+export const REGISTRY_OUTCOMES = ["REGISTERED", "NOT_REGISTERED", "INDETERMINATE"] as const;
+export type RegistryOutcome = (typeof REGISTRY_OUTCOMES)[number];
+
+/** PRD 9.3 — the canonical lifecycle. The provider's own wording is kept in rawStatus. */
+export const REGISTRATION_STATUSES = [
+  "REGISTRATION_INITIATED",
+  "PENDING_ACTIVATION",
+  "ACTIVE",
+  "PENDING_RENEWAL",
+  "REDEMPTION_PERIOD",
+  "FREE",
+  "DEACTIVATED",
+  "CANCELLED",
+  "RESERVED",
+  "AUCTION",
+  "UNKNOWN",
+] as const;
+export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number];
+
+/** PRD 9.4 — only the state travels in the public result; the value lives apart (PRD 19.8, 25). */
+export const REGISTRANT_FIELD_STATES = ["value", "redacted", "unavailable"] as const;
+export type RegistrantFieldState = (typeof REGISTRANT_FIELD_STATES)[number];
+
+export interface RegistrantField {
+  readonly state: RegistrantFieldState;
+}
+
+export const REGISTRY_TRANSPORTS = ["RDAP", "WHOIS"] as const;
+export type RegistryTransport = (typeof REGISTRY_TRANSPORTS)[number];
+
+/** PRD 9.4 */
+export interface NormalizedDomainRegistration {
+  readonly registryDomain: string;
+  readonly registrar: string | null;
+  readonly createdAt: string | null;
+  readonly expiresAt: string | null;
+  readonly nameServers: readonly string[];
+  readonly status: RegistrationStatus;
+  readonly rawStatus: readonly string[];
+  readonly registrant: {
+    readonly name: RegistrantField;
+    readonly email: RegistrantField;
+    readonly phone: RegistrantField;
+    readonly address: RegistrantField;
+  };
+  readonly freshness: CheckFreshness;
+}
+
+/** PRD 9.4 */
+export interface RegistryCheckTarget {
+  readonly kind: "REGISTRY_DOMAIN";
+  readonly registryDomain: string;
+}
+
+/** PRD 9.4 — transportsUsed records the strategy that actually produced the final result. */
+export interface RegistryCheckSource {
+  readonly kind: "REGISTRY_PROVIDER";
+  readonly registryProvider: string;
+  readonly transportsUsed: readonly RegistryTransport[];
+}
+
+/** PRD 6.2 — the TLS variant joins these once its module exists. */
+export type ModuleCheckTarget = DnsCheckTarget | RegistryCheckTarget;
+export type ModuleCheckSource = DnsCheckSource | RegistryCheckSource;
 
 /** PRD 6.2 */
 export interface CheckResult<TDetails = unknown> {

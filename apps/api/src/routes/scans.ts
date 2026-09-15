@@ -11,7 +11,7 @@ import { WEB_API_BASE_PATH } from "@2check/contracts";
 import { canonicalizeDomain } from "@2check/domain";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
-import { buildExecutionContext, type DnsQuery, runDnsScan } from "../scan/orchestrator.js";
+import { buildExecutionContext, runScan, type ScanDependencies } from "../scan/orchestrator.js";
 import type { ScanRecord, ScanStore } from "../scan/store.js";
 
 /** PRD 17.2 and 17.9 — unknown top-level fields are rejected and enums are validated strictly. */
@@ -27,7 +27,7 @@ const createScanSchema = z
 const POLL_AFTER_MS = 400;
 
 /** Categories this deployment can actually execute. Registry and TLS are not implemented yet. */
-const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns"];
+const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry"];
 
 function apiError(
   reply: FastifyReply,
@@ -67,9 +67,8 @@ function toResponse(record: ScanRecord): WebScanResponse {
   };
 }
 
-export interface ScanRouteDependencies {
+export interface ScanRouteDependencies extends ScanDependencies {
   readonly store: ScanStore;
-  readonly dnsQuery?: DnsQuery;
 }
 
 export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependencies): void {
@@ -153,7 +152,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
     deps.store.create(record);
 
     // PRD 17.3 — POST acknowledges acceptance; it never terminalizes, even on a full cache hit.
-    void runDnsScan(record, deps.dnsQuery).catch(() => {
+    void runScan(record, deps).catch(() => {
       record.executionState = "FAILED";
       record.failure = {
         failureCode: "orchestration_error",

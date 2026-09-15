@@ -67,7 +67,7 @@ pnpm build
 pnpm test
 ```
 
-`pnpm dev` starts the internal web API on port 3001 and the web interface on 3000. Open http://localhost:3000 and enter a domain: the DNS category works today — four-resolver comparison, name existence, and answer consistency.
+`pnpm dev` starts the internal web API on port 3001 and the web interface on 3000. Open http://localhost:3000 and enter a domain: two categories work today: DNS — four-resolver comparison, name existence and answer consistency — and registration, over RDAP for the `.uz` zone with a WHOIS fallback.
 
 A developer inspector prints what the finished modules produce for one input:
 
