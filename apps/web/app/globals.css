@@ -726,6 +726,23 @@ details.section[open] > summary {
   margin-bottom: 20px;
 }
 
+.technical-note {
+  margin: 0 0 22px;
+  max-width: 68ch;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.check-name {
+  display: block;
+}
+.check-id {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  word-break: break-all;
+}
+
 .technical dl {
   display: grid;
   grid-template-columns: 220px 1fr;

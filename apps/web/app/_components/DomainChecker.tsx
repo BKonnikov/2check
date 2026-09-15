@@ -69,6 +69,25 @@ const STATUS_MARK: Record<string, string> = {
   NOT_APPLICABLE: "—",
 };
 
+const DATE_LOCALE: Record<Language, string> = { ru: "ru-RU", uz: "uz-UZ", en: "en-GB" };
+
+/**
+ * PRD 23.7 — this is the moment of observation, so it is shown as a moment a reader recognises
+ * rather than an ISO string. The server renders it in its own zone and the browser in the
+ * reader's, which is exactly the case suppressHydrationWarning exists for; the exact instant
+ * stays available in the title attribute.
+ */
+function moment(iso: string, language: Language): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) {
+    return iso;
+  }
+  return parsed.toLocaleString(DATE_LOCALE[language], {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
 function fill(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in values ? String(values[key]) : match,
@@ -106,13 +125,24 @@ function StatusMark({ status, ui }: { status: string; ui: Ui }) {
 }
 
 /** PRD 23.7 — the age of cached data must be visible; completedAt never stands in for checkedAt. */
-function Freshness({ freshness, ui }: { freshness: CheckView["freshness"]; ui: Ui }) {
+function Freshness({
+  freshness,
+  ui,
+  language,
+}: {
+  freshness: CheckView["freshness"];
+  ui: Ui;
+  language: Language;
+}) {
   if (!freshness.cached) {
     return null;
   }
   const minutes = Math.round(freshness.cacheAge / 60);
   return (
-    <span className="freshness" title={`${ui.observedAt}: ${freshness.checkedAt}`}>
+    <span
+      className="freshness"
+      title={`${ui.observedAt}: ${moment(freshness.checkedAt, language)}`}
+    >
       {minutes > 0 ? fill(ui.cachedAgo, { minutes }) : ui.cached}
     </span>
   );
@@ -322,7 +352,7 @@ export default function DomainChecker({
                 <li key={check.checkId}>
                   <span className="check-title">{resolved.title || check.checkId}</span>
                   <span className="check-meta">
-                    <Freshness freshness={check.freshness} ui={ui} />
+                    <Freshness freshness={check.freshness} ui={ui} language={language} />
                     <StatusMark status={check.status} ui={ui} />
                   </span>
                 </li>
@@ -337,6 +367,7 @@ export default function DomainChecker({
         <details className="section">
           <summary>{ui.technicalHeading}</summary>
           <div className="technical">
+            <p className="technical-note">{ui.technicalNote}</p>
             <dl>
               <dt>{ui.technicalFields.name}</dt>
               <dd>{domain.unicodeHostname}</dd>
@@ -363,12 +394,26 @@ export default function DomainChecker({
                   {scan.categories.flatMap((category) =>
                     category.checks.map((check) => (
                       <tr key={check.checkId}>
-                        <td className="mono">{check.checkId}</td>
+                        <td>
+                          <span className="check-name">
+                            {message(check.message, language).title || check.checkId}
+                          </span>
+                          <span className="check-id">{check.checkId}</span>
+                        </td>
                         <td>
                           <StatusMark status={check.status} ui={ui} />
                         </td>
                         <td className="mono">{check.reasonCode ?? "—"}</td>
-                        <td className="mono">{check.freshness.checkedAt}</td>
+                        <td>
+                          <time
+                            className="mono"
+                            dateTime={check.freshness.checkedAt}
+                            title={check.freshness.checkedAt}
+                            suppressHydrationWarning
+                          >
+                            {moment(check.freshness.checkedAt, language)}
+                          </time>
+                        </td>
                       </tr>
                     )),
                   )}

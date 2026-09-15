@@ -38,6 +38,7 @@ export interface Ui {
   readonly statusWords: Readonly<Record<"PASS" | "FAIL" | "UNKNOWN" | "NOT_APPLICABLE", string>>;
   readonly partialCategory: string;
   readonly technicalHeading: string;
+  readonly technicalNote: string;
   readonly technicalFields: Readonly<Record<"name" | "ascii" | "suffix" | "registrable", string>>;
   readonly tableHeads: Readonly<Record<"check" | "status" | "reason" | "observed", string>>;
   readonly recheck: string;
@@ -132,6 +133,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       },
       partialCategory: "проверено не полностью",
       technicalHeading: "Технические подробности",
+      technicalNote:
+        "Ниже — то же самое, но так, как проверки называются внутри 2check. Это нужно, если вы пересылаете результат администратору сайта или хостингу: по идентификатору и коду они сразу поймут, о какой проверке речь.",
       technicalFields: {
         name: "Имя",
         ascii: "ASCII",
@@ -141,8 +144,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       tableHeads: {
         check: "Проверка",
         status: "Статус",
-        reason: "Причина",
-        observed: "Наблюдение",
+        reason: "Код причины",
+        observed: "Когда проверено",
       },
       recheck: "Проверить заново",
       cached: "из кэша",
@@ -220,6 +223,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       },
       partialCategory: "not checked in full",
       technicalHeading: "Technical details",
+      technicalNote:
+        "The same results under the names 2check uses internally. Useful when you forward the result to a site administrator or a hosting provider: the identifier and the code tell them exactly which check is meant.",
       technicalFields: {
         name: "Name",
         ascii: "ASCII",
@@ -229,8 +234,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       tableHeads: {
         check: "Check",
         status: "Status",
-        reason: "Reason",
-        observed: "Observed",
+        reason: "Reason code",
+        observed: "Checked at",
       },
       recheck: "Check again",
       cached: "from cache",
@@ -316,6 +321,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       },
       partialCategory: "to'liq tekshirilmadi",
       technicalHeading: "Texnik tafsilotlar",
+      technicalNote:
+        "Xuddi shu natijalar, lekin 2check ichida ishlatiladigan nomlar bilan. Natijani sayt ma'muriga yoki hosting provayderiga yuborsangiz, identifikator va kod bo'yicha ular qaysi tekshiruv haqida ekanini darhol tushunadi.",
       technicalFields: {
         name: "Nom",
         ascii: "ASCII",
@@ -325,8 +332,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       tableHeads: {
         check: "Tekshiruv",
         status: "Holat",
-        reason: "Sabab",
-        observed: "Kuzatuv",
+        reason: "Sabab kodi",
+        observed: "Qachon tekshirildi",
       },
       recheck: "Qayta tekshirish",
       cached: "keshdan",
@@ -378,3 +385,51 @@ export const LOCALE_NAMES: Readonly<Record<Locale, string>> = {
   uz: "O'zb",
   en: "Eng",
 };
+
+/** The cookie a reader's explicit language choice is remembered in. */
+export const LOCALE_COOKIE = "2check-locale";
+
+/**
+ * PRD 24.1 — "/" is a neutral entry point, so it has to decide which language to serve.
+ *
+ * An explicit choice made with the language control wins over everything. Otherwise the browser's
+ * Accept-Language decides, by quality value, matching on the primary subtag so that uz-Cyrl-UZ
+ * and uz-Latn both count as Uzbek. Russian is the fallback when nothing matches, including for a
+ * crawler, which usually sends no Accept-Language at all.
+ */
+export function negotiateLocale(acceptLanguage: string | null, chosen?: string | null): Locale {
+  if (chosen !== undefined && chosen !== null && isLocale(chosen)) {
+    return chosen;
+  }
+  if (acceptLanguage === null || acceptLanguage.trim() === "") {
+    return "ru";
+  }
+
+  const ranked = acceptLanguage
+    .split(",")
+    .map((part, index) => {
+      const [tag = "", ...parameters] = part.trim().split(";");
+      const quality = parameters
+        .map((parameter) => /^\s*q\s*=\s*([\d.]+)\s*$/.exec(parameter))
+        .find((match) => match !== null);
+      const weight = quality === undefined ? 1 : Number.parseFloat(quality[1] ?? "1");
+      return {
+        primary: tag.trim().toLowerCase().split("-")[0] ?? "",
+        weight: Number.isFinite(weight) ? weight : 0,
+        index,
+      };
+    })
+    .filter((entry) => entry.weight > 0 && entry.primary !== "")
+    // A stable order: quality first, then the order the browser listed them in.
+    .sort((a, b) => b.weight - a.weight || a.index - b.index);
+
+  for (const entry of ranked) {
+    if (entry.primary === "*") {
+      return "ru";
+    }
+    if (isLocale(entry.primary)) {
+      return entry.primary;
+    }
+  }
+  return "ru";
+}

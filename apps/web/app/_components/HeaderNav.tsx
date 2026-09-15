@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { LOCALE_COOKIE } from "./chrome";
 import ThemeToggle from "./ThemeToggle";
 
 export interface NavTab {
@@ -14,6 +15,20 @@ export interface LocaleOption {
 }
 
 /** The locale segment of the current path, so switching language keeps the page. */
+/**
+ * Choosing a language here is an explicit decision, so "/" honours it on the next visit instead
+ * of falling back to the browser's Accept-Language. A year-long functional cookie holding one of
+ * three locale codes is the whole mechanism; it carries nothing else.
+ */
+function remember(locale: string): void {
+  try {
+    // biome-ignore lint/suspicious/noDocumentCookie: the Cookie Store API is still missing in Safari and Firefox.
+    document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // A browser that refuses cookies still follows the link.
+  }
+}
+
 const LOCALE_PREFIX = /^\/(?:ru|uz|en)(?=\/|$)/;
 
 /**
@@ -52,6 +67,7 @@ export default function HeaderNav({
                 key={option.code}
                 href={`/${option.code}${withoutLocale}`}
                 hrefLang={option.code}
+                onClick={() => remember(option.code)}
                 {...(option.code === locale ? { "aria-current": "page" as const } : {})}
               >
                 {option.name}

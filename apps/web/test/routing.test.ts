@@ -5,6 +5,7 @@ import {
   INDEXABLE_PATHS,
   LOCALES,
   localeAlternates,
+  negotiateLocale,
 } from "../app/_components/chrome";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
@@ -146,5 +147,41 @@ describe("AC-13.7 — the interface is translated, not duplicated", () => {
       // Only strings that are the same word in every language may coincide.
       expect(shared).toEqual(shared.filter((value) => /^[A-Za-z0-9./ ]+$/.test(value)));
     }
+  });
+});
+
+/**
+ * PRD 24.1 — "/" is the neutral entry point, so it has to choose a language for a reader who
+ * has not chosen one. The explicit choice always wins; otherwise the browser decides.
+ */
+describe("PRD 24.1 — the neutral entry point negotiates a language", () => {
+  it("honours an explicit choice over the browser", () => {
+    expect(negotiateLocale("en-GB,en;q=0.9", "uz")).toBe("uz");
+    expect(negotiateLocale(null, "en")).toBe("en");
+  });
+
+  it("ignores a cookie that is not one of the served locales", () => {
+    expect(negotiateLocale("en-GB,en;q=0.9", "de")).toBe("en");
+    expect(negotiateLocale("en-GB,en;q=0.9", "../ru")).toBe("en");
+  });
+
+  it("reads the browser's order and quality values", () => {
+    expect(negotiateLocale("uz-UZ,uz;q=0.9,ru;q=0.8,en;q=0.7")).toBe("uz");
+    expect(negotiateLocale("en-US;q=0.6,ru-RU;q=0.9")).toBe("ru");
+    expect(negotiateLocale("en-GB,en")).toBe("en");
+  });
+
+  it("matches on the primary subtag, whatever the script", () => {
+    expect(negotiateLocale("uz-Cyrl-UZ")).toBe("uz");
+    expect(negotiateLocale("uz-Latn")).toBe("uz");
+  });
+
+  it("falls back to Russian for anything it does not serve", () => {
+    expect(negotiateLocale(null)).toBe("ru");
+    expect(negotiateLocale("")).toBe("ru");
+    expect(negotiateLocale("de-DE,fr;q=0.8")).toBe("ru");
+    expect(negotiateLocale("*")).toBe("ru");
+    // A zero quality value is an explicit refusal, not a preference.
+    expect(negotiateLocale("en;q=0,uz;q=0.5")).toBe("uz");
   });
 });
