@@ -18,13 +18,16 @@ const app = buildApp({
   probes: [
     {
       name: "scan-store",
+      required: true,
       check: async () => {
         await assertSchemaCompatible(pool);
       },
     },
     {
-      // PRD 14.1 and AC-14.1 — Redis is a mandatory component of the MVP.
+      // PRD 21.6 and AC-21.5 — an unavailable Redis is a degraded state, not an unready
+      // instance: the safe bypass keeps results correct, only slower.
       name: "reusable-cache",
+      required: false,
       check: async () => {
         await redis.ping();
       },

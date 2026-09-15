@@ -11,6 +11,7 @@ import { WEB_API_BASE_PATH } from "@2check/contracts";
 import { canonicalizeDomain } from "@2check/domain";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
+import type { Metrics } from "../observability/metrics.js";
 import { buildExecutionContext, runScan, type ScanDependencies } from "../scan/orchestrator.js";
 import type { ScanRecord, ScanStore } from "../scan/store.js";
 
@@ -70,6 +71,7 @@ function toResponse(record: ScanRecord): WebScanResponse {
 
 export interface ScanRouteDependencies extends ScanDependencies {
   readonly store: ScanStore;
+  readonly metrics?: Metrics;
 }
 
 export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependencies): void {
@@ -155,6 +157,10 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       categories: [],
     };
     await deps.store.create(record);
+    deps.metrics?.increment("scan_started_total");
+    if (cacheMode === "FORCE_REFRESH") {
+      deps.metrics?.increment("force_refresh_total");
+    }
 
     // PRD 17.3 — POST acknowledges acceptance; it never terminalizes, even on a full cache hit.
     void runScan(record, deps.store, deps).catch(() => undefined);
@@ -179,7 +185,32 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
         });
       }
       // PRD 17.7 and AC-17.4 — HTTP status never encodes domain health.
+      // PRD 21.1 and AC-21.7 — a domain FAIL is a product result, never a platform error.
+      if (record.executionState === "COMPLETED") {
+        deps.metrics?.increment("scan_completed_total");
+      }
+      if (record.executionState === "FAILED") {
+        deps.metrics?.increment("scan_failed_total");
+      }
       return reply.code(200).send(toResponse(record));
     },
+  );
+
+  /**
+   * PRD 17.1 and 25.3 — the gated registrant resource.
+   *
+   * AC-25.2 — knowing a scanId is deliberately not enough. The MVP defines no server-side
+   * clearance condition, so there is nothing that can satisfy the gate and the endpoint refuses
+   * every request. Returning 403 with no body of registrant data is the specified behaviour:
+   * without a trustworthy clearance condition, personal data is not returned at all.
+   */
+  app.get<{ Params: { scanId: string } }>(
+    `${WEB_API_BASE_PATH}/scans/:scanId/registry/registrant`,
+    async (_request, reply) =>
+      apiError(reply, 403, {
+        errorCode: "gated_access_denied",
+        titleCode: "web.error.gated_access_denied",
+        retryable: false,
+      }),
   );
 }
