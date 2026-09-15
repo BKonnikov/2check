@@ -128,6 +128,11 @@ export const en: Catalogue = {
       "2check runs on a single server and queries other people's public services, so the number of checks from one address is limited.",
     recommendation: "Wait a minute and try again.",
   },
+  "web.error.service_unavailable": {
+    title: "The service is not accepting checks right now",
+    explanation: "This instance is not ready, so a new check is not started.",
+    recommendation: "Try again in a few minutes.",
+  },
   "web.error.service_busy": {
     title: "The service is busy right now",
     explanation: "As many checks are running at once as the server can carry.",

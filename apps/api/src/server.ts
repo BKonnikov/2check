@@ -12,9 +12,30 @@ const redis = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest
 
 const store = createPostgresScanStore(pool);
 
+/**
+ * PRD 27.5 — the same compatibility check the readiness probe runs, memoised so that gating every
+ * POST on it costs one query every few seconds rather than one per request. An instance whose
+ * storage this build cannot write must refuse work: accepting a scan it can never finish leaves
+ * the reader polling a result that will never arrive.
+ */
+const SCHEMA_CHECK_TTL_MS = 5_000;
+let schemaCheckedAt = 0;
+let schemaCheck: Promise<void> | undefined;
+
+function canStoreResults(): Promise<void> {
+  const now = Date.now();
+  if (schemaCheck === undefined || now - schemaCheckedAt > SCHEMA_CHECK_TTL_MS) {
+    schemaCheckedAt = now;
+    schemaCheck = assertSchemaCompatible(pool);
+    schemaCheck.catch(() => undefined);
+  }
+  return schemaCheck;
+}
+
 const app = buildApp({
   env,
   store,
+  canStoreResults,
   cache: createRedisCache(redis),
   // PRD 27.5 — the instance confirms its mandatory dependencies before it receives traffic.
   probes: [

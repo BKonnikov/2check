@@ -97,6 +97,9 @@ function moment(iso: string, language: Language): string {
   });
 }
 
+/** Comfortably past the server's own scan budget (PRD 22.2), never shorter than it. */
+const POLL_BUDGET_MS = 75_000;
+
 function fill(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in values ? String(values[key]) : match,
@@ -351,8 +354,15 @@ export default function DomainChecker({
         return;
       }
 
-      // PRD 17.3 — the authoritative state is read through GET, never returned by POST.
-      for (let attempt = 0; attempt < 90; attempt += 1) {
+      /**
+       * PRD 17.3 — the authoritative state is read through GET, never returned by POST.
+       *
+       * The server guarantees a terminal state within its own scan budget, so this waits
+       * comfortably longer than that: giving up first would show a timeout for a scan that was
+       * about to answer, which is what it used to do when the two budgets were nearly equal.
+       */
+      const waitUntil = Date.now() + POLL_BUDGET_MS;
+      while (Date.now() < waitUntil) {
         const response = await fetch(`${WEB_API_BASE_PATH}/scans/${acceptance.scanId}`);
         const body: ScanView = await response.json();
         setScan(body);

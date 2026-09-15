@@ -18,6 +18,8 @@ export interface AppOptions extends ScanDependencies {
   readonly metrics?: Metrics;
   /** PRD 22.2 — supply one to override the limits taken from configuration. */
   readonly admission?: AdmissionControl;
+  /** PRD 27.5 — supply the storage compatibility check the instance should gate work on. */
+  readonly canStoreResults?: () => Promise<void>;
 }
 
 export function buildApp({
@@ -29,6 +31,7 @@ export function buildApp({
     maxConcurrent: env.SCAN_MAX_CONCURRENT,
     perMinute: env.SCAN_RATE_LIMIT_PER_MINUTE,
   }),
+  canStoreResults,
   ...deps
 }: AppOptions): FastifyInstance {
   const app = Fastify({
@@ -68,6 +71,7 @@ export function buildApp({
     metrics,
     admission,
     scanDeadlineMs: env.SCAN_DEADLINE_MS,
+    ...(canStoreResults === undefined ? {} : { canStoreResults }),
     // One cache and one single-flight registry per process, so reuse and coalescing actually span
     // scans rather than being private to each one.
     cache: deps.cache ?? createInMemoryCache(),

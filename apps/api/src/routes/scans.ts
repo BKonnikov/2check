@@ -15,8 +15,13 @@ import { z } from "zod";
 import type { Metrics } from "../observability/metrics.js";
 import type { AdmissionControl } from "../scan/admission.js";
 import { toPublicCategories, toTechnicalDetails } from "../scan/exposure.js";
-import { buildExecutionContext, runScan, type ScanDependencies } from "../scan/orchestrator.js";
-import type { ScanRecord, ScanStore } from "../scan/store.js";
+import {
+  buildExecutionContext,
+  DEFAULT_SCAN_DEADLINE_MS,
+  runScan,
+  type ScanDependencies,
+} from "../scan/orchestrator.js";
+import { isTerminal, type ScanRecord, type ScanStore } from "../scan/store.js";
 
 /** PRD 17.2 and 17.9 — unknown top-level fields are rejected and enums are validated strictly. */
 const createScanSchema = z
@@ -29,6 +34,9 @@ const createScanSchema = z
   .strict();
 
 const POLL_AFTER_MS = 400;
+
+/** How long past the scan budget a record may stay non-terminal before a reader is told the truth. */
+const STALE_MARGIN_MS = 10_000;
 
 /** Categories this deployment can actually execute. Registry and TLS are not implemented yet. */
 const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls"];
@@ -52,6 +60,36 @@ function publicDomain(domain: Omit<CanonicalDomain, "originalInput">): PublicCan
     publicSuffixType: domain.publicSuffixType,
     registrableDomain: domain.registrableDomain,
     isIdn: domain.isIdn,
+  };
+}
+
+/**
+ * PRD 22.2 and AC-16.9 — an accepted scan may not stay RUNNING for ever, and the in-process timer
+ * that normally guarantees that is worth nothing if the process died, or if the terminal write
+ * itself failed. A record that has outlived the budget by a clear margin is therefore reported
+ * as unrecoverable when it is read, whatever the row still says.
+ *
+ * This is a projection, not a write: if the execution is in fact still alive and lands its
+ * snapshot a moment later, the next read returns the real result rather than a failure someone
+ * persisted over it.
+ */
+function outlivedItsBudget(record: ScanRecord, budgetMs: number): boolean {
+  if (isTerminal(record.executionState)) {
+    return false;
+  }
+  const started = Date.parse(record.startedAt);
+  return Number.isFinite(started) && Date.now() - started > budgetMs + STALE_MARGIN_MS;
+}
+
+function asUnrecoverable(record: ScanRecord): ScanRecord {
+  return {
+    ...record,
+    executionState: "FAILED",
+    completedAt: new Date().toISOString(),
+    failure: {
+      failureCode: "execution_state_unrecoverable",
+      occurredAt: new Date().toISOString(),
+    },
   };
 }
 
@@ -79,6 +117,11 @@ export interface ScanRouteDependencies extends ScanDependencies {
   readonly metrics?: Metrics;
   /** PRD 22.2 and AC-25.8 — nothing starts a scan without passing this first. */
   readonly admission?: AdmissionControl;
+  /**
+   * PRD 27.5 — the instance confirms it can still store a result before it accepts work.
+   * Rejecting a scan loudly beats accepting one that can never reach a terminal state.
+   */
+  readonly canStoreResults?: () => Promise<void>;
 }
 
 export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependencies): void {
@@ -130,6 +173,21 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
      * scanId exists, so a refused request leaves nothing behind. A malformed request is answered
      * first: it costs nothing and should not consume the caller's allowance.
      */
+    if (deps.canStoreResults !== undefined) {
+      try {
+        await deps.canStoreResults();
+      } catch (error) {
+        request.log.error({ error: String(error) }, "refusing scans: results cannot be stored");
+        deps.metrics?.increment("scan_rejected_total");
+        return apiError(reply, 503, {
+          errorCode: "service_unavailable",
+          titleCode: "web.error.service_unavailable",
+          retryable: true,
+          retryAfterSeconds: 60,
+        });
+      }
+    }
+
     const ticket = deps.admission?.admit(request.ip) ?? { ok: true as const, release() {} };
     if (!ticket.ok) {
       deps.metrics?.increment("scan_rejected_total");
@@ -222,6 +280,14 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       }
       if (record.executionState === "FAILED") {
         deps.metrics?.increment("scan_failed_total");
+      }
+      if (outlivedItsBudget(record, deps.scanDeadlineMs ?? DEFAULT_SCAN_DEADLINE_MS)) {
+        request.log.error(
+          { scanId: record.scanId, startedAt: record.startedAt },
+          "scan outlived its budget without reaching a terminal state",
+        );
+        deps.metrics?.increment("scan_failed_total");
+        return reply.code(200).send(toResponse(asUnrecoverable(record)));
       }
       return reply.code(200).send(toResponse(record));
     },

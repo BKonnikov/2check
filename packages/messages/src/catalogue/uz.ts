@@ -136,6 +136,11 @@ export const uz: Catalogue = {
       "2check bitta serverda ishlaydi va boshqalarning ommaviy xizmatlariga murojaat qiladi, shuning uchun bitta manzildan tekshiruvlar soni cheklangan.",
     recommendation: "Bir daqiqa kuting va qayta urinib ko'ring.",
   },
+  "web.error.service_unavailable": {
+    title: "Xizmat hozircha tekshiruvlarni qabul qilmayapti",
+    explanation: "Xizmat nusxasi ishga tayyor emas, shuning uchun yangi tekshiruv boshlanmaydi.",
+    recommendation: "Bir necha daqiqadan keyin qayta urinib ko'ring.",
+  },
   "web.error.service_busy": {
     title: "Xizmat hozir band",
     explanation: "Bir vaqtning o'zida server ko'tara oladigan darajada tekshiruv bajarilmoqda.",

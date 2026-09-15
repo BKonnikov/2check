@@ -217,3 +217,84 @@ describe("AC-16.9 — recovery of interrupted executions", () => {
     expect(await store.recoverInterrupted()).toBe(0);
   });
 });
+
+/**
+ * The failure that reached production: without its migration the terminal write threw, the record
+ * stayed RUNNING and every reader waited for a result that could never arrive. Two rules now stop
+ * that shape of failure from being a silent hang.
+ */
+describe("PRD 27.5 and AC-16.9 — a result that cannot be stored is not accepted or awaited", () => {
+  it("refuses a scan when the instance cannot store results", async () => {
+    const app = buildApp({
+      env,
+      dnsQuery: answering,
+      canStoreResults: async () => {
+        throw new Error("storage schema version 4 does not match the 5 this build expects");
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/web/v1/scans",
+      payload: { input: "example.uz", mode: "FULL" },
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().errorCode).toBe("service_unavailable");
+    expect(response.json().retryable).toBe(true);
+    await app.close();
+  });
+
+  it("reports a scan that outlived its budget as unrecoverable instead of leaving it RUNNING", async () => {
+    const store = createInMemoryScanStore();
+    const app = buildApp({
+      env,
+      store,
+      // Small enough that the record is stale as soon as it is written.
+      scanDeadlineMs: 1,
+      dnsQuery: answering,
+    });
+
+    const record = {
+      scanId: "stuck",
+      mode: "FULL" as const,
+      cacheMode: "NORMAL" as const,
+      visibleCategories: ["dns", "registry", "tls"] as const,
+      canonicalDomain: {
+        inputType: "HOSTNAME" as const,
+        unicodeHostname: "example.uz",
+        asciiHostname: "example.uz",
+        publicSuffix: "uz",
+        publicSuffixType: "ICANN" as const,
+        registrableDomain: "example.uz",
+        isIdn: false,
+      },
+      executionContext: {
+        healthPolicyVersion: "t",
+        securityPolicyVersion: "t",
+        orchestrationConfigVersion: "t",
+        cacheContractVersion: "t",
+        resolverSetVersion: "t",
+        dnsModuleConfigVersion: "t",
+        registryModuleConfigVersion: "t",
+        tlsModuleConfigVersion: "t",
+        trustStoreVersion: "t",
+      },
+      // Started long enough ago to be past any margin.
+      startedAt: new Date(Date.now() - 600_000).toISOString(),
+      executionState: "RUNNING" as const,
+      categories: [],
+    };
+    await store.create(record);
+
+    const response = await app.inject({ method: "GET", url: "/api/web/v1/scans/stuck" });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as WebScanResponse;
+    expect(body.executionState).toBe("FAILED");
+    expect(body.failure?.failureCode).toBe("execution_state_unrecoverable");
+    // A reader who is told the truth stops polling: no pollAfterMs on a terminal state.
+    expect(body.pollAfterMs).toBeUndefined();
+
+    // It is a projection, not a write: the record itself is untouched, so a late snapshot wins.
+    expect((await store.get("stuck"))?.executionState).toBe("RUNNING");
+    await app.close();
+  });
+});
