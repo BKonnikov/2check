@@ -5,14 +5,35 @@ import type { TlsProbeOutcome } from "@2check/domain";
 export const TLS_PORT = 443;
 
 /** PRD 10.8 — failures of the target, as distinct from failures of our own scanner. */
-const TARGET_FAILURE_CODES = new Set([
-  "ECONNREFUSED",
-  "ECONNRESET",
-  "ETIMEDOUT",
-  "EHOSTUNREACH",
-  "ENETUNREACH",
-  "EPIPE",
-]);
+/**
+ * PRD 10.8 and AC-10.8 — a connection result is a FAIL of the target only when the target itself
+ * was observed. These are the codes where something on the other end actually answered:
+ * a refusal is the target's own stack saying no, a reset or a broken pipe is a connection that
+ * existed and was torn down, and §18.4 rules that a TCP or handshake timeout against a validated
+ * target counts as a FAIL rather than an absence of evidence.
+ *
+ * EHOSTUNREACH and ENETUNREACH are deliberately NOT here, though they look like they belong.
+ * They mean this machine has no path to the address — no route, or an intermediate router saying
+ * so. Nothing was observed about the target at all, which is exactly the case §10.8 sends to
+ * UNKNOWN/internal_network_error. Calling it a FAIL would publish a defect of our own network as
+ * a defect of somebody's domain.
+ */
+const TARGET_FAILURE_CODES = new Set(["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EPIPE"]);
+
+/**
+ * PRD 10.8 — whose failure it was. Separated from the socket so the rule can be tested directly
+ * rather than inferred from whichever errors a machine happens to be able to produce.
+ */
+export function classifyProbeError(
+  code: string,
+):
+  | { readonly kind: "TARGET_FAILURE"; readonly failureCode: string }
+  | { readonly kind: "SCANNER_FAILURE"; readonly reasonCode: "internal_network_error" } {
+  if (TARGET_FAILURE_CODES.has(code) || code.startsWith("ERR_SSL") || code.startsWith("ERR_TLS")) {
+    return { kind: "TARGET_FAILURE", failureCode: code || "handshake_failed" };
+  }
+  return { kind: "SCANNER_FAILURE", reasonCode: "internal_network_error" };
+}
 
 interface PeerCertificate {
   subject?: { CN?: string };
@@ -137,17 +158,7 @@ export function probeEndpoint(
     );
 
     socket.once("error", (error: NodeJS.ErrnoException) => {
-      const code = error.code ?? "";
-      if (
-        TARGET_FAILURE_CODES.has(code) ||
-        code.startsWith("ERR_SSL") ||
-        code.startsWith("ERR_TLS")
-      ) {
-        finish({ kind: "TARGET_FAILURE", address, failureCode: code || "handshake_failed" });
-        return;
-      }
-      // AC-10.8 — nothing trustworthy was observed about the target.
-      finish({ kind: "SCANNER_FAILURE", address, reasonCode: "internal_network_error" });
+      finish({ ...classifyProbeError(error.code ?? ""), address });
     });
   });
 }
