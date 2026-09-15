@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { track } from "./analytics";
 import { LOCALE_COOKIE } from "./chrome";
 import ThemeToggle from "./ThemeToggle";
 
@@ -67,7 +68,13 @@ export default function HeaderNav({
                 key={option.code}
                 href={`/${option.code}${withoutLocale}`}
                 hrefLang={option.code}
-                onClick={() => remember(option.code)}
+                onClick={() => {
+                  remember(option.code);
+                  track("locale_changed", {
+                    locale: option.code as "ru" | "uz" | "en",
+                    tool: "home",
+                  });
+                }}
                 {...(option.code === locale ? { "aria-current": "page" as const } : {})}
               >
                 {option.name}

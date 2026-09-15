@@ -36,7 +36,7 @@ export default async function LocaleHome({ params }: { params: Promise<{ locale:
     <>
       <h1>{chrome.ui.homeHeading}</h1>
       <p className="lede">{chrome.tagline}</p>
-      <DomainChecker language={LANGUAGE_OF[key]} ui={chrome.ui} />
+      <DomainChecker language={LANGUAGE_OF[key]} ui={chrome.ui} tool="home" />
       {/* PRD 24.5 — the home page says what the three checks are, in the same words as the tool pages. */}
       <div className="tiles">
         {TOOLS.map((tool, index) => (

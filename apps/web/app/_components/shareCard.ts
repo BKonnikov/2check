@@ -19,17 +19,36 @@ export interface ShareCardModel {
   readonly score?: number;
   readonly tone: "pass" | "warn" | "fail" | "neutral";
   readonly confidence: string;
-  readonly categories: readonly { readonly name: string; readonly status: string }[];
+  /**
+   * Each category says how much of it actually passed. A card that only says "fine" asks the
+   * reader to take it on faith; a card that says "8 of 9 checks passed" says what was looked at.
+   */
+  readonly categories: readonly {
+    readonly name: string;
+    readonly status: string;
+    readonly passed: number;
+    readonly total: number;
+    readonly tone: "pass" | "warn" | "fail" | "neutral";
+  }[];
   readonly issues: readonly { readonly title: string; readonly severity: string }[];
   readonly footer: string;
+  /** The word after the ratio, e.g. "проверок пройдено". */
+  readonly checksLabel: string;
+  /** PRD 23.7 — a result is only true of a moment, so the card carries the moment. */
+  readonly checkedAt?: string;
 }
 
 interface ScanLike {
   readonly mode: string;
+  readonly completedAt?: string;
   readonly canonicalDomain: { readonly unicodeHostname: string };
   readonly categories: readonly {
     readonly category: string;
     readonly status: string;
+    readonly checks?: readonly {
+      readonly status?: string;
+      readonly freshness?: { readonly checkedAt?: string };
+    }[];
   }[];
   readonly summary?: {
     readonly state: string;
@@ -51,8 +70,15 @@ const VERDICT_TONE: Readonly<Record<string, ShareCardModel["tone"]>> = {
   CRITICAL_PROBLEM: "fail",
 };
 
+const STATUS_TONE: Readonly<Record<string, ShareCardModel["tone"]>> = {
+  PASS: "pass",
+  FAIL: "fail",
+  UNKNOWN: "warn",
+  NOT_APPLICABLE: "neutral",
+};
+
 /** At most this many issues reach the card; the rest stay on the page. */
-const MAX_ISSUES = 3;
+const MAX_ISSUES = 2;
 
 function text(titleCode: string, language: Language, params?: Record<string, unknown>): string {
   const resolved = resolveMessage(
@@ -62,6 +88,36 @@ function text(titleCode: string, language: Language, params?: Record<string, unk
     language,
   );
   return resolved.title === "" ? titleCode : resolved.title;
+}
+
+const DATE_LOCALE: Readonly<Record<Language, string>> = {
+  ru: "ru-RU",
+  uz: "uz-UZ",
+  en: "en-GB",
+};
+
+/**
+ * PRD 23.7 — when the observation was made, not when the card was drawn. A card that travels for
+ * a week should not keep claiming to be about today, and the moment a reader forwards is the
+ * moment the checks actually ran.
+ */
+function observedAt(scan: ScanLike, language: Language): string | undefined {
+  const moments = scan.categories
+    .flatMap((category) => category.checks ?? [])
+    .map((check) => check.freshness?.checkedAt)
+    .filter((value): value is string => value !== undefined);
+  const latest = scan.completedAt ?? moments.sort().at(-1);
+  if (latest === undefined) {
+    return undefined;
+  }
+  const parsed = new Date(latest);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+  return parsed.toLocaleString(DATE_LOCALE[language], {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui): ShareCardModel {
@@ -77,15 +133,27 @@ export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui):
     tone: verdictCode === undefined ? "neutral" : (VERDICT_TONE[verdictCode] ?? "neutral"),
     confidence:
       summary === undefined ? "" : text(`confidence.${summary.confidence.level}`, language),
-    categories: scan.categories.map((category) => ({
-      name: text(`category.${category.category}`, language),
-      status: ui.statusWords[category.status as keyof Ui["statusWords"]] ?? category.status,
-    })),
+    categories: scan.categories.map((category) => {
+      const checks = category.checks ?? [];
+      return {
+        name: text(`category.${category.category}`, language),
+        status: ui.statusWords[category.status as keyof Ui["statusWords"]] ?? category.status,
+        tone: STATUS_TONE[category.status] ?? "neutral",
+        // N/A is not a check that failed and not one that passed, so it counts in neither.
+        passed: checks.filter((check) => check.status === "PASS").length,
+        total: checks.filter((check) => check.status !== "NOT_APPLICABLE").length,
+      };
+    }),
     issues: (summary?.issues ?? []).slice(0, MAX_ISSUES).map((issue) => ({
       title: text(issue.message.titleCode, language, issue.message.params),
       severity: ui.severityLabels[issue.severity as keyof Ui["severityLabels"]] ?? issue.severity,
     })),
     footer: ui.shareFooter,
+    checksLabel: ui.shareChecksLabel,
+    ...(() => {
+      const moment = observedAt(scan, language);
+      return moment === undefined ? {} : { checkedAt: `${ui.shareCheckedAt}: ${moment}` };
+    })(),
   };
 }
 
@@ -207,43 +275,59 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
     context.textAlign = "left";
   }
 
-  // The lower third is laid out from the bottom up: footer, categories, then the issues above.
-  const footerY = CARD.height - 40;
-  const categoriesY = CARD.height - 92;
-  let row = 372;
+  // The lower two thirds, from the top down: what was checked, then what to fix, then the footer.
+  const footerY = CARD.height - 36;
 
   context.strokeStyle = CARD.rule;
   context.beginPath();
-  context.moveTo(left, 338);
-  context.lineTo(right, 338);
+  context.moveTo(left, 300);
+  context.lineTo(right, 300);
   context.stroke();
 
-  for (const issue of model.issues) {
-    context.fillStyle = CARD.faint;
-    context.font = font(CARD.mono, 16);
-    context.fillText(issue.severity.toUpperCase(), left, row);
-    context.fillStyle = CARD.ink;
-    context.font = font(CARD.sans, 24, "600");
-    context.fillText(wrap(context, issue.title, right - left, 1)[0] ?? issue.title, left, row + 28);
-    row += 52;
-  }
-
-  let x = left;
+  let row = 334;
   for (const category of model.categories) {
     context.fillStyle = CARD.ink;
-    context.font = font(CARD.sans, 22, "600");
-    context.fillText(category.name, x, categoriesY);
-    const nameWidth = context.measureText(category.name).width;
+    context.font = font(CARD.sans, 23, "700");
+    context.fillText(category.name, left, row);
+
     context.fillStyle = CARD.muted;
-    context.font = font(CARD.mono, 18);
-    context.fillText(category.status, x + nameWidth + 12, categoriesY);
-    x += nameWidth + 12 + context.measureText(category.status).width + 40;
+    context.font = font(CARD.mono, 17);
+    context.fillText(`${category.passed}/${category.total}`, left + 190, row);
+
+    context.fillStyle = CARD.faint;
+    context.font = font(CARD.mono, 17);
+    context.fillText(model.checksLabel, left + 260, row);
+
+    context.textAlign = "right";
+    // The colour belongs to this category's own outcome, not to the overall verdict.
+    context.fillStyle = CARD.tones[category.tone];
+    context.font = font(CARD.mono, 17, "600");
+    context.fillText(category.status.toUpperCase(), right, row);
+    context.textAlign = "left";
+    row += 34;
+  }
+
+  row += 14;
+  for (const issue of model.issues) {
+    context.fillStyle = CARD.faint;
+    context.font = font(CARD.mono, 15);
+    context.fillText(issue.severity.toUpperCase(), left, row);
+    context.fillStyle = CARD.ink;
+    context.font = font(CARD.sans, 22, "600");
+    context.fillText(wrap(context, issue.title, right - left, 1)[0] ?? issue.title, left, row + 26);
+    row += 50;
   }
 
   // Its own baseline, so a long line of categories cannot run into it.
   context.fillStyle = CARD.faint;
   context.font = font(CARD.mono, 16);
   context.fillText(model.footer, left, footerY);
+  if (model.checkedAt !== undefined) {
+    context.textAlign = "right";
+    context.fillStyle = CARD.muted;
+    context.fillText(model.checkedAt, right, footerY);
+    context.textAlign = "left";
+  }
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {

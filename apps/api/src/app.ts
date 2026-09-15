@@ -1,8 +1,11 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import type { AnalyticsStore } from "./analytics/store.js";
+import { createInMemoryAnalyticsStore } from "./analytics/store.js";
 import { createInMemoryCache, createSingleFlight } from "./cache/reusable-cache.js";
 import type { Env } from "./config/env.js";
 import { LOG_REDACTION, requestSerializer } from "./observability/logging.js";
 import { createMetrics, type Metrics } from "./observability/metrics.js";
+import { registerEventRoutes } from "./routes/events.js";
 import { type ReadinessProbe, registerHealthRoutes } from "./routes/health.js";
 import { registerScanRoutes } from "./routes/scans.js";
 import { type AdmissionControl, createAdmissionControl } from "./scan/admission.js";
@@ -20,6 +23,8 @@ export interface AppOptions extends ScanDependencies {
   readonly admission?: AdmissionControl;
   /** PRD 27.5 — supply the storage compatibility check the instance should gate work on. */
   readonly canStoreResults?: () => Promise<void>;
+  /** PRD 28 — product analytics. Absent means a private in-process store. */
+  readonly analytics?: AnalyticsStore;
 }
 
 export function buildApp({
@@ -32,6 +37,7 @@ export function buildApp({
     perMinute: env.SCAN_RATE_LIMIT_PER_MINUTE,
   }),
   canStoreResults,
+  analytics = createInMemoryAnalyticsStore(),
   ...deps
 }: AppOptions): FastifyInstance {
   const app = Fastify({
@@ -66,6 +72,7 @@ export function buildApp({
     storageSchemaVersion: STORAGE_SCHEMA_VERSION,
     executionContext: buildExecutionContext(),
   });
+  registerEventRoutes(app, { analytics, metrics });
   registerScanRoutes(app, {
     store: store ?? createInMemoryScanStore(),
     metrics,

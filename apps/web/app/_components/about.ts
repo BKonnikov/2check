@@ -94,7 +94,9 @@ export const ABOUT: Readonly<Record<Locale, About>> = {
         heading: "Что сохраняется",
         paragraphs: [
           "В базе сохраняются каноническое доменное имя и результат проверки. Строка, которую вы ввели, до сохранения отбрасывается. Контактные данные владельца домена в результат не попадают: видно только, заполнено поле, скрыто реестром или недоступно.",
-          "Сторонняя аналитика и рекламные сети на сайте не подключены. В браузере сохраняются только выбранный язык и выбранная тема оформления.",
+          "Сторонняя аналитика и рекламные сети на сайте не подключены — и не могут быть: политика безопасности содержимого разрешает скрипты только с этого адреса. Посещаемость 2check считает сам: записываются обезличенные события вида «открыли форму», «запустили проверку», «посмотрели результат», «открыли технические подробности», с указанием языка, страницы и режима проверки.",
+          "В этих записях нет ни проверяемого домена, ни идентификатора проверки, ни введённой строки, ни IP-адреса, ни данных о владельце домена. Чтобы связать шаги одного визита, используется случайный номер, который живёт только до закрытия вкладки и ни с чем больше не связан.",
+          "В браузере сохраняются выбранный язык, выбранная тема оформления и отметка о том, что вы здесь уже были.",
         ],
       },
     ],
@@ -145,7 +147,9 @@ export const ABOUT: Readonly<Record<Locale, About>> = {
         heading: "What is stored",
         paragraphs: [
           "The canonical domain name and the result of the check are stored. The string you typed is discarded before anything is written. Registrant contact values never reach the result: it shows only whether a field is present, redacted by the registry, or unavailable.",
-          "No third-party analytics and no advertising networks are loaded. The only things kept in your browser are the language and the theme you chose.",
+          'No third-party analytics and no advertising networks are loaded, and none could be: the content security policy allows scripts from this origin only. 2check counts its own traffic: anonymous events such as "opened the form", "started a check", "viewed the result" and "opened the technical details", with the language, the page and the scan mode.',
+          "Those records contain no domain, no scan identifier, no typed string, no IP address and no registrant data. To join the steps of one visit they carry a random number that lives until the tab closes and is linked to nothing else.",
+          "What is kept in your browser is the language, the theme you chose, and a mark that you have been here before.",
         ],
       },
     ],
@@ -196,7 +200,9 @@ export const ABOUT: Readonly<Record<Locale, About>> = {
         heading: "Nima saqlanadi",
         paragraphs: [
           "Bazada kanonik domen nomi va tekshiruv natijasi saqlanadi. Siz kiritgan satr saqlashdan oldin tashlab yuboriladi. Domen egasining aloqa ma'lumotlari natijaga tushmaydi: faqat maydon to'ldirilgani, reestr tomonidan yashirilgani yoki mavjud emasligi ko'rsatiladi.",
-          "Saytda uchinchi tomon analitikasi va reklama tarmoqlari ulanmagan. Brauzerda faqat siz tanlagan til va mavzu saqlanadi.",
+          "Saytda uchinchi tomon analitikasi va reklama tarmoqlari ulanmagan va ulanishi ham mumkin emas: kontent xavfsizligi siyosati skriptlarga faqat shu manzildan ruxsat beradi. Tashriflarni 2check o'zi sanaydi: «forma ochildi», «tekshiruv boshlandi», «natija ko'rildi», «texnik tafsilotlar ochildi» kabi shaxssiz hodisalar til, sahifa va tekshiruv rejimi bilan yoziladi.",
+          "Bu yozuvlarda tekshirilayotgan domen ham, tekshiruv identifikatori ham, kiritilgan satr ham, IP-manzil ham, domen egasining ma'lumotlari ham yo'q. Bitta tashrif qadamlarini bog'lash uchun tasodifiy raqam ishlatiladi: u varaq yopilguncha yashaydi va boshqa hech narsa bilan bog'lanmagan.",
+          "Brauzerda tanlangan til, tanlangan mavzu va bu yerda avval bo'lganingiz haqidagi belgi saqlanadi.",
         ],
       },
     ],

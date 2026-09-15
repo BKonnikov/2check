@@ -556,3 +556,66 @@ export interface DomainHealthSummary {
   readonly categories: readonly ScanCategory[];
   readonly generatedAt: string;
 }
+
+/**
+ * PRD 28.2 — the product-analytics events.
+ *
+ * Product analytics answers how people use the product; how the platform behaves is §21 and lives
+ * in metrics and logs. The two are kept apart deliberately (AC-28.1): the rate at which domains
+ * come back FAIL is a fact about other people's domains, not a quality score for this service.
+ */
+export const ANALYTICS_EVENTS = [
+  "scan_form_viewed",
+  "scan_submitted",
+  "scan_accepted",
+  "scan_result_viewed",
+  "technical_details_opened",
+  "refresh_clicked",
+  "retry_clicked",
+  "share_clicked",
+  "locale_changed",
+  // PRD 28.2 — optional, recorded only where the browser reports the outcome truthfully.
+  "share_completed",
+  "share_image_saved",
+] as const;
+export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
+
+/** PRD 28.3 — the locales the product serves; the same three as the message catalogue. */
+export const ANALYTICS_LOCALES = ["ru", "uz", "en"] as const;
+export type AnalyticsLocale = (typeof ANALYTICS_LOCALES)[number];
+
+/** PRD 28.3 — which page the event happened on. A bounded set, never a URL. */
+export const ANALYTICS_TOOLS = ["home", "dns", "registry", "tls", "scan"] as const;
+export type AnalyticsTool = (typeof ANALYTICS_TOOLS)[number];
+
+/** PRD 28.3 — the selected scope, as a bounded enumeration rather than a free list. */
+export const ANALYTICS_SCOPES = ["all", "dns", "registry", "tls"] as const;
+export type AnalyticsScope = (typeof ANALYTICS_SCOPES)[number];
+
+export const ANALYTICS_OUTCOMES = ["COMPLETED", "FAILED"] as const;
+export type AnalyticsOutcome = (typeof ANALYTICS_OUTCOMES)[number];
+
+/**
+ * PRD 28.4 and AC-28.3 — the shape is the boundary.
+ *
+ * There is no field here for a domain, a scanId, the string the reader typed, registration data,
+ * an IP address, a certificate fingerprint or a DNS value, so none of them can be sent by
+ * accident: a payload carrying one is rejected rather than trimmed. The scan page is counted as
+ * the route template `scan`, never as the URL that contains a scanId.
+ */
+export interface AnalyticsEventPayload {
+  readonly event: AnalyticsEvent;
+  readonly locale: AnalyticsLocale;
+  readonly tool: AnalyticsTool;
+  readonly mode?: ScanMode;
+  readonly scope?: AnalyticsScope;
+  readonly outcome?: AnalyticsOutcome;
+  readonly verdictCode?: VerdictCode;
+  /**
+   * PRD 28.6 — an anonymous per-session value, for joining a funnel within one visit. It is not
+   * an account, it does not persist past the session, and it is not shared with anything else.
+   */
+  readonly sessionId?: string;
+  /** PRD 28.5 — whether this browser has been here before, without keeping an identifier for it. */
+  readonly returning?: boolean;
+}

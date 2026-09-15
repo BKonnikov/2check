@@ -2,6 +2,7 @@
 
 import type { Language } from "@2check/messages";
 import { useState } from "react";
+import { type AnalyticsDimensions, track } from "./analytics";
 import type { Ui } from "./chrome";
 import { buildShareCardModel, renderShareCard } from "./shareCard";
 
@@ -17,10 +18,12 @@ export default function ShareActions({
   scan,
   language,
   ui,
+  dimensions,
 }: {
   scan: Parameters<typeof buildShareCardModel>[0];
   language: Language;
   ui: Ui;
+  dimensions: AnalyticsDimensions;
 }) {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,7 +66,12 @@ export default function ShareActions({
               if (!navigator.canShare({ files: [file] })) {
                 throw new Error("files cannot be shared here");
               }
+              track("share_clicked", dimensions);
               await navigator.share({ files: [file] });
+              // PRD 28.2 — the optional outcome event, recorded only because the promise
+              // resolving here means the sheet completed. AC-28.5 — it says nothing about who
+              // received the image or where it went.
+              track("share_completed", dimensions);
             })
           }
         >
@@ -76,6 +84,7 @@ export default function ShareActions({
         disabled={busy}
         onClick={() =>
           void run(async ({ blob }) => {
+            track("share_clicked", dimensions);
             await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
             setNote(ui.shareCopied);
           })
@@ -89,6 +98,7 @@ export default function ShareActions({
         disabled={busy}
         onClick={() =>
           void run(async ({ blob, name }) => {
+            track("share_image_saved", dimensions);
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;

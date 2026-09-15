@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import { createPostgresAnalyticsStore } from "./analytics/store.js";
 import { buildApp } from "./app.js";
 import { createRedisCache } from "./cache/redis-cache.js";
 import { loadEnv } from "./config/env.js";
@@ -36,6 +37,7 @@ const app = buildApp({
   env,
   store,
   canStoreResults,
+  analytics: createPostgresAnalyticsStore(pool),
   cache: createRedisCache(redis),
   // PRD 27.5 — the instance confirms its mandatory dependencies before it receives traffic.
   probes: [

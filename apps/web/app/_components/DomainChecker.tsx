@@ -1,9 +1,16 @@
 "use client";
 
-import type { ScanCategory, TechnicalCheckDetail } from "@2check/contracts";
+import type {
+  AnalyticsLocale,
+  AnalyticsScope,
+  AnalyticsTool,
+  ScanCategory,
+  TechnicalCheckDetail,
+} from "@2check/contracts";
 import { WEB_API_BASE_PATH } from "@2check/contracts";
 import { type Language, resolveMessage } from "@2check/messages";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type AnalyticsDimensions, track } from "./analytics";
 import type { Ui } from "./chrome";
 import ShareActions from "./ShareActions";
 
@@ -66,6 +73,7 @@ interface ScanView {
   };
   selectedCategories: string[];
   categories: CategoryView[];
+  completedAt?: string;
   completionReason?: string;
   pollAfterMs?: number;
 }
@@ -208,10 +216,12 @@ function TechnicalDetails({
   scanId,
   named,
   ui,
+  onOpen,
 }: {
   scanId: string;
   named: ReadonlyMap<string, { title: string; status: string }>;
   ui: Ui;
+  onOpen: () => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [checks, setChecks] = useState<readonly TechnicalCheckDetail[]>([]);
@@ -240,6 +250,7 @@ function TechnicalDetails({
       className="section"
       onToggle={(event) => {
         if (event.currentTarget.open) {
+          onOpen();
           void load();
         }
       }}
@@ -312,6 +323,8 @@ export type { ScanView };
 export interface DomainCheckerProps {
   readonly language: Language;
   readonly ui: Ui;
+  /** PRD 28.3 — which page this is, as a bounded value rather than a URL. */
+  readonly tool: AnalyticsTool;
   /** PRD 3.3 and 17.2 — a tool page runs PARTIAL over its own category; the home page runs FULL. */
   readonly categories?: readonly ScanCategory[];
   /** PRD 24.6 and AC-24.6 — a scan already read from the server; nothing is started on load. */
@@ -321,6 +334,7 @@ export interface DomainCheckerProps {
 export default function DomainChecker({
   language,
   ui,
+  tool,
   categories,
   initialScan = null,
 }: DomainCheckerProps) {
@@ -330,7 +344,26 @@ export default function DomainChecker({
   const [error, setError] = useState<ErrorView | null>(null);
   const [running, setRunning] = useState(false);
 
+  const scope: AnalyticsScope =
+    categories === undefined || categories.length === 0 ? "all" : (categories[0] ?? "all");
+  const partial = categories !== undefined && categories.length > 0;
+  const dimensions: AnalyticsDimensions = {
+    locale: language as AnalyticsLocale,
+    tool,
+    mode: partial ? "PARTIAL" : "FULL",
+    scope,
+  };
+
+  // PRD 28.5 — the first step of the funnel, and the only measure of traffic the product keeps.
+  // A view is counted once per mount; `dimensions` is rebuilt every render and listing it would
+  // count the same page again on every keystroke.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one view, one count.
+  useEffect(() => {
+    track(initialScan === null ? "scan_form_viewed" : "scan_result_viewed", dimensions);
+  }, []);
+
   async function start(value: string, cacheMode?: "FORCE_REFRESH"): Promise<void> {
+    track(cacheMode === undefined ? "scan_submitted" : "refresh_clicked", dimensions);
     setError(null);
     setScan(null);
     setRunning(true);
@@ -349,6 +382,9 @@ export default function DomainChecker({
         }),
       });
       const acceptance = await created.json();
+      if (created.ok) {
+        track("scan_accepted", dimensions);
+      }
       if (!created.ok) {
         setError(message({ titleCode: `web.error.${acceptance.errorCode}` }, language));
         return;
@@ -367,6 +403,13 @@ export default function DomainChecker({
         const body: ScanView = await response.json();
         setScan(body);
         if (body.executionState === "COMPLETED" || body.executionState === "FAILED") {
+          track("scan_result_viewed", {
+            ...dimensions,
+            outcome: body.executionState,
+            ...(body.summary?.verdictCode === undefined
+              ? {}
+              : { verdictCode: body.summary.verdictCode as never }),
+          });
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, body.pollAfterMs ?? 400));
@@ -543,6 +586,7 @@ export default function DomainChecker({
       {/* PRD 23.6 — technical detail is a disclosure, closed by default and keyboard operable. */}
       {scan !== null && scan.executionState === "COMPLETED" && domain !== undefined && (
         <TechnicalDetails
+          onOpen={() => track("technical_details_opened", dimensions)}
           scanId={scan.scanId}
           named={
             new Map(
@@ -563,7 +607,7 @@ export default function DomainChecker({
 
       {/* PRD 23.9 — for a COMPLETED scan: share, copy or save the result as an image. */}
       {scan !== null && scan.executionState === "COMPLETED" && (
-        <ShareActions scan={scan} language={language} ui={ui} />
+        <ShareActions scan={scan} language={language} ui={ui} dimensions={dimensions} />
       )}
 
       {/* PRD 23.8 — refreshing creates a new FORCE_REFRESH scan, never patches this one. */}

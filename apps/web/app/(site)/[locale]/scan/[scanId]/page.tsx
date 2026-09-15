@@ -50,7 +50,7 @@ export default async function ScanPage({
     <>
       <h1>{chrome.scanTitle}</h1>
       <p className="lede">{scan.canonicalDomain.unicodeHostname}</p>
-      <DomainChecker language={LANGUAGE_OF[key]} ui={chrome.ui} initialScan={scan} />
+      <DomainChecker language={LANGUAGE_OF[key]} ui={chrome.ui} initialScan={scan} tool="scan" />
     </>
   );
 }

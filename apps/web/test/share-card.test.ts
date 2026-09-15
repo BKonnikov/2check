@@ -9,10 +9,23 @@ function scan(overrides: Record<string, unknown> = {}) {
     scanId: "3f2a6d1e-0000-4000-8000-1234567890ab",
     mode: "FULL",
     canonicalDomain: { unicodeHostname: "почта.uz", asciiHostname: "xn--80a1acny.uz" },
+    completedAt: "2026-09-15T12:30:00.000Z",
     categories: [
-      { category: "dns", status: "FAIL" },
-      { category: "registry", status: "UNKNOWN" },
-      { category: "tls", status: "PASS" },
+      {
+        category: "dns",
+        status: "FAIL",
+        checks: [
+          { status: "PASS", freshness: { checkedAt: "2026-09-15T12:29:00.000Z" } },
+          { status: "PASS", freshness: { checkedAt: "2026-09-15T12:29:00.000Z" } },
+          { status: "FAIL", freshness: { checkedAt: "2026-09-15T12:29:00.000Z" } },
+        ],
+      },
+      { category: "registry", status: "UNKNOWN", checks: [{ status: "UNKNOWN" }] },
+      {
+        category: "tls",
+        status: "PASS",
+        checks: [{ status: "PASS" }, { status: "NOT_APPLICABLE" }],
+      },
     ],
     summary: {
       state: "FINAL",
@@ -58,7 +71,7 @@ describe("AC-23.8 — the share card carries nothing it should not", () => {
     }
   });
 
-  it("shows at most three issues, however many there are", () => {
+  it("shows at most two issues, however many there are", () => {
     const many = scan({
       summary: {
         state: "FINAL",
@@ -71,7 +84,7 @@ describe("AC-23.8 — the share card carries nothing it should not", () => {
         })),
       },
     });
-    expect(buildShareCardModel(many, "ru", UI).issues).toHaveLength(3);
+    expect(buildShareCardModel(many, "ru", UI).issues).toHaveLength(2);
   });
 });
 
@@ -108,5 +121,39 @@ describe("PRD 13.6 — the card speaks the language of the page", () => {
       expect(issue.title).not.toMatch(/\.fail$/);
       expect(issue.title).not.toMatch(/\{\w+\}/);
     }
+  });
+});
+
+/**
+ * A card that only says "fine" asks the reader to take it on faith. It has to say what was
+ * looked at, and when.
+ */
+describe("the card says what was checked, not only that it was", () => {
+  it("reports how much of each category passed", () => {
+    const model = buildShareCardModel(scan(), "ru", UI);
+    expect(
+      model.categories.map((category) => [category.name, category.passed, category.total]),
+    ).toEqual([
+      ["DNS", 2, 3],
+      ["Домен", 0, 1],
+      // A check that does not apply counts in neither column.
+      ["SSL/TLS", 1, 1],
+    ]);
+  });
+
+  it("colours each category by its own outcome, not by the overall verdict", () => {
+    const model = buildShareCardModel(scan(), "ru", UI);
+    expect(model.categories.map((category) => category.tone)).toEqual(["fail", "warn", "pass"]);
+  });
+
+  it("carries the moment the checks were made", () => {
+    const model = buildShareCardModel(scan(), "ru", UI);
+    expect(model.checkedAt).toContain("Проверено");
+    expect(model.checkedAt).toMatch(/\d/);
+  });
+
+  it("has no moment to show when the scan never recorded one", () => {
+    const withoutTime = scan({ completedAt: undefined, categories: [] });
+    expect(buildShareCardModel(withoutTime, "ru", UI).checkedAt).toBeUndefined();
   });
 });
