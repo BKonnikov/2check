@@ -44,3 +44,46 @@ export type Retryability = (typeof RETRYABILITY_VALUES)[number];
 
 /** PRD 17.1 — base path of the internal web API. */
 export const WEB_API_BASE_PATH = "/api/web/v1";
+
+/** PRD 5.1 — how the user's input was shaped. */
+export const INPUT_TYPES = ["HOSTNAME", "URL", "URL_LIKE"] as const;
+export type InputType = (typeof INPUT_TYPES)[number];
+
+/** PRD 5.3 — where the public suffix came from. */
+export const PUBLIC_SUFFIX_TYPES = ["ICANN", "PRIVATE", "UNKNOWN"] as const;
+export type PublicSuffixType = (typeof PUBLIC_SUFFIX_TYPES)[number];
+
+/**
+ * PRD 5.3 — the single preprocessing object every module consumes.
+ * registryDomain is deliberately absent: it is an output of the registry module.
+ */
+export interface CanonicalDomain {
+  readonly originalInput: string;
+  readonly inputType: InputType;
+  readonly unicodeHostname: string;
+  readonly asciiHostname: string;
+  readonly publicSuffix: string | null;
+  readonly publicSuffixType: PublicSuffixType;
+  readonly registrableDomain: string | null;
+  readonly labels: readonly string[];
+  readonly isIdn: boolean;
+  readonly hadTrailingDot: boolean;
+}
+
+/**
+ * Input-level rejections (PRD 18.1, level 1: before a scan exists, without a scanId).
+ * These surface as WebApiError.errorCode with HTTP 422 (PRD 17.2), never as a reasonCode.
+ */
+export const INPUT_REJECTION_CODES = [
+  "input_empty",
+  "input_scheme_unsupported",
+  "input_credentials_present",
+  "input_port_not_allowed",
+  "input_ip_address",
+  "input_wildcard_hostname",
+  "input_email_address",
+  "input_single_label",
+  "input_reserved_hostname",
+  "input_hostname_invalid",
+] as const;
+export type InputRejectionCode = (typeof INPUT_REJECTION_CODES)[number];

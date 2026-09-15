@@ -31,6 +31,7 @@ dnsModuleConfigVersion
 registryModuleConfigVersion
 tlsModuleConfigVersion
 trustStoreVersion
+publicSuffixListVersion
 ```
 
 Для необязательной группировки используется `configReleaseId`.
@@ -47,7 +48,8 @@ trustStoreVersion
 - доверенные корневые сертификаты → trustStoreVersion;
 - правила SSRF или внутреннего списка запретов → securityPolicyVersion;
 - общий срок или поведение оркестрации → orchestrationConfigVersion;
-- общая сериализация или совместимость кэша → cacheContractVersion.
+- общая сериализация или совместимость кэша → cacheContractVersion;
+- снимок Public Suffix List → publicSuffixListVersion.
 
 ## 20.4. Политика оценки и технические наблюдения
 
@@ -95,5 +97,6 @@ load
 - **AC-20.6** Неизвестные ссылки на проверки и межкатегорийные правила Issue делают конфигурацию недопустимой.
 - **AC-20.7** Пользовательский API не изменяет политику, кворум, доверенные сертификаты или параметры SSRF.
 - **AC-20.8** Канонический идентификатор технической конфигурации регистрации — `registryModuleConfigVersion`.
+- **AC-20.9** Изменение снимка Public Suffix List обновляет `publicSuffixListVersion`.
 
 ---

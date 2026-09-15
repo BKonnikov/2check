@@ -30,8 +30,8 @@
       "en": "19ef38b4db2404d28f9c9bf5bafb78e8693558f45a5d5962a1653e83b2b68268"
     },
     "docs/prd/05-input-canonical-domain.md": {
-      "ru": "f04fedd8b4bf2a8ee6da3e597c719feab75236257a90b317b8de73f870f89d71",
-      "en": "826cb99322d78ad830de5e9d43399a4aa4082d9c5d2e36e3ebd0d9021d524313"
+      "ru": "1f12fb9680f1140f6e058fdc270aead2392fd05ff2e61b7e45967b918a99ab50",
+      "en": "7310a1816ffd533d4578ccc6b430707040b14b50da7eb2f1779e1d40836b465d"
     },
     "docs/prd/06-common-data-contracts-exposure.md": {
       "ru": "5f850bd9b040f70b171b7dab672208dec257dbe11fc11cffa4b8bc902fcd5a77",
@@ -90,8 +90,8 @@
       "en": "837313e6ae8846848e629863a9f07463a51d67c263416438af1e1b601cfc6d08"
     },
     "docs/prd/20-configuration-policy-management.md": {
-      "ru": "c47c0badddddbe8f589f2d142e3b47f81a341f5d98deb5db5e76380215f109c6",
-      "en": "99c7c1ffc6aacfa1b7fa0cf32a3b5c5e081897e734c4e961e0d8b198f8cc1e44"
+      "ru": "4c018ed453abdee5641aa24f739c8cc59b1e3263373c1cbe64dd57ab355a9b5a",
+      "en": "a1a1b3b3fa709d375affdd6b4e779a8fb37f96892bbd2bf24cccd0f5db10caf4"
     },
     "docs/prd/21-observability-logging-operational-monitoring.md": {
       "ru": "a7a7a9a5aaf7cd2382a3f2d70f952c35d68ea43bdb35d7c6d950c26cf10ec251",
@@ -138,8 +138,8 @@
       "en": "d84d54b3c8a1f524c33e651dc503d7989e914b3a920a825d75555014b0f1ed25"
     },
     "README": {
-      "ru": "0ac9bf5345d1870ef93dee191e7d66d4325ea96260d70703f0f9615caf4b46e1",
-      "en": "a0f1fe27e9ca424e1162c3f0fbe4600dd0ef6605962a723d1262419d0a0887a6"
+      "ru": "d263dfa2af32b66a4b3bc9c44be29429a808eeb0671ee1e2e7549eca09ac66f6",
+      "en": "9ae3de90c40bb5fd55339947f7eeec919ba3336782953557948db16b98b65aa0"
     },
     "CONTRIBUTING": {
       "ru": "40563e9cd2e272c8f6a11a2e2082fdfc2b1820fec1bb57c07f5f0036cd088659",

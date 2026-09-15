@@ -17,9 +17,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@2check/contracts": "workspace:*"
+    "@2check/contracts": "workspace:*",
+    "parse-domain": "^8.4.0",
+    "tr46": "^6.0.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/tr46": "^5.0.1",
     "typescript": "^5.9.0",
     "vitest": "^3.0.0"
   }

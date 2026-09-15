@@ -18,7 +18,7 @@ The product purpose, audiences, principles, and MVP boundaries. This is the proj
 | In sequence | [Complete single-file PRD](dist/en/2check_MVP_1.0_PRD.md) |
 | In Russian | [Концепция и PRD на русском](docs/ru/README.md) |
 
-The PRD develops the concept into data contracts, DNS/registration/TLS checks, interface requirements, security rules, and 220 acceptance criteria.
+The PRD develops the concept into data contracts, DNS/registration/TLS checks, interface requirements, security rules, and 221 acceptance criteria.
 
 ## Document Locations
 

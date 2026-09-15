@@ -64,6 +64,8 @@ CanonicalDomain {
 
 `registrableDomain` is determined by preprocessing and PSL rules.
 
+The PSL snapshot is a versioned configuration item per §20: changing it changes the computed `registrableDomain`.
+
 `registryDomain` is determined by the specific `registryProvider` and returned by the registration module.
 
 ## 5.5. Typo Correction

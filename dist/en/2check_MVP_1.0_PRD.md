@@ -313,6 +313,8 @@ CanonicalDomain {
 
 `registrableDomain` is determined by preprocessing and PSL rules.
 
+The PSL snapshot is a versioned configuration item per §20: changing it changes the computed `registrableDomain`.
+
 `registryDomain` is determined by the specific `registryProvider` and returned by the registration module.
 
 ## 5.5. Typo Correction
@@ -1891,6 +1893,7 @@ dnsModuleConfigVersion
 registryModuleConfigVersion
 tlsModuleConfigVersion
 trustStoreVersion
+publicSuffixListVersion
 ```
 
 Optional grouping uses `configReleaseId`.
@@ -1907,7 +1910,8 @@ Optional grouping uses `configReleaseId`.
 - trust anchors → trustStoreVersion;
 - SSRF or internal denylist semantics → securityPolicyVersion;
 - the global deadline or orchestration behavior → orchestrationConfigVersion;
-- general cache serialization or compatibility → cacheContractVersion.
+- general cache serialization or compatibility → cacheContractVersion;
+- the Public Suffix List snapshot → publicSuffixListVersion.
 
 ## 20.4. Health Policy and Technical Observations
 
@@ -1955,6 +1959,7 @@ Secret rotation without a behavioral change does not require an artificial modul
 - **AC-20.6** Unknown check references and cross-category Issue rules make a configuration invalid.
 - **AC-20.7** The user API does not modify policy, quorum, trust anchors, or SSRF parameters.
 - **AC-20.8** The canonical registration configuration identifier is `registryModuleConfigVersion`.
+- **AC-20.9** A change to the Public Suffix List snapshot updates `publicSuffixListVersion`.
 
 ---
 
