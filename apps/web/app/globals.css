@@ -57,6 +57,38 @@ h2 {
   font-weight: 400;
 }
 
+/* PRD 23/24 — the header is a link cluster, not a run of default hyperlinks. */
+a {
+  color: var(--focus);
+}
+
+header {
+  margin-bottom: 32px;
+}
+header .lede {
+  margin-bottom: 0;
+}
+h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.tools {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.tools a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid transparent;
+}
+.tools a:hover {
+  color: var(--text);
+  border-bottom-color: var(--line);
+}
+
 /* AC-23.9 — focus must stay visible for keyboard use. */
 :focus-visible {
   outline: 2px solid var(--focus);

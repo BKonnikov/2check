@@ -20,7 +20,7 @@ export default async function LocaleLayout({
   const chrome = CHROME[locale as Locale];
 
   return (
-    <main>
+    <main lang={locale}>
       <header>
         <h1>
           <a href={`/${locale}`}>2check.uz</a>
