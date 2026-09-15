@@ -6,20 +6,33 @@ import type {
 } from "@2check/contracts";
 import {
   buildCategoryResult,
+  buildDnsCacheKey,
+  buildRegistryCacheKey,
   buildSummary,
   collectAddressCandidates,
+  dnsCacheTtlSeconds,
   evaluateNameExistence,
   evaluateRegistryLookup,
   evaluateResolveCheck,
   evaluateResolverConsistency,
   evaluateTlsBlockedChecks,
   evaluateTlsChecks,
+  markServedFromCache,
+  mayReadCache,
+  mayWriteCache,
+  registrationCacheTtlSeconds,
   resolveRegistryLookup,
   selectRepresentativeAddress,
+  singleFlightKey,
   type TlsProbeOutcome,
   type TlsProbes,
   validateTarget,
 } from "@2check/domain";
+import {
+  createInMemoryCache,
+  createSingleFlight,
+  type ReusableCache,
+} from "../cache/reusable-cache.js";
 import {
   DEFAULT_QTYPES,
   DEFAULT_RESOLVER_SET_VERSION,
@@ -46,6 +59,9 @@ export interface ScanDependencies {
   readonly dnsQuery?: DnsQuery;
   readonly registryLookup?: RegistryLookup;
   readonly tlsProbe?: TlsProbe;
+  /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
+  readonly cache?: ReusableCache;
+  readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
 }
 
 /** PRD 16.4 — pinned for the whole scan. */
@@ -98,12 +114,52 @@ export async function runScan(
   await store.save(record);
 
   const qname = record.canonicalDomain.asciiHostname;
-  const dnsOptions = { qname, resolverSetVersion: record.executionContext.resolverSetVersion };
+  const context = record.executionContext;
+  const dnsOptions = { qname, resolverSetVersion: context.resolverSetVersion };
+  const cache = deps.cache ?? createInMemoryCache();
+  const singleFlight = deps.singleFlight ?? createSingleFlight();
+
   let dnsResults: readonly DnsProviderResult[] | undefined;
+  let dnsCacheAge: number | undefined;
+
+  // PRD 14.5 — the technical key carries the cache contract and the module configuration versions.
+  const dnsKey = buildDnsCacheKey({
+    asciiHostname: qname,
+    resolverSetVersion: context.resolverSetVersion,
+    dnsModuleConfigVersion: context.dnsModuleConfigVersion,
+    cacheContractVersion: context.cacheContractVersion,
+  });
 
   const dnsOnce = async (): Promise<readonly DnsProviderResult[]> => {
-    dnsResults ??= await (deps.dnsQuery ?? queryResolverSet)(qname);
-    return dnsResults;
+    if (dnsResults !== undefined) {
+      return dnsResults;
+    }
+    // PRD 14.2 — FORCE_REFRESH bypasses the read; it never clears anything.
+    if (mayReadCache(record.cacheMode)) {
+      const hit = await cache.get<DnsProviderResult[]>(dnsKey);
+      if (hit !== undefined) {
+        dnsCacheAge = hit.ageSeconds;
+        dnsResults = hit.value;
+        return hit.value;
+      }
+    }
+    // PRD 14.7 — concurrent identical retrievals share one execution, keyed technically.
+    const fresh = await singleFlight(singleFlightKey(dnsKey), () =>
+      (deps.dnsQuery ?? queryResolverSet)(qname),
+    );
+    dnsResults = fresh;
+    if (mayWriteCache(record.cacheMode)) {
+      const observedAt = [...fresh.map((entry) => entry.receivedAt)].sort()[0];
+      await cache.set(
+        dnsKey,
+        fresh,
+        dnsCacheTtlSeconds(
+          fresh.flatMap((entry) => entry.answers.map((answer) => answer.ttl ?? 0)),
+        ),
+        observedAt,
+      );
+    }
+    return fresh;
   };
 
   try {
@@ -120,7 +176,13 @@ export async function runScan(
           checks.push(evaluateResolveCheck(qtype, forType, dnsOptions));
           checks.push(evaluateResolverConsistency(qtype, forType, dnsOptions));
         }
-        categories.push(buildCategoryResult("dns", checks));
+        // AC-6.5 — checkedAt keeps the original observation; only cached and cacheAge change.
+        categories.push(
+          buildCategoryResult(
+            "dns",
+            dnsCacheAge === undefined ? checks : markServedFromCache(checks, dnsCacheAge),
+          ),
+        );
       }
 
       if (category === "registry") {
@@ -128,19 +190,58 @@ export async function runScan(
         const registryDomain =
           record.canonicalDomain.registrableDomain ?? record.canonicalDomain.asciiHostname;
         const supported = isSupportedZone(registryDomain);
-        const resolution = supported
-          ? resolveRegistryLookup(await (deps.registryLookup ?? lookupRegistration)(registryDomain))
-          : { outcome: "INDETERMINATE" as const, registration: null, transportsUsed: [] };
+        const registryKey = buildRegistryCacheKey({
+          registryDomain,
+          registryProvider: REGISTRY_PROVIDER,
+          registryModuleConfigVersion: context.registryModuleConfigVersion,
+          cacheContractVersion: context.cacheContractVersion,
+        });
+
+        let registryAge: number | undefined;
+        let resolution = {
+          outcome: "INDETERMINATE" as const,
+          registration: null,
+          transportsUsed: [],
+        } as Awaited<ReturnType<typeof resolveRegistryLookup>>;
+
+        if (supported) {
+          const hit = mayReadCache(record.cacheMode)
+            ? await cache.get<typeof resolution>(registryKey)
+            : undefined;
+          if (hit !== undefined) {
+            resolution = hit.value;
+            registryAge = hit.ageSeconds;
+          } else {
+            resolution = resolveRegistryLookup(
+              await singleFlight(singleFlightKey(registryKey), () =>
+                (deps.registryLookup ?? lookupRegistration)(registryDomain),
+              ),
+            );
+            if (mayWriteCache(record.cacheMode)) {
+              // PRD 9.7 — the lifetime follows the registration status.
+              await cache.set(
+                registryKey,
+                resolution,
+                registrationCacheTtlSeconds(resolution.registration?.status ?? "UNKNOWN"),
+              );
+            }
+          }
+        }
+
+        const registryCheck = evaluateRegistryLookup(resolution, {
+          registryDomain,
+          registryProvider: REGISTRY_PROVIDER,
+          supported,
+          freshness: freshnessNow(),
+        });
 
         categories.push(
-          buildCategoryResult("registry", [
-            evaluateRegistryLookup(resolution, {
-              registryDomain,
-              registryProvider: REGISTRY_PROVIDER,
-              supported,
-              freshness: freshnessNow(),
-            }),
-          ]),
+          buildCategoryResult(
+            "registry",
+            registryAge === undefined
+              ? [registryCheck]
+              : markServedFromCache([registryCheck], registryAge),
+          ),
         );
       }
 

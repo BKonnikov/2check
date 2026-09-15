@@ -85,7 +85,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       });
     }
 
-    const { input, mode, selectedCategories } = parsed.data;
+    const { input, mode, selectedCategories, cacheMode = "NORMAL" } = parsed.data;
 
     // PRD 17.2 — FULL carries no selectedCategories; PARTIAL carries a non-empty proper subset.
     if (mode === "FULL" && selectedCategories !== undefined) {
@@ -146,6 +146,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
     const record: ScanRecord = {
       scanId: randomUUID(),
       mode,
+      cacheMode,
       visibleCategories: requested,
       canonicalDomain: storedDomain,
       executionContext: buildExecutionContext(),

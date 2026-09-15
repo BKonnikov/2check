@@ -1,4 +1,5 @@
 export * from "./aggregation.js";
+export * from "./cache.js";
 export * from "./canonical-domain.js";
 export * from "./category.js";
 export * from "./dns.js";

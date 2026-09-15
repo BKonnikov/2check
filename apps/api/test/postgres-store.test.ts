@@ -42,6 +42,7 @@ function record(scanId: string): ScanRecord {
   return {
     scanId,
     mode: "PARTIAL",
+    cacheMode: "NORMAL",
     visibleCategories: ["dns"],
     canonicalDomain: {
       inputType: "HOSTNAME",

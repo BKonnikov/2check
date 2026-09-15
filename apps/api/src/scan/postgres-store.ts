@@ -17,6 +17,7 @@ interface ScanRow {
   readonly scan_id: string;
   readonly execution_state: ScanRecord["executionState"];
   readonly mode: ScanRecord["mode"];
+  readonly cache_mode: ScanRecord["cacheMode"];
   readonly visible_categories: string[];
   readonly canonical_domain: StoredCanonicalDomain;
   readonly execution_context: ScanRecord["executionContext"];
@@ -34,6 +35,7 @@ function toRecord(row: ScanRow): ScanRecord {
   return {
     scanId: row.scan_id,
     mode: row.mode,
+    cacheMode: row.cache_mode,
     visibleCategories: row.visible_categories as ScanRecord["visibleCategories"],
     canonicalDomain: row.canonical_domain,
     executionContext: row.execution_context,
@@ -64,8 +66,8 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
       await pool.query(
         `insert into scans (
            scan_id, storage_schema_version, execution_state, mode, visible_categories,
-           canonical_domain, execution_context, categories, started_at, finalized
-         ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)`,
+           canonical_domain, execution_context, categories, started_at, cache_mode, finalized
+         ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false)`,
         [
           record.scanId,
           STORAGE_SCHEMA_VERSION,
@@ -76,6 +78,7 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
           JSON.stringify(record.executionContext),
           JSON.stringify(record.categories),
           record.startedAt,
+          record.cacheMode,
         ],
       );
     },

@@ -1,4 +1,5 @@
 import type {
+  CacheMode,
   CanonicalDomain,
   CategoryResult,
   DomainHealthSummary,
@@ -20,6 +21,7 @@ export type StoredCanonicalDomain = Omit<CanonicalDomain, "originalInput">;
 export interface ScanRecord {
   readonly scanId: string;
   readonly mode: ScanMode;
+  readonly cacheMode: CacheMode;
   readonly visibleCategories: readonly ScanCategory[];
   readonly canonicalDomain: StoredCanonicalDomain;
   readonly executionContext: ExecutionContext;

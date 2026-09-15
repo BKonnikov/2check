@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import { createInMemoryCache, createSingleFlight } from "./cache/reusable-cache.js";
 import type { Env } from "./config/env.js";
 import { type ReadinessProbe, registerHealthRoutes } from "./routes/health.js";
 import { registerScanRoutes } from "./routes/scans.js";
@@ -19,7 +20,14 @@ export function buildApp({ env, probes = [], store, ...deps }: AppOptions): Fast
   });
 
   registerHealthRoutes(app, env, probes);
-  registerScanRoutes(app, { store: store ?? createInMemoryScanStore(), ...deps });
+  registerScanRoutes(app, {
+    store: store ?? createInMemoryScanStore(),
+    // One cache and one single-flight registry per process, so reuse and coalescing actually span
+    // scans rather than being private to each one.
+    cache: deps.cache ?? createInMemoryCache(),
+    singleFlight: deps.singleFlight ?? createSingleFlight(),
+    ...deps,
+  });
 
   return app;
 }
