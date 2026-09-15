@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 export interface NavTab {
   readonly href: string;
@@ -24,12 +25,14 @@ export default function HeaderNav({
   locale,
   locales,
   languageLabel,
+  themeLabel,
   toolsLabel,
   tabs,
 }: {
   readonly locale: string;
   readonly locales: readonly LocaleOption[];
   readonly languageLabel: string;
+  readonly themeLabel: string;
   readonly toolsLabel: string;
   readonly tabs: readonly NavTab[];
 }) {
@@ -40,25 +43,23 @@ export default function HeaderNav({
     <header className="site-header">
       <div className="bar">
         <a className="brand" href={`/${locale}`}>
-          <span className="brand-mark" aria-hidden="true">
-            2✓
-          </span>
-          <span>
-            2check<span className="brand-tld">.uz</span>
-          </span>
+          2check<span className="brand-tld">.uz</span>
         </a>
-        <nav className="lang" aria-label={languageLabel}>
-          {locales.map((option) => (
-            <a
-              key={option.code}
-              href={`/${option.code}${withoutLocale}`}
-              hrefLang={option.code}
-              {...(option.code === locale ? { "aria-current": "page" as const } : {})}
-            >
-              {option.name}
-            </a>
-          ))}
-        </nav>
+        <div className="controls">
+          <nav className="lang" aria-label={languageLabel}>
+            {locales.map((option) => (
+              <a
+                key={option.code}
+                href={`/${option.code}${withoutLocale}`}
+                hrefLang={option.code}
+                {...(option.code === locale ? { "aria-current": "page" as const } : {})}
+              >
+                {option.name}
+              </a>
+            ))}
+          </nav>
+          <ThemeToggle label={themeLabel} />
+        </div>
       </div>
       <nav className="tabs" aria-label={toolsLabel}>
         {tabs.map((tab) => (

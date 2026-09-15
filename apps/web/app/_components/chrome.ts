@@ -23,6 +23,7 @@ export interface Ui {
   readonly homeHeading: string;
   readonly toolsNav: string;
   readonly languageNav: string;
+  readonly theme: string;
   readonly inputLabel: string;
   readonly inputPlaceholder: string;
   readonly inputHint: string;
@@ -107,6 +108,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       homeHeading: "Проверка домена",
       toolsNav: "Инструменты",
       languageNav: "Язык интерфейса",
+      theme: "Светлая или тёмная тема",
       inputLabel: "Домен",
       inputPlaceholder: "example.uz",
       inputHint: "Можно вставить адрес целиком — 2check возьмёт из него имя домена.",
@@ -194,6 +196,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       homeHeading: "Domain check",
       toolsNav: "Tools",
       languageNav: "Interface language",
+      theme: "Light or dark theme",
       inputLabel: "Domain",
       inputPlaceholder: "example.uz",
       inputHint: "You can paste a whole address — 2check takes the domain name out of it.",
@@ -289,6 +292,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       homeHeading: "Domen tekshiruvi",
       toolsNav: "Vositalar",
       languageNav: "Interfeys tili",
+      theme: "Yorug' yoki qorong'i mavzu",
       inputLabel: "Domen",
       inputPlaceholder: "example.uz",
       inputHint: "To'liq manzilni ham qo'yish mumkin — 2check undan domen nomini ajratib oladi.",

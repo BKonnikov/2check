@@ -96,14 +96,11 @@ function message(descriptor: MessageDescriptorView, language: Language) {
   );
 }
 
-function StatusChip({ status, ui }: { status: string; ui: Ui }) {
+function StatusMark({ status, ui }: { status: string; ui: Ui }) {
   const word = ui.statusWords[status as keyof Ui["statusWords"]] ?? status;
   return (
-    <span className={`chip chip-${status}`}>
-      <span className="mark" aria-hidden="true">
-        {STATUS_MARK[status] ?? "·"}
-      </span>
-      {word}
+    <span className={`mark st-${status}`}>
+      <span aria-hidden="true">[{STATUS_MARK[status] ?? "·"}]</span> {word}
     </span>
   );
 }
@@ -218,14 +215,14 @@ export default function DomainChecker({
       <p className="hint">{ui.inputHint}</p>
 
       {error !== null && (
-        <div className="card" role="alert">
+        <div className="section sheet" role="alert">
           <p className="error">{error}</p>
         </div>
       )}
 
       {/* PRD 23.2 — during execution: visible category states, no percentage, no score. */}
       {scan !== null && scan.executionState !== "COMPLETED" && scan.executionState !== "FAILED" && (
-        <div className="card" aria-live="polite">
+        <section className="section" aria-live="polite">
           <h2>{ui.runningHeading}</h2>
           <ul className="running">
             {scan.selectedCategories.map((category) => (
@@ -235,12 +232,12 @@ export default function DomainChecker({
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
 
       {showOverall && summary?.verdictCode !== undefined && (
         <section
-          className={`card verdict v-${summary.verdictCode}`}
+          className={`section sheet verdict v-${summary.verdictCode}`}
           aria-labelledby="verdict-heading"
         >
           <div className="verdict-body">
@@ -254,7 +251,7 @@ export default function DomainChecker({
                 {message({ titleCode: `verdict.${summary.verdictCode}` }, language).explanation}
               </p>
             )}
-            <p className="muted">
+            <p className="confidence">
               {title(`confidence.${summary.confidence.level}`, language)}
               {summary.confidence.unknownChecksCount > 0 &&
                 ` · ${fill(ui.unknownChecks, { count: summary.confidence.unknownChecksCount })}`}
@@ -262,10 +259,12 @@ export default function DomainChecker({
           </div>
           {summary.score !== undefined && (
             <div className="score" style={{ ["--value" as string]: summary.score }}>
-              <div className="score-inner">
-                <span className="score-value">{summary.score}</span>
-                <span className="score-label">{ui.scoreLabel}</span>
+              <span className="score-num">{summary.score}</span>
+              <div className="meter" aria-hidden="true">
+                <div className="meter-fill" />
+                <div className="meter-ticks" />
               </div>
+              <span className="score-label">{ui.scoreLabel}</span>
             </div>
           )}
         </section>
@@ -273,7 +272,7 @@ export default function DomainChecker({
 
       {/* AC-23.4 — only confirmed problems appear here; UNKNOWN never does. */}
       {summary !== undefined && summary.issues.length > 0 && (
-        <section className="card" aria-labelledby="issues-heading">
+        <section className="section" aria-labelledby="issues-heading">
           <h2 id="issues-heading">{ui.issuesHeading}</h2>
           <ul className="issues">
             {summary.issues.map((issue) => {
@@ -281,13 +280,11 @@ export default function DomainChecker({
               const severity = issue.severity as keyof Ui["severityLabels"];
               return (
                 <li key={issue.issueId} className={`sev-${issue.severity}`}>
-                  <div className="issue-head">
-                    <p className="issue-title">{resolved.title}</p>
-                    <span className="freshness">
-                      {ui.severityLabels[severity] ?? issue.severity} ·{" "}
-                      {title(`category.${issue.category}`, language)}
-                    </span>
-                  </div>
+                  <p className="issue-meta">
+                    {ui.severityLabels[severity] ?? issue.severity} ·{" "}
+                    {title(`category.${issue.category}`, language)}
+                  </p>
+                  <p className="issue-title">{resolved.title}</p>
                   {resolved.explanation !== undefined && (
                     <p className="muted">{resolved.explanation}</p>
                   )}
@@ -302,20 +299,21 @@ export default function DomainChecker({
         </section>
       )}
 
-      {scan?.categories.map((category) => (
+      {scan?.categories.map((category, index) => (
         <section
-          className="card"
+          className="section"
           key={category.category}
           aria-labelledby={`cat-${category.category}`}
         >
           <div className="cat-head">
             <h2 className="cat-name" id={`cat-${category.category}`}>
-              {title(`category.${category.category}`, language)}{" "}
+              <span className="cat-index">{String(index + 1).padStart(2, "0")}</span>
+              {title(`category.${category.category}`, language)}
               {category.completeness === "PARTIAL" && (
                 <span className="cat-note">{ui.partialCategory}</span>
               )}
             </h2>
-            <StatusChip status={category.status} ui={ui} />
+            <StatusMark status={category.status} ui={ui} />
           </div>
           <ul className="checks">
             {category.checks.map((check) => {
@@ -325,7 +323,7 @@ export default function DomainChecker({
                   <span className="check-title">{resolved.title || check.checkId}</span>
                   <span className="check-meta">
                     <Freshness freshness={check.freshness} ui={ui} />
-                    <StatusChip status={check.status} ui={ui} />
+                    <StatusMark status={check.status} ui={ui} />
                   </span>
                 </li>
               );
@@ -336,7 +334,7 @@ export default function DomainChecker({
 
       {/* PRD 23.6 — technical detail is a disclosure, closed by default and keyboard operable. */}
       {scan !== null && scan.executionState === "COMPLETED" && domain !== undefined && (
-        <details className="card">
+        <details className="section">
           <summary>{ui.technicalHeading}</summary>
           <div className="technical">
             <dl>
@@ -367,7 +365,7 @@ export default function DomainChecker({
                       <tr key={check.checkId}>
                         <td className="mono">{check.checkId}</td>
                         <td>
-                          <StatusChip status={check.status} ui={ui} />
+                          <StatusMark status={check.status} ui={ui} />
                         </td>
                         <td className="mono">{check.reasonCode ?? "—"}</td>
                         <td className="mono">{check.freshness.checkedAt}</td>

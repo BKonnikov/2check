@@ -37,7 +37,7 @@ export default async function ToolPage({ params }: { params: Promise<{ locale: s
       <h1>{chrome.toolTitles[KEY]}</h1>
       <p className="lede">{chrome.toolDescriptions[KEY]}</p>
       <DomainChecker language={LANGUAGE_OF[key]} ui={chrome.ui} categories={CATEGORIES} />
-      <section className="card">
+      <section className="section">
         <h2>{chrome.ui.aboutHeading}</h2>
         {chrome.toolBody[KEY].map((paragraph) => (
           <p key={paragraph.slice(0, 32)}>{paragraph}</p>

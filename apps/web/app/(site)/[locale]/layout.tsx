@@ -23,6 +23,14 @@ function categoryName(code: string, locale: Locale): string {
 }
 
 /**
+ * Applied before first paint so a reader who chose a theme never sees the other one flash.
+ * Without a stored choice nothing is set and the CSS follows the operating system.
+ */
+const THEME_SCRIPT =
+  '(function(){try{var t=localStorage.getItem("2check-theme");' +
+  'if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}})()';
+
+/**
  * PRD 24.1 — the root layout of the localised pages. `<html lang>` carries the locale actually
  * being served, which is why this route group has its own root layout.
  */
@@ -42,7 +50,11 @@ export default async function LocaleLayout({
   const ui = chrome.ui;
 
   return (
-    <html lang={key}>
+    <html lang={key} suppressHydrationWarning>
+      <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: the pre-paint theme script is a constant. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <a className="skip" href="#content">
           {ui.skipToContent}
@@ -51,6 +63,7 @@ export default async function LocaleLayout({
           locale={key}
           locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))}
           languageLabel={ui.languageNav}
+          themeLabel={ui.theme}
           toolsLabel={ui.toolsNav}
           tabs={[
             { href: `/${key}`, label: ui.navHome },
