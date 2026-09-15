@@ -5,6 +5,7 @@ import { WEB_API_BASE_PATH } from "@2check/contracts";
 import { type Language, resolveMessage } from "@2check/messages";
 import { type FormEvent, type ReactNode, useState } from "react";
 import type { Ui } from "./chrome";
+import ShareActions from "./ShareActions";
 
 /** PRD 13.1 — an input rejection is a message like any other: what, why, and what to do. */
 interface ErrorView {
@@ -548,6 +549,11 @@ export default function DomainChecker({
           }
           ui={ui}
         />
+      )}
+
+      {/* PRD 23.9 — for a COMPLETED scan: share, copy or save the result as an image. */}
+      {scan !== null && scan.executionState === "COMPLETED" && (
+        <ShareActions scan={scan} language={language} ui={ui} />
       )}
 
       {/* PRD 23.8 — refreshing creates a new FORCE_REFRESH scan, never patches this one. */}

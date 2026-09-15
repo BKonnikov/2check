@@ -49,6 +49,13 @@ export interface Ui {
   readonly detailLabels: Readonly<Record<string, string>>;
   readonly technicalFields: Readonly<Record<"name" | "ascii" | "suffix" | "registrable", string>>;
   readonly tableHeads: Readonly<Record<"check" | "status" | "reason" | "observed", string>>;
+  readonly share: string;
+  readonly shareCopy: string;
+  readonly shareSave: string;
+  readonly shareCopied: string;
+  readonly shareFailed: string;
+  readonly shareFooter: string;
+  readonly shareNote: string;
   readonly recheck: string;
   readonly recheckNote: string;
   readonly cachedResults: string;
@@ -205,6 +212,13 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         reason: "Код причины",
         observed: "Когда проверено",
       },
+      share: "Поделиться",
+      shareCopy: "Скопировать картинку",
+      shareSave: "Сохранить картинку",
+      shareCopied: "Картинка скопирована",
+      shareFailed: "Не удалось подготовить картинку",
+      shareFooter: "Наблюдение из одной точки в один момент времени",
+      shareNote: "Уходит только картинка: ни ссылки, ни технических подробностей в ней нет.",
       recheck: "Проверить заново",
       recheckNote: "Запрос уйдёт к резолверам, реестру и серверу заново, мимо кэша.",
       deadlineNote:
@@ -347,6 +361,13 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         reason: "Reason code",
         observed: "Checked at",
       },
+      share: "Share",
+      shareCopy: "Copy image",
+      shareSave: "Save image",
+      shareCopied: "Image copied",
+      shareFailed: "The image could not be prepared",
+      shareFooter: "One observation, from one location, at one moment",
+      shareNote: "Only the image travels: it carries no link and no technical detail.",
       recheck: "Check again",
       recheckNote:
         "The resolvers, the registry and the host are queried again, bypassing the cache.",
@@ -498,6 +519,13 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         reason: "Sabab kodi",
         observed: "Qachon tekshirildi",
       },
+      share: "Ulashish",
+      shareCopy: "Rasmni nusxalash",
+      shareSave: "Rasmni saqlash",
+      shareCopied: "Rasm nusxalandi",
+      shareFailed: "Rasmni tayyorlab bo'lmadi",
+      shareFooter: "Bitta joydan, bitta vaqtda qilingan kuzatuv",
+      shareNote: "Faqat rasm yuboriladi: unda havola ham, texnik tafsilot ham yo'q.",
       recheck: "Qayta tekshirish",
       recheckNote: "So'rov rezolverlar, reestr va serverga keshdan o'tmasdan qaytadan yuboriladi.",
       deadlineNote:

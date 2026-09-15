@@ -366,6 +366,20 @@ button.secondary:disabled {
   cursor: default;
 }
 
+.share {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid var(--rule);
+}
+.share-note {
+  margin: 0;
+  flex: 1 1 100%;
+}
+
 .refresh {
   display: flex;
   align-items: center;
