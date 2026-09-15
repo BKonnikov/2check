@@ -15,6 +15,7 @@ export const METRIC_NAMES = [
   "scan_started_total",
   "scan_completed_total",
   "scan_failed_total",
+  "scan_rejected_total",
 ] as const;
 export type MetricName = (typeof METRIC_NAMES)[number];
 

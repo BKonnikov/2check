@@ -2,6 +2,7 @@ import type { CheckFreshness } from "@2check/contracts";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_REGISTRY_TTL_SECONDS,
+  decodeEntities,
   evaluateRegistryLookup,
   normalizeRdapDomain,
   normalizeRegistrationStatus,
@@ -303,5 +304,29 @@ describe("AC-9.7 — status-aware cache lifetime", () => {
 
   it("covers every canonical status", () => {
     expect(Object.keys(DEFAULT_REGISTRY_TTL_SECONDS)).toHaveLength(11);
+  });
+});
+
+/**
+ * PRD 9.4 — the normalised value is the registry's text, not a rendering of it. The .uz service
+ * returns company names with their quotation marks already escaped for HTML.
+ */
+describe("registry text arrives decoded", () => {
+  it.each([
+    ["OOO &quot;BILLUR COM&quot;", 'OOO "BILLUR COM"'],
+    ["Ivanov &amp; Sons", "Ivanov & Sons"],
+    ["&#1050;&#1086;&#1084;", "Ком"],
+    ["&#x41;&#x42;", "AB"],
+  ])("decodes %j", (input, expected) => {
+    expect(decodeEntities(input)).toBe(expected);
+  });
+
+  it("decodes once, so an escaped entity stays escaped", () => {
+    expect(decodeEntities("&amp;quot;")).toBe("&quot;");
+  });
+
+  it("leaves anything that is not an entity alone", () => {
+    expect(decodeEntities("100% & rising, AT&T")).toBe("100% & rising, AT&T");
+    expect(decodeEntities("&notreal; &#xZZ;")).toBe("&notreal; &#xZZ;");
   });
 });

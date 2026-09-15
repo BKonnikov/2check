@@ -7,6 +7,7 @@ import type {
 import {
   addressEvidenceIsSufficient,
   buildCategoryResult,
+  buildDeadlineChecks,
   buildDnsCacheKey,
   buildRegistryCacheKey,
   buildSummary,
@@ -64,7 +65,18 @@ export interface ScanDependencies {
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
   readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
+  /** PRD 22.2 — the budget for the whole scan, not for one provider call. */
+  readonly scanDeadlineMs?: number;
+  /** PRD 21.3 — somewhere to say why a scan fell over, instead of swallowing the error. */
+  readonly logger?: { error(details: Record<string, unknown>, message: string): void };
 }
+
+/**
+ * PRD 22.3 — the per-operation timeouts are 3s for DNS, 6s for the registry and 8s per TLS
+ * endpoint. Run one after another they can add up past what anyone will wait for, so the whole
+ * scan gets a budget of its own.
+ */
+export const DEFAULT_SCAN_DEADLINE_MS = 30_000;
 
 /** PRD 16.4 — pinned for the whole scan. */
 export function buildExecutionContext(): ExecutionContext {
@@ -164,9 +176,10 @@ export async function runScan(
     return fresh;
   };
 
-  try {
-    const categories: CategoryResult[] = [];
+  const categories: CategoryResult[] = [];
+  let thrown = false;
 
+  const work = async (): Promise<void> => {
     for (const category of record.visibleCategories) {
       if (category === "dns") {
         const results = await dnsOnce();
@@ -327,22 +340,68 @@ export async function runScan(
         categories.push(buildCategoryResult("tls", evaluateTlsChecks(probes, tlsOptions)));
       }
     }
+  };
 
-    record.categories = categories;
+  /**
+   * PRD 22.2 and AC-22.2 — an accepted scan may not stay RUNNING for ever, so the whole run has
+   * a budget. Per-operation timeouts bound each provider call; this bounds their sum, which is
+   * what a client waiting on the result actually experiences.
+   */
+  const budgetMs = deps.scanDeadlineMs ?? DEFAULT_SCAN_DEADLINE_MS;
+  let deadlineExceeded = false;
+  await Promise.race([
+    work().catch((error: unknown) => {
+      thrown = true;
+      deps.logger?.error({ error: String(error) }, "scan orchestration failed");
+    }),
+    new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        deadlineExceeded = true;
+        resolve();
+      }, budgetMs);
+      timer.unref?.();
+    }),
+  ]);
+
+  /**
+   * PRD 16.7 — a check the deadline interrupted is UNKNOWN with scan_deadline_exceeded, and the
+   * scan stays COMPLETED with the reason recorded. What did finish is trustworthy and is kept.
+   */
+  const produced = [...categories];
+  if (deadlineExceeded) {
+    const freshness = freshnessNow();
+    for (const category of record.visibleCategories) {
+      if (produced.some((entry) => entry.category === category)) {
+        continue;
+      }
+      produced.push(
+        buildCategoryResult(
+          category,
+          category === "tls"
+            ? evaluateTlsBlockedChecks("scan_deadline_exceeded", { hostname: qname, freshness })
+            : buildDeadlineChecks(category, { hostname: qname, freshness }),
+        ),
+      );
+    }
+    record.completionReason = "DEADLINE_TERMINALIZED";
+  }
+
+  if (thrown && produced.length === 0) {
+    // PRD 16.9 — FAILED only when no trustworthy final result can be produced.
+    record.executionState = "FAILED";
+    record.completedAt = new Date().toISOString();
+    record.failure = { failureCode: "orchestration_error", occurredAt: new Date().toISOString() };
+  } else {
+    record.categories = produced;
     // PRD 16.8 — the deterministic server-side order: checks, categories, issues, confidence,
     // verdict, score. The client never assembles the authoritative result.
-    record.summary = buildSummary(categories, {
+    record.summary = buildSummary(produced, {
       groups: DEFAULT_ISSUE_GROUPS,
       mode: record.mode,
       state: "FINAL",
     });
     record.executionState = "COMPLETED";
     record.completedAt = new Date().toISOString();
-  } catch {
-    // PRD 16.9 — FAILED only when no trustworthy final result can be produced.
-    record.executionState = "FAILED";
-    record.completedAt = new Date().toISOString();
-    record.failure = { failureCode: "orchestration_error", occurredAt: new Date().toISOString() };
   }
 
   // AC-19.9 — the terminal snapshot is published in one write, after which it is immutable.

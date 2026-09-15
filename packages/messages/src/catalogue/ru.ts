@@ -120,6 +120,17 @@ export const ru: Catalogue = {
   "web.error.scan_scope_not_available": {
     title: "Эта установка пока не выполняет запрошенные проверки",
   },
+  "web.error.rate_limited": {
+    title: "Слишком много проверок подряд",
+    explanation:
+      "2check работает на одном сервере и обращается к чужим публичным сервисам, поэтому число проверок с одного адреса ограничено.",
+    recommendation: "Подождите минуту и повторите.",
+  },
+  "web.error.service_busy": {
+    title: "Сервис сейчас занят",
+    explanation: "Одновременно выполняется столько проверок, сколько сервер может выдержать.",
+    recommendation: "Повторите через несколько секунд.",
+  },
   "web.error.gated_access_denied": { title: "Доступ к этим данным не предоставлен" },
   "web.error.scan_not_found": { title: "Сканирование неизвестно или срок его хранения истёк" },
   "web.error.input_empty": { title: "Введите домен" },

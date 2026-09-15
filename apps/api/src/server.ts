@@ -10,9 +10,11 @@ const env = loadEnv();
 const pool = createPool(env.DATABASE_URL);
 const redis = new Redis(env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 2 });
 
+const store = createPostgresScanStore(pool);
+
 const app = buildApp({
   env,
-  store: createPostgresScanStore(pool),
+  store,
   cache: createRedisCache(redis),
   // PRD 27.5 — the instance confirms its mandatory dependencies before it receives traffic.
   probes: [
@@ -61,6 +63,23 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     );
   });
 }
+
+/**
+ * AC-16.9 — a scan whose process died mid-execution would otherwise stay RUNNING for ever, and a
+ * client polling it would wait for ever with it. The next start closes them with
+ * execution_state_unrecoverable, which is the honest terminal state for a result nobody can
+ * produce any more.
+ */
+store.recoverInterrupted().then(
+  (closed) => {
+    if (closed > 0) {
+      app.log.warn({ closed }, "closed scans left running by a previous process");
+    }
+  },
+  (error: unknown) => {
+    app.log.error({ error }, "could not recover interrupted scans");
+  },
+);
 
 redis.connect().catch((error: unknown) => {
   // A cache that is unreachable at startup must not stop the service from reporting readiness

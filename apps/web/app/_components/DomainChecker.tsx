@@ -65,6 +65,7 @@ interface ScanView {
   };
   selectedCategories: string[];
   categories: CategoryView[];
+  completionReason?: string;
   pollAfterMs?: number;
 }
 
@@ -138,7 +139,28 @@ function renderValue(value: unknown, ui: Ui): ReactNode {
     return value ? ui.yes : ui.no;
   }
   if (Array.isArray(value)) {
-    return value.length === 0 ? ui.none : value.map((entry) => String(entry)).join(", ");
+    if (value.length === 0) {
+      return ui.none;
+    }
+    // A list of records — one per resolver, say — reads as rows, not as "[object Object]".
+    if (
+      value.every((entry) => typeof entry === "object" && entry !== null && !Array.isArray(entry))
+    ) {
+      return (
+        <ul className="detail-sub">
+          {value.map((entry, index) => {
+            const [head, ...rest] = Object.entries(entry as Record<string, unknown>);
+            return (
+              <li key={`${String(head?.[1] ?? index)}`}>
+                <span className="detail-key">{String(head?.[1] ?? "")}</span>
+                <span>{rest.map(([, nested]) => String(nested)).join(" · ") || ui.none}</span>
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
+    return value.map((entry) => String(entry)).join(", ");
   }
   if (typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>);
@@ -355,6 +377,10 @@ export default function DomainChecker({
   // AC-23.3 — a PARTIAL scan shows no overall verdict and no overall score.
   const showOverall = scan?.mode === "FULL" && summary?.state === "FINAL";
   const domain = scan?.canonicalDomain;
+  // PRD 23.7 — the reader should be able to see that something was reused, and ask for a fresh run.
+  const anyCached =
+    scan?.categories.some((category) => category.checks.some((check) => check.freshness.cached)) ??
+    false;
 
   return (
     <>
@@ -418,6 +444,10 @@ export default function DomainChecker({
                 {message({ titleCode: `verdict.${summary.verdictCode}` }, language).explanation}
               </p>
             )}
+            {scan?.completionReason === "DEADLINE_TERMINALIZED" && (
+              <p className="confidence">{ui.deadlineNote}</p>
+            )}
+            {anyCached && <p className="confidence">{ui.cachedResults}</p>}
             <p className="confidence">
               {title(`confidence.${summary.confidence.level}`, language)}
               {summary.confidence.unknownChecksCount > 0 &&
@@ -522,7 +552,7 @@ export default function DomainChecker({
 
       {/* PRD 23.8 — refreshing creates a new FORCE_REFRESH scan, never patches this one. */}
       {scan !== null && scan.executionState === "COMPLETED" && (
-        <p>
+        <p className="refresh">
           <button
             type="button"
             className="secondary"
@@ -531,6 +561,7 @@ export default function DomainChecker({
           >
             {ui.recheck}
           </button>
+          <span className="hint refresh-note">{ui.recheckNote}</span>
         </p>
       )}
     </>

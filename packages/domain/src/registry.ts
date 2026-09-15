@@ -88,6 +88,46 @@ interface RdapDomain {
   readonly redacted?: readonly { readonly name?: { readonly type?: string } }[];
 }
 
+/**
+ * PRD 9.4 — the normalised value must be the actual text, not a rendering of it.
+ *
+ * Registry answers sometimes arrive already escaped for HTML: the .uz service returns a company
+ * name as `OOO &quot;BILLUR COM&quot;`. Everything downstream escapes on output rather than
+ * trusting markup, so left alone those entities reach the reader verbatim. They are decoded once,
+ * here, where the provider's text enters the product — never again later, which would turn
+ * `&amp;quot;` into a quotation mark that was not in the registry.
+ */
+const NAMED_ENTITIES: Readonly<Record<string, string>> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+};
+
+export function decodeEntities(value: string): string {
+  return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, body: string) => {
+    if (!body.startsWith("#")) {
+      return NAMED_ENTITIES[body.toLowerCase()] ?? match;
+    }
+    const codePoint =
+      body[1]?.toLowerCase() === "x"
+        ? Number.parseInt(body.slice(2), 16)
+        : Number.parseInt(body.slice(1), 10);
+    const valid =
+      Number.isFinite(codePoint) &&
+      codePoint > 0 &&
+      codePoint <= 0x10ffff &&
+      !(codePoint >= 0xd800 && codePoint <= 0xdfff);
+    return valid ? String.fromCodePoint(codePoint) : match;
+  });
+}
+
+function decodeOrNull(value: string | null | undefined): string | null {
+  return value === null || value === undefined ? null : decodeEntities(value);
+}
+
 /** Reads one property out of the jCard array of RFC 7095, e.g. ["fn", {}, "text", "Name"]. */
 function vcardValue(vcardArray: unknown, property: string): string | undefined {
   if (!Array.isArray(vcardArray) || !Array.isArray(vcardArray[1])) {
@@ -147,14 +187,14 @@ export function normalizeRdapDomain(
   const declaredRedacted = (needle: string): boolean =>
     [...redactedNames].some((name) => name.includes(needle));
 
-  const rawStatus = domain.status ?? [];
+  const rawStatus = (domain.status ?? []).map(decodeEntities);
 
   return {
     registryDomain: registryDomain.replace(/\.$/, ""),
-    registrar:
+    registrar: decodeOrNull(
       vcardValue(registrarEntity?.vcardArray, "fn") ??
-      vcardValue(registrarEntity?.vcardArray, "org") ??
-      null,
+        vcardValue(registrarEntity?.vcardArray, "org"),
+    ),
     createdAt: eventDate(domain.events, "registration"),
     expiresAt: eventDate(domain.events, "expiration"),
     nameServers: (domain.nameservers ?? [])
@@ -241,12 +281,12 @@ export function parseWhoisRecord(
     return { registration: null, notFound: false };
   }
 
-  const rawStatus = collectWhoisValues(lines, WHOIS_KEYS.status ?? []);
+  const rawStatus = collectWhoisValues(lines, WHOIS_KEYS.status ?? []).map(decodeEntities);
 
   return {
     registration: {
       registryDomain: registryDomain.toLowerCase().replace(/\.$/, ""),
-      registrar: first("registrar") ?? null,
+      registrar: decodeOrNull(first("registrar")),
       createdAt: first("createdAt") ?? null,
       expiresAt: first("expiresAt") ?? null,
       nameServers: collectWhoisValues(lines, WHOIS_KEYS.nameServer ?? []).map(

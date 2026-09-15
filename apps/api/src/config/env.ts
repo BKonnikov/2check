@@ -12,6 +12,10 @@ const schema = z.object({
   REDIS_URL: z.string().url(),
   DATABASE_URL: z.string().url(),
   APPLICATION_RELEASE_VERSION: z.string().min(1),
+  // PRD 22.2 — the limits that keep one server from being exhausted by its own traffic.
+  SCAN_DEADLINE_MS: z.coerce.number().int().min(1000).max(300_000).default(30_000),
+  SCAN_MAX_CONCURRENT: z.coerce.number().int().min(1).max(64).default(4),
+  SCAN_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(12),
 });
 
 export type Env = Readonly<z.infer<typeof schema>>;

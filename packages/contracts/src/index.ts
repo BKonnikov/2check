@@ -429,6 +429,16 @@ export interface CreateScanResponse {
   readonly pollAfterMs?: number;
 }
 
+/**
+ * PRD 16.7 — how a scan reached its terminal state.
+ *
+ * DEADLINE_TERMINALIZED is not a failure: trustworthy results were produced for the checks that
+ * finished, and the ones that did not are UNKNOWN with scan_deadline_exceeded. The scan is
+ * COMPLETED, and the reason says the rest was cut short rather than answered.
+ */
+export const COMPLETION_REASONS = ["NORMAL", "DEADLINE_TERMINALIZED"] as const;
+export type CompletionReason = (typeof COMPLETION_REASONS)[number];
+
 /** PRD 16.9 */
 export const SCAN_FAILURE_CODES = [
   "orchestration_error",
@@ -456,6 +466,7 @@ export interface WebScanResponse {
   readonly summary?: DomainHealthSummary;
   readonly startedAt: string;
   readonly completedAt?: string;
+  readonly completionReason?: CompletionReason;
   readonly pollAfterMs?: number;
   readonly failure?: ScanExecutionFailure;
 }

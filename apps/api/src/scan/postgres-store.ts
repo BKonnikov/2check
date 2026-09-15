@@ -1,5 +1,6 @@
 import type {
   CategoryResult,
+  CompletionReason,
   DomainHealthSummary,
   SecurityValidationResult,
   TlsExecutionMetadata,
@@ -29,6 +30,7 @@ interface ScanRow {
   readonly failure: ScanRecord["failure"] | null;
   readonly started_at: Date;
   readonly completed_at: Date | null;
+  readonly completion_reason: CompletionReason | null;
 }
 
 function toRecord(row: ScanRow): ScanRecord {
@@ -51,6 +53,7 @@ function toRecord(row: ScanRow): ScanRecord {
       : { tlsExecutionMetadata: row.tls_execution_metadata }),
     ...(row.summary === null ? {} : { summary: row.summary }),
     ...(row.completed_at === null ? {} : { completedAt: row.completed_at.toISOString() }),
+    ...(row.completion_reason === null ? {} : { completionReason: row.completion_reason }),
     ...(row.failure === null || row.failure === undefined ? {} : { failure: row.failure }),
   };
 }
@@ -83,6 +86,25 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
       );
     },
 
+    /** AC-16.9 — close whatever the previous process left running. */
+    async recoverInterrupted() {
+      const result = await pool.query(
+        `update scans set
+           execution_state = 'FAILED',
+           completed_at = now(),
+           failure = $1,
+           finalized = true
+         where finalized = false and execution_state in ('PENDING', 'RUNNING')`,
+        [
+          JSON.stringify({
+            failureCode: "execution_state_unrecoverable",
+            occurredAt: new Date().toISOString(),
+          }),
+        ],
+      );
+      return result.rowCount ?? 0;
+    },
+
     async get(scanId) {
       const result = await pool.query<ScanRow>("select * from scans where scan_id = $1", [scanId]);
       const row = result.rows[0];
@@ -102,7 +124,8 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
            summary = $7,
            failure = $8,
            completed_at = $9,
-           finalized = $10
+           completion_reason = $10,
+           finalized = $11
          where scan_id = $1`,
         [
           record.scanId,
@@ -120,6 +143,7 @@ export function createPostgresScanStore(pool: Pool): ScanStore {
           record.summary === undefined ? null : JSON.stringify(record.summary),
           record.failure === undefined ? null : JSON.stringify(record.failure),
           record.completedAt ?? null,
+          record.completionReason ?? null,
           isTerminal(record.executionState),
         ],
       );

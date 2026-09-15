@@ -130,6 +130,17 @@ export const uz: Catalogue = {
     title: "Bu o'rnatma so'ralgan tekshiruvlarni hozircha bajara olmaydi",
   },
   "web.error.scan_not_found": { title: "Bu tekshiruv noma'lum yoki saqlash muddati tugagan" },
+  "web.error.rate_limited": {
+    title: "Ketma-ket juda ko'p tekshiruv",
+    explanation:
+      "2check bitta serverda ishlaydi va boshqalarning ommaviy xizmatlariga murojaat qiladi, shuning uchun bitta manzildan tekshiruvlar soni cheklangan.",
+    recommendation: "Bir daqiqa kuting va qayta urinib ko'ring.",
+  },
+  "web.error.service_busy": {
+    title: "Xizmat hozir band",
+    explanation: "Bir vaqtning o'zida server ko'tara oladigan darajada tekshiruv bajarilmoqda.",
+    recommendation: "Bir necha soniyadan keyin qayta urinib ko'ring.",
+  },
   "web.error.gated_access_denied": { title: "Bu ma'lumotlarga ruxsat yo'q" },
   "web.error.input_empty": { title: "Domenni kiriting" },
   "web.error.input_scheme_unsupported": { title: "Faqat http va https manzillari qabul qilinadi" },

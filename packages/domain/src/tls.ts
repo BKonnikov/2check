@@ -325,7 +325,11 @@ export function evaluateTlsChecks(
  * reason code, the certificate checks follow by dependency, and no failure is invented.
  */
 export function evaluateTlsBlockedChecks(
-  reasonCode: "ssrf_policy_block" | "security_validation_incomplete" | "dns_quorum_not_reached",
+  reasonCode:
+    | "ssrf_policy_block"
+    | "security_validation_incomplete"
+    | "dns_quorum_not_reached"
+    | "scan_deadline_exceeded",
   options: TlsEvaluationOptions,
 ): CheckResult<TlsConnectionDetails | TlsCertificateDetails>[] {
   const dependsOn = ["tls.connection.ipv4", "tls.connection.ipv6"];

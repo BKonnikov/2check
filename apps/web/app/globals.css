@@ -366,6 +366,18 @@ button.secondary:disabled {
   cursor: default;
 }
 
+.refresh {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+.refresh-note {
+  margin: 0;
+  max-width: 46ch;
+}
+
 /* ---------- sections ---------- */
 
 .section {

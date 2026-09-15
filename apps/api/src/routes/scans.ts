@@ -13,6 +13,7 @@ import { canonicalizeDomain } from "@2check/domain";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Metrics } from "../observability/metrics.js";
+import type { AdmissionControl } from "../scan/admission.js";
 import { toPublicCategories, toTechnicalDetails } from "../scan/exposure.js";
 import { buildExecutionContext, runScan, type ScanDependencies } from "../scan/orchestrator.js";
 import type { ScanRecord, ScanStore } from "../scan/store.js";
@@ -67,6 +68,7 @@ function toResponse(record: ScanRecord): WebScanResponse {
     ...(record.summary === undefined ? {} : { summary: record.summary }),
     startedAt: record.startedAt,
     ...(record.completedAt === undefined ? {} : { completedAt: record.completedAt }),
+    ...(record.completionReason === undefined ? {} : { completionReason: record.completionReason }),
     ...(record.failure === undefined ? {} : { failure: record.failure }),
     ...(terminal ? {} : { pollAfterMs: POLL_AFTER_MS }),
   };
@@ -75,6 +77,8 @@ function toResponse(record: ScanRecord): WebScanResponse {
 export interface ScanRouteDependencies extends ScanDependencies {
   readonly store: ScanStore;
   readonly metrics?: Metrics;
+  /** PRD 22.2 and AC-25.8 — nothing starts a scan without passing this first. */
+  readonly admission?: AdmissionControl;
 }
 
 export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependencies): void {
@@ -121,9 +125,26 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       }
     }
 
+    /**
+     * PRD 22.2 and AC-25.8 — the caller's rate and the service's capacity are checked before a
+     * scanId exists, so a refused request leaves nothing behind. A malformed request is answered
+     * first: it costs nothing and should not consume the caller's allowance.
+     */
+    const ticket = deps.admission?.admit(request.ip) ?? { ok: true as const, release() {} };
+    if (!ticket.ok) {
+      deps.metrics?.increment("scan_rejected_total");
+      return apiError(reply, ticket.reason === "rate_limited" ? 429 : 503, {
+        errorCode: ticket.reason,
+        titleCode: `web.error.${ticket.reason}`,
+        retryable: true,
+        retryAfterSeconds: ticket.retryAfterSeconds,
+      });
+    }
+
     // PRD 16.2 and AC-16.1 — preprocessing runs before a scan exists; invalid input creates no scanId.
     const canonical = canonicalizeDomain(input);
     if (!canonical.ok) {
+      ticket.release();
       return apiError(reply, 400, {
         errorCode: canonical.code,
         titleCode: `web.error.${canonical.code}`,
@@ -166,7 +187,14 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
     }
 
     // PRD 17.3 — POST acknowledges acceptance; it never terminalizes, even on a full cache hit.
-    void runScan(record, deps.store, deps).catch(() => undefined);
+    void runScan(record, deps.store, deps)
+      .catch((error: unknown) => {
+        // PRD 21.3 — a background failure that nobody logs is a failure nobody can diagnose.
+        app.log.error({ error: String(error), scanId: record.scanId }, "scan execution failed");
+      })
+      .finally(() => {
+        ticket.release();
+      });
 
     const body: CreateScanResponse = {
       scanId: record.scanId,

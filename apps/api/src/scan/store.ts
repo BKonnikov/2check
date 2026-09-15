@@ -2,6 +2,7 @@ import type {
   CacheMode,
   CanonicalDomain,
   CategoryResult,
+  CompletionReason,
   DomainHealthSummary,
   ExecutionContext,
   ExecutionState,
@@ -33,6 +34,7 @@ export interface ScanRecord {
   securityValidation?: SecurityValidationResult;
   tlsExecutionMetadata?: TlsExecutionMetadata;
   completedAt?: string;
+  completionReason?: CompletionReason;
   failure?: ScanExecutionFailure;
 }
 
@@ -45,6 +47,12 @@ export interface ScanStore {
   get(scanId: string): Promise<ScanRecord | undefined>;
   /** PRD 19.10 and AC-19.9 — a terminal snapshot is written once, atomically, and never rewritten. */
   save(record: ScanRecord): Promise<void>;
+  /**
+   * AC-16.9 — a scan whose execution was lost cannot stay RUNNING for ever. A process that dies
+   * mid-scan leaves the record non-terminal and nothing would ever finish it, so the next start
+   * terminalises what it finds and says why. Returns how many records it closed.
+   */
+  recoverInterrupted(): Promise<number>;
 }
 
 /** Non-durable store for tests and for running without a database. */
@@ -57,6 +65,23 @@ export function createInMemoryScanStore(): ScanStore {
     },
     async get(scanId) {
       return records.get(scanId)?.record;
+    },
+    async recoverInterrupted() {
+      let closed = 0;
+      for (const [scanId, entry] of records) {
+        if (entry.finalized || isTerminal(entry.record.executionState)) {
+          continue;
+        }
+        entry.record.executionState = "FAILED";
+        entry.record.completedAt = new Date().toISOString();
+        entry.record.failure = {
+          failureCode: "execution_state_unrecoverable",
+          occurredAt: new Date().toISOString(),
+        };
+        records.set(scanId, { record: entry.record, finalized: true });
+        closed += 1;
+      }
+      return closed;
     },
     async save(record) {
       const existing = records.get(record.scanId);

@@ -5,6 +5,7 @@ import { LOG_REDACTION, requestSerializer } from "./observability/logging.js";
 import { createMetrics, type Metrics } from "./observability/metrics.js";
 import { type ReadinessProbe, registerHealthRoutes } from "./routes/health.js";
 import { registerScanRoutes } from "./routes/scans.js";
+import { type AdmissionControl, createAdmissionControl } from "./scan/admission.js";
 import type { ScanDependencies } from "./scan/orchestrator.js";
 import { buildExecutionContext } from "./scan/orchestrator.js";
 import { createInMemoryScanStore, type ScanStore } from "./scan/store.js";
@@ -15,6 +16,8 @@ export interface AppOptions extends ScanDependencies {
   readonly probes?: readonly ReadinessProbe[];
   readonly store?: ScanStore;
   readonly metrics?: Metrics;
+  /** PRD 22.2 — supply one to override the limits taken from configuration. */
+  readonly admission?: AdmissionControl;
 }
 
 export function buildApp({
@@ -22,6 +25,10 @@ export function buildApp({
   probes = [],
   store,
   metrics = createMetrics(),
+  admission = createAdmissionControl({
+    maxConcurrent: env.SCAN_MAX_CONCURRENT,
+    perMinute: env.SCAN_RATE_LIMIT_PER_MINUTE,
+  }),
   ...deps
 }: AppOptions): FastifyInstance {
   const app = Fastify({
@@ -31,8 +38,15 @@ export function buildApp({
       redact: { paths: [...LOG_REDACTION.paths], censor: LOG_REDACTION.censor },
       serializers: { req: requestSerializer },
     },
-    // PRD 15 — a user-controlled target never reaches a network client through the router.
-    trustProxy: false,
+    /**
+     * PRD 22.2 — the rate limit is per caller, so the caller has to be identifiable. The service
+     * binds to the loopback interface and is reachable only through the reverse proxy in front of
+     * it (deploy/nginx.example.conf sets X-Forwarded-For), so the forwarded address is the only
+     * one that means anything here; without this every visitor would share one bucket.
+     * This governs request.ip alone: a user-controlled target still never reaches a network
+     * client through the router (PRD 15).
+     */
+    trustProxy: true,
   });
 
   app.addHook("onSend", async (_request, reply, payload) => {
@@ -52,6 +66,8 @@ export function buildApp({
   registerScanRoutes(app, {
     store: store ?? createInMemoryScanStore(),
     metrics,
+    admission,
+    scanDeadlineMs: env.SCAN_DEADLINE_MS,
     // One cache and one single-flight registry per process, so reuse and coalescing actually span
     // scans rather than being private to each one.
     cache: deps.cache ?? createInMemoryCache(),

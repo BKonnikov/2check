@@ -122,6 +122,17 @@ export const en: Catalogue = {
   "web.error.scan_scope_not_available": {
     title: "This deployment cannot run the requested checks yet",
   },
+  "web.error.rate_limited": {
+    title: "Too many checks in a row",
+    explanation:
+      "2check runs on a single server and queries other people's public services, so the number of checks from one address is limited.",
+    recommendation: "Wait a minute and try again.",
+  },
+  "web.error.service_busy": {
+    title: "The service is busy right now",
+    explanation: "As many checks are running at once as the server can carry.",
+    recommendation: "Try again in a few seconds.",
+  },
   "web.error.gated_access_denied": { title: "Access to this data is not granted" },
   "web.error.scan_not_found": { title: "This scan is unknown or has expired" },
   "web.error.input_empty": { title: "Enter a domain" },

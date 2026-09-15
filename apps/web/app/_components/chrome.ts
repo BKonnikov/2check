@@ -50,6 +50,9 @@ export interface Ui {
   readonly technicalFields: Readonly<Record<"name" | "ascii" | "suffix" | "registrable", string>>;
   readonly tableHeads: Readonly<Record<"check" | "status" | "reason" | "observed", string>>;
   readonly recheck: string;
+  readonly recheckNote: string;
+  readonly cachedResults: string;
+  readonly deadlineNote: string;
   readonly cached: string;
   readonly cachedAgo: string;
   readonly observedAt: string;
@@ -203,6 +206,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         observed: "Когда проверено",
       },
       recheck: "Проверить заново",
+      recheckNote: "Запрос уйдёт к резолверам, реестру и серверу заново, мимо кэша.",
+      deadlineNote:
+        "Проверка не уложилась в отведённое время: часть проверок осталась незавершённой, а не показала проблему.",
+      cachedResults:
+        "Часть данных взята из кэша — точное время каждой проверки в технических подробностях.",
       cached: "из кэша",
       cachedAgo: "из кэша, {minutes} мин назад",
       observedAt: "Наблюдение",
@@ -340,6 +348,12 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         observed: "Checked at",
       },
       recheck: "Check again",
+      recheckNote:
+        "The resolvers, the registry and the host are queried again, bypassing the cache.",
+      deadlineNote:
+        "The scan ran out of its time budget: some checks were cut short rather than finding a problem.",
+      cachedResults:
+        "Some of this came from the cache — the technical details give the exact time of each check.",
       cached: "from cache",
       cachedAgo: "from cache, {minutes} min ago",
       observedAt: "Observed",
@@ -485,6 +499,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         observed: "Qachon tekshirildi",
       },
       recheck: "Qayta tekshirish",
+      recheckNote: "So'rov rezolverlar, reestr va serverga keshdan o'tmasdan qaytadan yuboriladi.",
+      deadlineNote:
+        "Tekshiruv ajratilgan vaqtga sig'madi: ba'zi tekshiruvlar muammo topgani uchun emas, tugamagani uchun yakunlanmadi.",
+      cachedResults:
+        "Ma'lumotlarning bir qismi keshdan olingan — har bir tekshiruvning aniq vaqti texnik tafsilotlarda.",
       cached: "keshdan",
       cachedAgo: "keshdan, {minutes} daqiqa oldin",
       observedAt: "Kuzatuv",
