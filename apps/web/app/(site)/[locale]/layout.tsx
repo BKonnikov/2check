@@ -76,6 +76,9 @@ export default async function LocaleLayout({
         <footer className="site-footer">
           <div>
             <p>{ui.footerNote}</p>
+            <p>
+              <a href={`/${key}/about`}>{ui.aboutNav}</a>
+            </p>
           </div>
         </footer>
       </body>

@@ -6,6 +6,13 @@ import { type Language, resolveMessage } from "@2check/messages";
 import { type FormEvent, useState } from "react";
 import type { Ui } from "./chrome";
 
+/** PRD 13.1 — an input rejection is a message like any other: what, why, and what to do. */
+interface ErrorView {
+  readonly title: string;
+  readonly explanation?: string;
+  readonly recommendation?: string;
+}
+
 interface MessageDescriptorView {
   titleCode: string;
   params?: Record<string, string | number | boolean>;
@@ -168,7 +175,7 @@ export default function DomainChecker({
   // PRD 23.8 — re-running a scan read from its own page needs the domain it was run for.
   const [input, setInput] = useState(initialScan?.canonicalDomain.unicodeHostname ?? "");
   const [scan, setScan] = useState<ScanView | null>(initialScan);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorView | null>(null);
   const [running, setRunning] = useState(false);
 
   async function start(value: string, cacheMode?: "FORCE_REFRESH"): Promise<void> {
@@ -191,7 +198,7 @@ export default function DomainChecker({
       });
       const acceptance = await created.json();
       if (!created.ok) {
-        setError(title(`web.error.${acceptance.errorCode}`, language));
+        setError(message({ titleCode: `web.error.${acceptance.errorCode}` }, language));
         return;
       }
 
@@ -205,9 +212,9 @@ export default function DomainChecker({
         }
         await new Promise((resolve) => setTimeout(resolve, body.pollAfterMs ?? 400));
       }
-      setError(ui.errorTimeout);
+      setError({ title: ui.errorTimeout });
     } catch {
-      setError(ui.errorNetwork);
+      setError({ title: ui.errorNetwork });
     } finally {
       setRunning(false);
     }
@@ -246,7 +253,11 @@ export default function DomainChecker({
 
       {error !== null && (
         <div className="section sheet" role="alert">
-          <p className="error">{error}</p>
+          <p className="error">{error.title}</p>
+          {error.explanation !== undefined && <p className="muted">{error.explanation}</p>}
+          {error.recommendation !== undefined && (
+            <p className="recommendation">{error.recommendation}</p>
+          )}
         </div>
       )}
 

@@ -20,6 +20,7 @@ export const SITE_ORIGIN = process.env.SITE_ORIGIN ?? "https://2check.uz";
 export interface Ui {
   readonly skipToContent: string;
   readonly navHome: string;
+  readonly aboutNav: string;
   readonly homeHeading: string;
   readonly toolsNav: string;
   readonly languageNav: string;
@@ -106,13 +107,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
     ui: {
       skipToContent: "К содержимому",
       navHome: "Полная проверка",
+      aboutNav: "О проекте",
       homeHeading: "Проверка домена",
       toolsNav: "Инструменты",
       languageNav: "Язык интерфейса",
       theme: "Светлая или тёмная тема",
       inputLabel: "Домен",
       inputPlaceholder: "example.uz",
-      inputHint: "Можно вставить адрес целиком — 2check возьмёт из него имя домена.",
+      inputHint: "Можно вставить ссылку целиком — 2check возьмёт из неё имя домена.",
       submit: "Проверить",
       submitBusy: "Проверяю…",
       runningHeading: "Выполняется",
@@ -196,13 +198,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
     ui: {
       skipToContent: "Skip to content",
       navHome: "Full check",
+      aboutNav: "About",
       homeHeading: "Domain check",
       toolsNav: "Tools",
       languageNav: "Interface language",
       theme: "Light or dark theme",
       inputLabel: "Domain",
       inputPlaceholder: "example.uz",
-      inputHint: "You can paste a whole address — 2check takes the domain name out of it.",
+      inputHint: "You can paste a whole link — 2check takes the domain name out of it.",
       submit: "Check",
       submitBusy: "Checking…",
       runningHeading: "Running",
@@ -294,13 +297,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
     ui: {
       skipToContent: "Mazmunga o'tish",
       navHome: "To'liq tekshiruv",
+      aboutNav: "Loyiha haqida",
       homeHeading: "Domen tekshiruvi",
       toolsNav: "Vositalar",
       languageNav: "Interfeys tili",
       theme: "Yorug' yoki qorong'i mavzu",
       inputLabel: "Domen",
       inputPlaceholder: "example.uz",
-      inputHint: "To'liq manzilni ham qo'yish mumkin — 2check undan domen nomini ajratib oladi.",
+      inputHint: "To'liq havolani ham qo'yish mumkin — 2check undan domen nomini ajratib oladi.",
       submit: "Tekshirish",
       submitBusy: "Tekshirilmoqda…",
       runningHeading: "Bajarilmoqda",

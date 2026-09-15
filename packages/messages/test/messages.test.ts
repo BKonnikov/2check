@@ -61,11 +61,28 @@ describe("AC-13.4 — PASS states the fact instead of a stock reassurance", () =
 });
 
 describe("AC-13.2 — fact, then impact, then recommendation", () => {
-  it("adds impact and recommendation only where a failure was confirmed", () => {
+  it("adds impact and recommendation to a check only where a failure was confirmed", () => {
     for (const language of LANGUAGES) {
       for (const [code, entry] of Object.entries(CATALOGUES[language])) {
+        if (code.startsWith("web.error.")) {
+          continue;
+        }
         if (entry.impact !== undefined || entry.recommendation !== undefined) {
           expect(code).toMatch(/\.fail$/);
+        }
+      }
+    }
+  });
+
+  /**
+   * An input rejection is a confirmed fact about the input, so it may say what to do instead.
+   * It still claims nothing about the domain, so it never carries an impact.
+   */
+  it("lets an input rejection say what to do, but never claim an impact", () => {
+    for (const language of LANGUAGES) {
+      for (const [code, entry] of Object.entries(CATALOGUES[language])) {
+        if (code.startsWith("web.error.")) {
+          expect(entry.impact).toBeUndefined();
         }
       }
     }

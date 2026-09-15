@@ -121,7 +121,12 @@ export const ru: Catalogue = {
   "web.error.input_scheme_unsupported": { title: "Принимаются только адреса http и https" },
   "web.error.input_credentials_present": { title: "Уберите учётные данные из адреса" },
   "web.error.input_port_not_allowed": { title: "Нестандартный порт не поддерживается" },
-  "web.error.input_ip_address": { title: "Введите доменное имя, а не IP-адрес" },
+  "web.error.input_ip_address": {
+    title: "Введите доменное имя, а не IP-адрес",
+    explanation:
+      "2check проверяет то, что относится к имени: записи DNS, регистрацию в зоне и сертификат, предъявленный для этого имени. У самого по себе адреса ничего из этого нет.",
+    recommendation: "Введите имя, которое указывает на этот адрес, например example.uz.",
+  },
   "web.error.input_wildcard_hostname": { title: "Имя с подстановочным знаком проверить нельзя" },
   "web.error.input_email_address": { title: "Введите доменное имя, а не адрес почты" },
   "web.error.input_single_label": { title: "Введите полное доменное имя, например example.uz" },

@@ -130,7 +130,12 @@ export const uz: Catalogue = {
   "web.error.input_scheme_unsupported": { title: "Faqat http va https manzillari qabul qilinadi" },
   "web.error.input_credentials_present": { title: "Manzildan hisob ma'lumotlarini olib tashlang" },
   "web.error.input_port_not_allowed": { title: "Nostandart port qo'llab-quvvatlanmaydi" },
-  "web.error.input_ip_address": { title: "IP-manzil emas, domen nomini kiriting" },
+  "web.error.input_ip_address": {
+    title: "IP-manzil emas, domen nomini kiriting",
+    explanation:
+      "2check nomga tegishli narsalarni tekshiradi: DNS yozuvlari, zonada ro'yxatdan o'tish va shu nom uchun taqdim etilgan sertifikat. Manzilning o'zida bularning hech biri yo'q.",
+    recommendation: "Shu manzilga ishora qiluvchi nomni kiriting, masalan example.uz.",
+  },
   "web.error.input_wildcard_hostname": {
     title: "O'rniga qo'yish belgisi bilan nomni tekshirib bo'lmaydi",
   },

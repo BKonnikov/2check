@@ -123,7 +123,12 @@ export const en: Catalogue = {
   "web.error.input_scheme_unsupported": { title: "Only http and https addresses are accepted" },
   "web.error.input_credentials_present": { title: "Remove the credentials from the address" },
   "web.error.input_port_not_allowed": { title: "A non-standard port is not supported" },
-  "web.error.input_ip_address": { title: "Enter a domain name, not an IP address" },
+  "web.error.input_ip_address": {
+    title: "Enter a domain name, not an IP address",
+    explanation:
+      "2check checks what belongs to a name: its DNS records, its registration in the zone and the certificate presented for that name. An address on its own has none of these.",
+    recommendation: "Enter the name that points at this address, for example example.uz.",
+  },
   "web.error.input_wildcard_hostname": { title: "A wildcard name cannot be checked" },
   "web.error.input_email_address": { title: "Enter a domain name, not an email address" },
   "web.error.input_single_label": { title: "Enter a full domain name, for example example.uz" },

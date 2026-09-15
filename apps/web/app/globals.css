@@ -797,6 +797,17 @@ td {
   vertical-align: top;
 }
 
+.prose p {
+  margin: 0 0 12px;
+  max-width: 72ch;
+}
+.prose p:last-child {
+  margin-bottom: 0;
+}
+.prose table td {
+  padding: 9px 20px 9px 0;
+}
+
 /* ---------- footer ---------- */
 
 .site-footer {
@@ -814,6 +825,9 @@ td {
 .site-footer p {
   margin: 0;
   max-width: 78ch;
+}
+.site-footer p + p {
+  margin-top: 10px;
 }
 
 /* ---------- narrow screens ---------- */
