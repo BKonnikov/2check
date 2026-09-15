@@ -8,7 +8,9 @@ export default defineConfig({
       { find: /^(\.{1,2}\/.*)\.js$/, replacement: "$1" },
       {
         find: "@2check/contracts",
-        replacement: fileURLToPath(new URL("../../packages/contracts/src/index.ts", import.meta.url)),
+        replacement: fileURLToPath(
+          new URL("../../packages/contracts/src/index.ts", import.meta.url),
+        ),
       },
       {
         find: "@2check/domain",

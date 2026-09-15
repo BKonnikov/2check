@@ -8,3 +8,4 @@ next-env.d.ts
 apps/*/dist/
 packages/*/dist/
 *.tsbuildinfo
+.pnpm-store/
