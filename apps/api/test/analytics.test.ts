@@ -138,14 +138,12 @@ describe("PRD 28 — the collection endpoint", () => {
 describe("PRD 28 — the statistics endpoint", () => {
   const stats = {
     generatedAt: "2026-09-16T00:00:00.000Z",
-    scans: { total: 1200, completed: 1180, last30Days: 310, last24Hours: 12 },
+    scansTotal: 1200,
     verdicts: { HEALTHY: 800, PROBLEMS: 120 },
     tools: { home: 900, dns: 140, registry: 90, tls: 70 },
-    typicalSeconds: 4,
     audience: {
       sessions: 140,
       returningSessions: 22,
-      views: 400,
       devices: [{ key: "desktop", sessions: 90 }],
       browsers: [{ key: "chrome", sessions: 80 }],
     },
@@ -155,7 +153,7 @@ describe("PRD 28 — the statistics endpoint", () => {
     const instance = buildApp({ env, stats: { read: async () => stats } });
     const response = await instance.inject({ method: "GET", url: "/api/web/v1/stats" });
     expect(response.statusCode).toBe(200);
-    expect(response.json().scans.total).toBe(1200);
+    expect(response.json().scansTotal).toBe(1200);
     // PRD 25.4 forbids a shared cache for a scan; an aggregate that is identical for everyone
     // is exactly the case that exception exists for.
     expect(response.headers["cache-control"]).toContain("max-age");
@@ -206,11 +204,10 @@ describe("the published counters are cached, not queried per visitor", () => {
         }
         return {
           generatedAt: new Date().toISOString(),
-          scans: { total: reads, completed: 0, last30Days: 0, last24Hours: 0 },
+          scansTotal: reads,
           verdicts: {},
           tools: {},
-          typicalSeconds: null,
-          audience: { sessions: 0, returningSessions: 0, views: 0, devices: [], browsers: [] },
+          audience: { sessions: 0, returningSessions: 0, devices: [], browsers: [] },
         };
       },
     };
@@ -222,7 +219,7 @@ describe("the published counters are cached, not queried per visitor", () => {
     const brief = cachePublicStats(source, 0);
     const first = await brief.read();
     fail = true;
-    expect((await brief.read()).scans.total).toBe(first.scans.total);
+    expect((await brief.read()).scansTotal).toBe(first.scansTotal);
   });
 });
 

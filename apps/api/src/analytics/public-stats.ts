@@ -11,12 +11,7 @@ import type { AnalyticsStore } from "./store.js";
  */
 export interface PublicStats {
   readonly generatedAt: string;
-  readonly scans: {
-    readonly total: number;
-    readonly completed: number;
-    readonly last30Days: number;
-    readonly last24Hours: number;
-  };
+  readonly scansTotal: number;
   /** Completed FULL scans by verdict, which is the only place a domain outcome is counted. */
   readonly verdicts: Readonly<Record<string, number>>;
   /**
@@ -25,12 +20,9 @@ export interface PublicStats {
    * scan is a durable fact and an analytics event is a best-effort beacon.
    */
   readonly tools: Readonly<Record<string, number>>;
-  /** Median seconds from accepted to completed, over the last 30 days. */
-  readonly typicalSeconds: number | null;
   readonly audience: {
     readonly sessions: number;
     readonly returningSessions: number;
-    readonly views: number;
     /** Sessions by coarse client class; the User-Agent behind them is never stored. */
     readonly devices: readonly { readonly key: string; readonly sessions: number }[];
     readonly browsers: readonly { readonly key: string; readonly sessions: number }[];
@@ -43,11 +35,10 @@ export interface PublicStatsSource {
 
 const EMPTY: PublicStats = {
   generatedAt: new Date(0).toISOString(),
-  scans: { total: 0, completed: 0, last30Days: 0, last24Hours: 0 },
+  scansTotal: 0,
   verdicts: {},
   tools: {},
-  typicalSeconds: null,
-  audience: { sessions: 0, returningSessions: 0, views: 0, devices: [], browsers: [] },
+  audience: { sessions: 0, returningSessions: 0, devices: [], browsers: [] },
 };
 
 function tally(rows: readonly { key: string | null; count: string }[]): Record<string, number> {
@@ -66,19 +57,8 @@ export function createPostgresPublicStats(
 ): PublicStatsSource {
   return {
     async read() {
-      const [scans, verdicts, tools, duration, clients, report] = await Promise.all([
-        pool.query<{
-          total: string;
-          completed: string;
-          recent: string;
-          today: string;
-        }>(
-          `select count(*)::text as total,
-                  count(*) filter (where execution_state = 'COMPLETED')::text as completed,
-                  count(*) filter (where started_at > now() - interval '30 days')::text as recent,
-                  count(*) filter (where started_at > now() - interval '24 hours')::text as today
-             from scans`,
-        ),
+      const [scans, verdicts, tools, clients, report] = await Promise.all([
+        pool.query<{ total: string }>(`select count(*)::text as total from scans`),
         pool.query<{ key: string | null; count: string }>(
           `select summary->>'verdictCode' as key, count(*)::text as count
              from scans
@@ -101,17 +81,6 @@ export function createPostgresPublicStats(
              from scans
             group by 1`,
         ),
-        // The median rather than the mean: one scan that sat on a resolver timeout should not
-        // decide the number a reader is shown.
-        pool.query<{ seconds: string | null }>(
-          `select percentile_cont(0.5) within group (
-                    order by extract(epoch from (completed_at - started_at))
-                  )::text as seconds
-             from scans
-            where execution_state = 'COMPLETED'
-              and completed_at is not null
-              and started_at > now() - interval '30 days'`,
-        ),
         // Sessions, not events: the question is how many people came with what, not how many
         // times each of them clicked.
         pool.query<{ device_kind: string | null; browser: string | null; sessions: string }>(
@@ -126,7 +95,6 @@ export function createPostgresPublicStats(
       ]);
 
       const row = scans.rows[0];
-      const seconds = duration.rows[0]?.seconds;
 
       const tallyRows = (
         column: "device_kind" | "browser",
@@ -143,20 +111,12 @@ export function createPostgresPublicStats(
 
       return {
         generatedAt: new Date().toISOString(),
-        scans: {
-          total: Number(row?.total ?? 0),
-          completed: Number(row?.completed ?? 0),
-          last30Days: Number(row?.recent ?? 0),
-          last24Hours: Number(row?.today ?? 0),
-        },
+        scansTotal: Number(row?.total ?? 0),
         verdicts: tally(verdicts.rows),
         tools: tally(tools.rows),
-        typicalSeconds:
-          seconds === null || seconds === undefined ? null : Math.round(Number(seconds)),
         audience: {
           sessions: report?.sessions ?? 0,
           returningSessions: report?.returningSessions ?? 0,
-          views: report?.totals.scan_form_viewed ?? 0,
           devices: tallyRows("device_kind"),
           browsers: tallyRows("browser"),
         },

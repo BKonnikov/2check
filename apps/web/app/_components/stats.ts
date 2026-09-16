@@ -14,18 +14,14 @@ export interface StatsCopy {
   readonly description: string;
   readonly nav: string;
   readonly scansTotal: string;
-  readonly scans30: string;
   readonly sessions: string;
   readonly returning: string;
   readonly verdictsHeading: string;
   /** The three groups the verdicts are collapsed into on this page. */
   readonly verdictGroups: Readonly<Record<"clean" | "notes" | "problems", string>>;
   readonly toolsHeading: string;
-  readonly toolsNote: string;
   readonly devicesHeading: string;
   readonly browsersHeading: string;
-  readonly typical: string;
-  readonly seconds: string;
   readonly audienceHeading: string;
   readonly privacyHeading: string;
   readonly privacy: readonly string[];
@@ -44,23 +40,19 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     title: "Статистика 2check",
     description: "Сколько проверок сделал сервис и как его читают. Только суммы, без доменов.",
     nav: "Статистика",
-    scansTotal: "Проверок всего",
-    scans30: "За 30 дней",
-    sessions: "Сессий за 30 дней",
-    returning: "Из них вернувшихся",
-    verdictsHeading: "Что находим",
+    scansTotal: "проверок сделано",
+    sessions: "Всего заходов",
+    returning: "Из них повторных",
+    verdictsHeading: "Что нашли у доменов",
     verdictGroups: {
-      clean: "Проблем не найдено",
-      notes: "Есть замечания",
-      problems: "Есть проблемы",
+      clean: "Всё в порядке",
+      notes: "Есть к чему придраться",
+      problems: "Есть поломки",
     },
-    toolsHeading: "Откуда запускали",
-    toolsNote: "Названия ведут на сами инструменты.",
-    devicesHeading: "С чего заходят",
-    browsersHeading: "Браузеры",
-    typical: "Обычная проверка",
-    seconds: "сек.",
-    audienceHeading: "Посещаемость",
+    toolsHeading: "Что проверяли",
+    devicesHeading: "С чего заходили",
+    browsersHeading: "В каком браузере",
+    audienceHeading: "Кто заходил",
     privacyHeading: "Что здесь не считается",
     privacy: [
       "На этой странице только суммы. Ни один показатель не относится к конкретному домену и ни один — к конкретному человеку.",
@@ -71,10 +63,10 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     generatedNote: "обновляются раз в несколько минут",
     unavailable: "Статистика сейчас недоступна. Сами проверки это не затрагивает.",
     toolNames: {
-      home: "Полная проверка",
-      dns: "DNS",
-      registry: "Домен",
-      tls: "SSL/TLS",
+      home: "Домен целиком",
+      dns: "Только DNS",
+      registry: "Только регистрацию домена",
+      tls: "Только сертификат SSL/TLS",
     },
     deviceNames: {
       desktop: "Компьютер",
@@ -90,23 +82,19 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     title: "2check statistics",
     description: "How much the service has been used, and how it is read. Totals only, no domains.",
     nav: "Statistics",
-    scansTotal: "Scans in total",
-    scans30: "Last 30 days",
-    sessions: "Sessions in 30 days",
-    returning: "Of those, returning",
-    verdictsHeading: "What we find",
+    scansTotal: "checks done",
+    sessions: "Visits in total",
+    returning: "Of those, repeat visits",
+    verdictsHeading: "What the domains turned out like",
     verdictGroups: {
-      clean: "Nothing wrong found",
-      notes: "Something to look at",
-      problems: "Problems found",
+      clean: "All fine",
+      notes: "Something to tidy up",
+      problems: "Something broken",
     },
-    toolsHeading: "Where scans were started",
-    toolsNote: "The names link to the tools themselves.",
-    devicesHeading: "What people arrive on",
-    browsersHeading: "Browsers",
-    typical: "A scan usually takes",
-    seconds: "s",
-    audienceHeading: "Audience",
+    toolsHeading: "What people checked",
+    devicesHeading: "What they arrived on",
+    browsersHeading: "Which browser",
+    audienceHeading: "Who came",
     privacyHeading: "What is not counted here",
     privacy: [
       "This page holds totals only. No figure on it belongs to one domain, and none belongs to one person.",
@@ -117,10 +105,10 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     generatedNote: "refreshed every few minutes",
     unavailable: "Statistics are unavailable right now. Scans themselves are unaffected.",
     toolNames: {
-      home: "Full check",
-      dns: "DNS",
-      registry: "Domain",
-      tls: "SSL/TLS",
+      home: "The whole domain",
+      dns: "DNS only",
+      registry: "Domain registration only",
+      tls: "SSL/TLS certificate only",
     },
     deviceNames: {
       desktop: "Desktop",
@@ -137,23 +125,19 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     description:
       "Xizmat qancha tekshiruv bajargani va uni qanday o'qishlari. Faqat yig'indilar, domensiz.",
     nav: "Statistika",
-    scansTotal: "Jami tekshiruvlar",
-    scans30: "30 kun ichida",
-    sessions: "30 kundagi sessiyalar",
-    returning: "Shundan qaytganlari",
-    verdictsHeading: "Nima topamiz",
+    scansTotal: "tekshiruv bajarilgan",
+    sessions: "Jami tashriflar",
+    returning: "Shundan takroriylari",
+    verdictsHeading: "Domenlar qanday chiqdi",
     verdictGroups: {
-      clean: "Muammo topilmadi",
-      notes: "E'tibor beriladigan joylar bor",
-      problems: "Muammolar bor",
+      clean: "Hammasi joyida",
+      notes: "Tartibga soladigan joyi bor",
+      problems: "Buzilgan joyi bor",
     },
-    toolsHeading: "Qayerdan boshlangan",
-    toolsNote: "Nomlar asboblarning o'ziga olib boradi.",
-    devicesHeading: "Nima bilan kirishadi",
-    browsersHeading: "Brauzerlar",
-    typical: "Odatdagi tekshiruv",
-    seconds: "s",
-    audienceHeading: "Tashrif",
+    toolsHeading: "Nimani tekshirishgan",
+    devicesHeading: "Nima bilan kirishgan",
+    browsersHeading: "Qaysi brauzerda",
+    audienceHeading: "Kim kirgan",
     privacyHeading: "Bu yerda nima hisoblanmaydi",
     privacy: [
       "Bu sahifada faqat yig'indilar. Birorta ko'rsatkich aniq bir domenga ham, aniq bir odamga ham tegishli emas.",
@@ -164,10 +148,10 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     generatedNote: "bir necha daqiqada bir yangilanadi",
     unavailable: "Statistika hozir mavjud emas. Bu tekshiruvlarga ta'sir qilmaydi.",
     toolNames: {
-      home: "To'liq tekshiruv",
-      dns: "DNS",
-      registry: "Domen",
-      tls: "SSL/TLS",
+      home: "Domenni butunlay",
+      dns: "Faqat DNS",
+      registry: "Faqat domen ro'yxatini",
+      tls: "Faqat SSL/TLS sertifikatini",
     },
     deviceNames: {
       desktop: "Kompyuter",
@@ -184,19 +168,12 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
 /** The shape the API publishes at /stats; the page and the view both read it. */
 export interface PublicStats {
   readonly generatedAt: string;
-  readonly scans: {
-    readonly total: number;
-    readonly completed: number;
-    readonly last30Days: number;
-    readonly last24Hours: number;
-  };
+  readonly scansTotal: number;
   readonly verdicts: Readonly<Record<string, number>>;
   readonly tools: Readonly<Record<string, number>>;
-  readonly typicalSeconds: number | null;
   readonly audience: {
     readonly sessions: number;
     readonly returningSessions: number;
-    readonly views: number;
     readonly devices: readonly { readonly key: string; readonly sessions: number }[];
     readonly browsers: readonly { readonly key: string; readonly sessions: number }[];
   };

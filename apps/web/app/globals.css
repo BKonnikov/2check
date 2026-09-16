@@ -967,30 +967,23 @@ td {
  * Same rule as everywhere else: colour means status. The verdict bars borrow the status colours
  * because they are statuses; every other bar is ink, because a count is not an outcome.
  */
-.figures {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1px;
-  background: var(--rule-2);
-  border: 1px solid var(--rule-2);
-}
-.figure {
+/* One number, stated plainly. */
+.headline-figure {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 18px 16px;
-  background: var(--sheet);
+  align-items: baseline;
+  gap: 14px;
+  margin: 30px 0 10px;
 }
-.figure-value {
+.headline-value {
   font-family: var(--mono);
-  font-size: 30px;
+  font-size: 46px;
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.figure-label {
+.headline-label {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-3);

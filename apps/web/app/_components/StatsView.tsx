@@ -65,12 +65,13 @@ function count(value: number, locale: Locale): string {
   return value.toLocaleString(LOCALE_TAG[locale]);
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
+/** The one number the page opens with. No panel around it — it is a figure, not a dashboard. */
+function Headline({ label, value }: { label: string; value: string }) {
   return (
-    <div className="figure">
-      <span className="figure-value">{value}</span>
-      <span className="figure-label">{label}</span>
-    </div>
+    <p className="headline-figure">
+      <span className="headline-value">{value}</span>
+      <span className="headline-label">{label}</span>
+    </p>
   );
 }
 
@@ -141,18 +142,7 @@ export default function StatsView({
       <h1>{copy.title}</h1>
       <p className="lede">{copy.description}</p>
 
-      <section className="section">
-        <div className="figures">
-          <Figure label={copy.scansTotal} value={count(stats.scans.total, key)} />
-          <Figure label={copy.scans30} value={count(stats.scans.last30Days, key)} />
-          {stats.typicalSeconds !== null && (
-            <Figure
-              label={copy.typical}
-              value={`${count(stats.typicalSeconds, key)} ${copy.seconds}`}
-            />
-          )}
-        </div>
-      </section>
+      <Headline label={copy.scansTotal} value={count(stats.scansTotal, key)} />
 
       {verdictTotal > 0 && (
         <section className="section">
@@ -173,16 +163,18 @@ export default function StatsView({
               href,
             }))}
           />
-          <p className="hint">{copy.toolsNote}</p>
         </section>
       )}
 
       <section className="section">
         <h2>{copy.audienceHeading}</h2>
-        <div className="figures">
-          <Figure label={copy.sessions} value={count(stats.audience.sessions, key)} />
-          <Figure label={copy.returning} value={count(stats.audience.returningSessions, key)} />
-        </div>
+        <Counts
+          locale={key}
+          rows={[
+            { key: "sessions", label: copy.sessions, value: stats.audience.sessions },
+            { key: "returning", label: copy.returning, value: stats.audience.returningSessions },
+          ]}
+        />
         {deviceTotal > 0 && (
           <>
             <h3 className="sub-heading">{copy.devicesHeading}</h3>
