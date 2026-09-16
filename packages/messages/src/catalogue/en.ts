@@ -61,6 +61,7 @@ export const en: Catalogue = {
   },
   "registry.lookup.registered.record": {
     title: "The domain is registered through {registrar}",
+    fact: "Registered {createdAt} · paid up to {expiresAt}",
     explanation:
       "The registry record was created on {createdAt} and is paid up to {expiresAt}. The registrar is the company the domain is renewed through — the one to contact to change name servers or extend the term. Name servers and record status are in the technical detail.",
   },

@@ -726,6 +726,10 @@ export default function DomainChecker({
                 <li key={check.checkId}>
                   <span className="check-title">
                     {resolved.title || check.checkId}
+                    {/* PRD 13.2 — what was measured, before what the check means. */}
+                    {resolved.fact !== undefined && (
+                      <span className="check-fact">{resolved.fact}</span>
+                    )}
                     {/* What the check actually looked at, for a reader who has not met the
                         term before. A passing check needs this as much as a failing one. */}
                     {resolved.explanation !== undefined && (

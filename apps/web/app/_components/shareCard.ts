@@ -46,6 +46,8 @@ export interface ShareCardModel {
    */
   readonly checks?: readonly {
     readonly title: string;
+    /** PRD 13.2 — the measured particulars, where the wording carries any. */
+    readonly fact?: string;
     readonly status: string;
     readonly tone: ShareCardModel["tone"];
   }[];
@@ -118,13 +120,17 @@ const CHECK_PRIORITY: Readonly<Record<string, number>> = {
 /** At most this many issues reach the card; the rest stay on the page. */
 const MAX_ISSUES = 2;
 
-function text(titleCode: string, language: Language, params?: Record<string, unknown>): string {
-  const resolved = resolveMessage(
+function resolve(titleCode: string, language: Language, params?: Record<string, unknown>) {
+  return resolveMessage(
     params === undefined
       ? { titleCode }
       : { titleCode, params: params as Record<string, string | number | boolean> },
     language,
   );
+}
+
+function text(titleCode: string, language: Language, params?: Record<string, unknown>): string {
+  const resolved = resolve(titleCode, language, params);
   return resolved.title === "" ? titleCode : resolved.title;
 }
 
@@ -204,14 +210,21 @@ export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui):
       const listed = ordered.slice(0, MAX_LISTED_CHECKS);
       const hidden = ordered.length - listed.length;
       return {
-        checks: listed.map((check) => ({
-          title:
+        checks: listed.map((check) => {
+          const resolved =
             check.message === undefined
-              ? (check.status ?? "")
-              : text(check.message.titleCode, language, check.message.params),
-          status: ui.statusWords[check.status as keyof Ui["statusWords"]] ?? check.status ?? "",
-          tone: STATUS_TONE[check.status ?? ""] ?? "neutral",
-        })),
+              ? undefined
+              : resolve(check.message.titleCode, language, check.message.params);
+          return {
+            title:
+              resolved === undefined || resolved.title === ""
+                ? (check.status ?? "")
+                : resolved.title,
+            ...(resolved?.fact === undefined ? {} : { fact: resolved.fact }),
+            status: ui.statusWords[check.status as keyof Ui["statusWords"]] ?? check.status ?? "",
+            tone: STATUS_TONE[check.status ?? ""] ?? "neutral",
+          };
+        }),
         ...(hidden > 0
           ? { moreChecks: ui.shareMoreChecks.replace("{count}", String(hidden)) }
           : {}),
@@ -335,7 +348,8 @@ function plan(context: CanvasRenderingContext2D, model: ShareCardModel): Plan {
   y += 38;
   y += 36 + model.categories.length * 34;
   if (model.checks !== undefined) {
-    y += 6 + model.checks.length * 32 + (model.moreChecks === undefined ? 0 : 26);
+    const facts = model.checks.filter((check) => check.fact !== undefined).length;
+    y += 6 + model.checks.length * 32 + facts * 26 + (model.moreChecks === undefined ? 0 : 26);
   }
   if (issues.length > 0) {
     y += 20 + issues.length * 52;
@@ -428,12 +442,15 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
     context.font = font(CARD.sans, 23, "700");
     context.fillText(category.name, left, y);
 
-    context.fillStyle = CARD.muted;
-    context.font = font(CARD.mono, 17);
-    context.fillText(`${category.passed}/${category.total}`, left + 190, y);
+    // "1/1 checks passed" is a way of saying nothing; the check itself is right underneath.
+    if (category.total > 1) {
+      context.fillStyle = CARD.muted;
+      context.font = font(CARD.mono, 17);
+      context.fillText(`${category.passed}/${category.total}`, left + 190, y);
 
-    context.fillStyle = CARD.faint;
-    context.fillText(model.checksLabel, left + 260, y);
+      context.fillStyle = CARD.faint;
+      context.fillText(model.checksLabel, left + 260, y);
+    }
 
     context.textAlign = "right";
     // The colour belongs to this category's own outcome, not to the overall verdict.
@@ -467,6 +484,14 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
       context.fillText(check.status.toUpperCase(), right, y);
       context.textAlign = "left";
       y += 32;
+
+      // The particulars, under the finding they belong to.
+      if (check.fact !== undefined) {
+        context.fillStyle = CARD.muted;
+        context.font = font(CARD.mono, 16);
+        context.fillText(wrap(context, check.fact, right - indent, 1)[0] ?? check.fact, indent, y);
+        y += 26;
+      }
     }
     if (model.moreChecks !== undefined) {
       context.fillStyle = CARD.faint;

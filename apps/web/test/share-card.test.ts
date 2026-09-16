@@ -236,3 +236,60 @@ describe("a narrow scan says what it found, not how many boxes it ticked", () =>
     expect(buildShareCardModel(scan(), "ru", UI).checks).toBeUndefined();
   });
 });
+
+/**
+ * A card of one check was a domain name, a status word and a tally of one. What the reader came
+ * for — when the registration was made and how long it is paid for — is in the message, and the
+ * card can carry it.
+ */
+describe("a check's particulars travel with it", () => {
+  const registryOnly = scan({
+    mode: "PARTIAL",
+    categories: [
+      {
+        category: "registry",
+        status: "PASS",
+        checks: [
+          {
+            status: "PASS",
+            message: {
+              titleCode: "registry.lookup.registered.record",
+              params: {
+                registrar: "OOO BILLUR COM",
+                createdAt: "2024-06-20T00:00:00.000Z",
+                expiresAt: "2027-06-20T00:00:00.000Z",
+              },
+            },
+          },
+        ],
+      },
+    ],
+    summary: { state: "FINAL", confidence: { level: "HIGH" }, issues: [] },
+  });
+
+  it("carries the registration dates under the finding", () => {
+    const model = buildShareCardModel(registryOnly, "ru", UI);
+    expect(model.checks?.[0]?.title).toContain("BILLUR COM");
+    expect(model.checks?.[0]?.fact).toContain("20 июня 2024");
+    expect(model.checks?.[0]?.fact).toContain("20 июня 2027");
+  });
+
+  it("leaves a check with no particulars without one", () => {
+    const model = buildShareCardModel(
+      scan({
+        mode: "PARTIAL",
+        categories: [
+          {
+            category: "tls",
+            status: "PASS",
+            checks: [{ status: "PASS", message: { titleCode: "tls.certificate.chain.pass" } }],
+          },
+        ],
+        summary: { state: "FINAL", confidence: { level: "HIGH" }, issues: [] },
+      }),
+      "ru",
+      UI,
+    );
+    expect(model.checks?.[0]?.fact).toBeUndefined();
+  });
+});

@@ -67,6 +67,7 @@ export const uz: Catalogue = {
   },
   "registry.lookup.registered.record": {
     title: "Domen {registrar} orqali ro'yxatdan o'tgan",
+    fact: "{createdAt} da ro'yxatdan o'tgan · {expiresAt} gacha to'langan",
     explanation:
       "Reestrdagi yozuv {createdAt} sanasida yaratilgan va {expiresAt} gacha to'langan. Registrator — domen uzaytiriladigan kompaniya: nom serverlarini o'zgartirish yoki muddatni uzaytirish uchun unga murojaat qilinadi. Nom serverlari va yozuv holati texnik tafsilotlarda.",
   },

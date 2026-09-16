@@ -13,6 +13,8 @@ export const REFERENCE_LANGUAGE: Language = "en";
 
 export interface ResolvedMessage {
   readonly title: string;
+  /** One short line of measured particulars; see MessageEntry.fact. */
+  readonly fact?: string;
   readonly explanation?: string;
   readonly impact?: string;
   readonly recommendation?: string;
@@ -87,6 +89,9 @@ export function resolveMessage(descriptor: MessageDescriptor, language: Language
     if (entry !== undefined) {
       return {
         title: interpolate(entry.title, descriptor.params, candidate),
+        ...(entry.fact === undefined
+          ? {}
+          : { fact: interpolate(entry.fact, descriptor.params, candidate) }),
         ...(entry.explanation === undefined
           ? {}
           : { explanation: interpolate(entry.explanation, descriptor.params, candidate) }),
