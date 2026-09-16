@@ -46,13 +46,13 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     verdictsHeading: "Что нашли у доменов",
     verdictGroups: {
       clean: "Всё в порядке",
-      notes: "Есть к чему придраться",
+      notes: "Можно улучшить",
       problems: "Есть поломки",
     },
     toolsHeading: "Что проверяли",
     devicesHeading: "С чего заходили",
     browsersHeading: "В каком браузере",
-    audienceHeading: "Кто заходил",
+    audienceHeading: "Посещаемость",
     privacyHeading: "Что здесь не считается",
     privacy: [
       "На этой странице только суммы. Ни один показатель не относится к конкретному домену и ни один — к конкретному человеку.",
@@ -88,13 +88,13 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     verdictsHeading: "What the domains turned out like",
     verdictGroups: {
       clean: "All fine",
-      notes: "Something to tidy up",
+      notes: "Room for improvement",
       problems: "Something broken",
     },
     toolsHeading: "What people checked",
     devicesHeading: "What they arrived on",
     browsersHeading: "Which browser",
-    audienceHeading: "Who came",
+    audienceHeading: "Visits",
     privacyHeading: "What is not counted here",
     privacy: [
       "This page holds totals only. No figure on it belongs to one domain, and none belongs to one person.",
@@ -131,13 +131,13 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     verdictsHeading: "Domenlar qanday chiqdi",
     verdictGroups: {
       clean: "Hammasi joyida",
-      notes: "Tartibga soladigan joyi bor",
+      notes: "Yaxshilash mumkin",
       problems: "Buzilgan joyi bor",
     },
     toolsHeading: "Nimani tekshirishgan",
     devicesHeading: "Nima bilan kirishgan",
     browsersHeading: "Qaysi brauzerda",
-    audienceHeading: "Kim kirgan",
+    audienceHeading: "Tashriflar",
     privacyHeading: "Bu yerda nima hisoblanmaydi",
     privacy: [
       "Bu sahifada faqat yig'indilar. Birorta ko'rsatkich aniq bir domenga ham, aniq bir odamga ham tegishli emas.",
