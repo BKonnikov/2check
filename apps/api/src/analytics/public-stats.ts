@@ -19,13 +19,22 @@ export interface PublicStats {
   };
   /** Completed FULL scans by verdict, which is the only place a domain outcome is counted. */
   readonly verdicts: Readonly<Record<string, number>>;
-  readonly modes: Readonly<Record<string, number>>;
+  /**
+   * Which of the four entry points the scans were started from: the full check, or one of the
+   * single-category tools. Taken from the scan records rather than from analytics, because a
+   * scan is a durable fact and an analytics event is a best-effort beacon.
+   */
+  readonly tools: Readonly<Record<string, number>>;
   readonly byDay: readonly { readonly day: string; readonly scans: number }[];
+  /** Median seconds from accepted to completed, over the last 30 days. */
+  readonly typicalSeconds: number | null;
   readonly audience: {
     readonly sessions: number;
     readonly returningSessions: number;
     readonly views: number;
-    readonly locales: readonly { readonly locale: string; readonly views: number }[];
+    /** Sessions by coarse client class; the User-Agent behind them is never stored. */
+    readonly devices: readonly { readonly key: string; readonly sessions: number }[];
+    readonly browsers: readonly { readonly key: string; readonly sessions: number }[];
   };
 }
 
@@ -37,9 +46,10 @@ const EMPTY: PublicStats = {
   generatedAt: new Date(0).toISOString(),
   scans: { total: 0, completed: 0, last30Days: 0, last24Hours: 0 },
   verdicts: {},
-  modes: {},
+  tools: {},
   byDay: [],
-  audience: { sessions: 0, returningSessions: 0, views: 0, locales: [] },
+  typicalSeconds: null,
+  audience: { sessions: 0, returningSessions: 0, views: 0, devices: [], browsers: [] },
 };
 
 function tally(rows: readonly { key: string | null; count: string }[]): Record<string, number> {
@@ -58,7 +68,7 @@ export function createPostgresPublicStats(
 ): PublicStatsSource {
   return {
     async read() {
-      const [scans, verdicts, modes, daily, report] = await Promise.all([
+      const [scans, verdicts, tools, daily, duration, clients, report] = await Promise.all([
         pool.query<{
           total: string;
           completed: string;
@@ -78,8 +88,20 @@ export function createPostgresPublicStats(
               and summary->>'verdictCode' is not null
             group by 1`,
         ),
+        /**
+         * A FULL scan came from the home page; a PARTIAL scan of exactly one category came from
+         * that category's tool page. Anything else is a hand-picked selection and is counted
+         * apart rather than attributed to a page nobody used.
+         */
         pool.query<{ key: string | null; count: string }>(
-          `select mode as key, count(*)::text as count from scans group by mode`,
+          `select case
+                    when mode = 'FULL' then 'home'
+                    when array_length(visible_categories, 1) = 1 then visible_categories[1]
+                    else 'custom'
+                  end as key,
+                  count(*)::text as count
+             from scans
+            group by 1`,
         ),
         pool.query<{ day: string; scans: string }>(
           `select to_char(date_trunc('day', started_at), 'YYYY-MM-DD') as day,
@@ -88,11 +110,46 @@ export function createPostgresPublicStats(
             where started_at > now() - interval '30 days'
             group by 1 order by 1`,
         ),
+        // The median rather than the mean: one scan that sat on a resolver timeout should not
+        // decide the number a reader is shown.
+        pool.query<{ seconds: string | null }>(
+          `select percentile_cont(0.5) within group (
+                    order by extract(epoch from (completed_at - started_at))
+                  )::text as seconds
+             from scans
+            where execution_state = 'COMPLETED'
+              and completed_at is not null
+              and started_at > now() - interval '30 days'`,
+        ),
+        // Sessions, not events: the question is how many people came with what, not how many
+        // times each of them clicked.
+        pool.query<{ device_kind: string | null; browser: string | null; sessions: string }>(
+          `select device_kind, browser, count(distinct session_id)::text as sessions
+             from analytics_events
+            where occurred_at > now() - interval '30 days'
+              and session_id is not null
+            group by 1, 2`,
+        ),
         // AC-28.6 — the audience half is a nicety; losing it must not lose the scan counts.
         analytics?.report(30).catch(() => undefined),
       ]);
 
       const row = scans.rows[0];
+      const seconds = duration.rows[0]?.seconds;
+
+      const tallyRows = (
+        column: "device_kind" | "browser",
+      ): readonly { key: string; sessions: number }[] => {
+        const totals = new Map<string, number>();
+        for (const entry of clients.rows) {
+          const key = (column === "device_kind" ? entry.device_kind : entry.browser) ?? "other";
+          totals.set(key, (totals.get(key) ?? 0) + Number(entry.sessions));
+        }
+        return [...totals.entries()]
+          .map(([key, sessions]) => ({ key, sessions }))
+          .sort((left, right) => right.sessions - left.sessions);
+      };
+
       return {
         generatedAt: new Date().toISOString(),
         scans: {
@@ -102,13 +159,16 @@ export function createPostgresPublicStats(
           last24Hours: Number(row?.today ?? 0),
         },
         verdicts: tally(verdicts.rows),
-        modes: tally(modes.rows),
+        tools: tally(tools.rows),
         byDay: daily.rows.map((entry) => ({ day: entry.day, scans: Number(entry.scans) })),
+        typicalSeconds:
+          seconds === null || seconds === undefined ? null : Math.round(Number(seconds)),
         audience: {
           sessions: report?.sessions ?? 0,
           returningSessions: report?.returningSessions ?? 0,
           views: report?.totals.scan_form_viewed ?? 0,
-          locales: report?.byLocale ?? [],
+          devices: tallyRows("device_kind"),
+          browsers: tallyRows("browser"),
         },
       };
     },

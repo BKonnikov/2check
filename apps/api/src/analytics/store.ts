@@ -1,5 +1,6 @@
 import type { AnalyticsEventPayload } from "@2check/contracts";
 import type { Pool } from "pg";
+import type { AnalyticsClient } from "./client.js";
 
 /**
  * PRD 28 — where product-analytics events are recorded and read back.
@@ -8,7 +9,12 @@ import type { Pool } from "pg";
  * here is logged and dropped; nothing about a domain check depends on it.
  */
 export interface AnalyticsStore {
-  record(payload: AnalyticsEventPayload): Promise<void>;
+  /**
+   * PRD 28.3 — `client` is derived on the server from the request's User-Agent and is a closed
+   * enumeration; the header itself is never stored. It is a separate argument rather than part
+   * of the payload so that it cannot be confused for something the browser sent.
+   */
+  record(payload: AnalyticsEventPayload, client?: AnalyticsClient): Promise<void>;
   /** The funnel and the traffic behind it, over the last `days` days. */
   report(days: number): Promise<AnalyticsReport>;
   /** PRD 19.9 — analytics has a life of its own; this is what ends it. */
@@ -47,11 +53,12 @@ const SINCE = "now() - ($1 || ' days')::interval";
 
 export function createPostgresAnalyticsStore(pool: Pool): AnalyticsStore {
   return {
-    async record(payload) {
+    async record(payload, client) {
       await pool.query(
         `insert into analytics_events
-           (event, locale, tool, mode, scope, outcome, verdict_code, session_id, is_returning)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+           (event, locale, tool, mode, scope, outcome, verdict_code, session_id, is_returning,
+            device_kind, browser)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           payload.event,
           payload.locale,
@@ -62,6 +69,8 @@ export function createPostgresAnalyticsStore(pool: Pool): AnalyticsStore {
           payload.verdictCode ?? null,
           payload.sessionId ?? null,
           payload.returning ?? false,
+          client?.deviceKind ?? null,
+          client?.browser ?? null,
         ],
       );
     },

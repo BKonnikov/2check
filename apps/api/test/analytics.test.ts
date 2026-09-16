@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { classifyClient } from "../src/analytics/client.js";
 import { cachePublicStats } from "../src/analytics/public-stats.js";
 import { createInMemoryAnalyticsStore } from "../src/analytics/store.js";
 import { buildApp } from "../src/app.js";
@@ -139,9 +140,16 @@ describe("PRD 28 — the statistics endpoint", () => {
     generatedAt: "2026-09-16T00:00:00.000Z",
     scans: { total: 1200, completed: 1180, last30Days: 310, last24Hours: 12 },
     verdicts: { HEALTHY: 800, PROBLEMS: 120 },
-    modes: { FULL: 900, PARTIAL: 300 },
+    tools: { home: 900, dns: 140, registry: 90, tls: 70 },
     byDay: [{ day: "2026-09-15", scans: 12 }],
-    audience: { sessions: 140, returningSessions: 22, views: 400, locales: [] },
+    typicalSeconds: 4,
+    audience: {
+      sessions: 140,
+      returningSessions: 22,
+      views: 400,
+      devices: [{ key: "desktop", sessions: 90 }],
+      browsers: [{ key: "chrome", sessions: 80 }],
+    },
   };
 
   it("serves the aggregate and lets it be cached", async () => {
@@ -201,9 +209,10 @@ describe("the published counters are cached, not queried per visitor", () => {
           generatedAt: new Date().toISOString(),
           scans: { total: reads, completed: 0, last30Days: 0, last24Hours: 0 },
           verdicts: {},
-          modes: {},
+          tools: {},
           byDay: [],
-          audience: { sessions: 0, returningSessions: 0, views: 0, locales: [] },
+          typicalSeconds: null,
+          audience: { sessions: 0, returningSessions: 0, views: 0, devices: [], browsers: [] },
         };
       },
     };
@@ -216,5 +225,88 @@ describe("the published counters are cached, not queried per visitor", () => {
     const first = await brief.read();
     fail = true;
     expect((await brief.read()).scans.total).toBe(first.scans.total);
+  });
+});
+
+/**
+ * PRD 28.3 and 28.6 — the client class is read from the User-Agent and the string itself is
+ * thrown away. A raw User-Agent names a browser build and an OS patch level; a few of them are
+ * unique to one person, and it would otherwise sit in the same row as the session id.
+ */
+describe("PRD 28.3 — the client is classified, never recorded", () => {
+  it.each([
+    [
+      "iPhone Safari",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "mobile",
+      "safari",
+    ],
+    [
+      "Android Chrome",
+      "Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "mobile",
+      "chrome",
+    ],
+    [
+      "an Android tablet, which says Android without saying Mobile",
+      "Mozilla/5.0 (Linux; Android 13; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "tablet",
+      "chrome",
+    ],
+    [
+      "iPad",
+      "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Version/17.4 Safari/604.1",
+      "tablet",
+      "safari",
+    ],
+    [
+      "desktop Firefox",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+      "desktop",
+      "firefox",
+    ],
+    [
+      "Edge, which also says Chrome and Safari",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+      "desktop",
+      "edge",
+    ],
+    [
+      "Yandex Browser, which also says Chrome",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 YaBrowser/24.4.0.0 Safari/537.36",
+      "desktop",
+      "yandex",
+    ],
+    [
+      "Googlebot",
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "bot",
+      "other",
+    ],
+  ])("classifies %s", (_name, agent, deviceKind, browser) => {
+    expect(classifyClient(agent)).toEqual({ deviceKind, browser });
+  });
+
+  it("has an answer for a request with no User-Agent at all", () => {
+    expect(classifyClient(undefined)).toEqual({ deviceKind: "unknown", browser: "other" });
+    expect(classifyClient("   ")).toEqual({ deviceKind: "unknown", browser: "other" });
+  });
+
+  it("stores the class and never the string it came from", async () => {
+    const store = createInMemoryAnalyticsStore();
+    const instance = buildApp({ env, analytics: store });
+    const agent =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.207 Safari/537.36";
+    const response = await instance.inject({
+      method: "POST",
+      url: "/api/web/v1/events",
+      headers: { "user-agent": agent },
+      payload: [VALID],
+    });
+    expect(response.statusCode).toBe(204);
+    // The in-memory store keeps the payload, which is the browser's half and has no room for it.
+    expect(JSON.stringify(store.events)).not.toContain("537.36");
+    expect(analyticsEventSchema.safeParse({ ...VALID, deviceKind: "mobile" }).success).toBe(false);
+    await instance.close();
   });
 });

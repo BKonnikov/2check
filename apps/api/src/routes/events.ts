@@ -10,6 +10,7 @@ import {
 } from "@2check/contracts";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { classifyClient } from "../analytics/client.js";
 import type { AnalyticsStore } from "../analytics/store.js";
 import type { Metrics } from "../observability/metrics.js";
 
@@ -64,6 +65,11 @@ export function registerEventRoutes(app: FastifyInstance, deps: EventRouteDepend
 
     const store = deps.analytics;
     if (store !== undefined) {
+      /**
+       * PRD 28.3 — read here, stored as a coarse class, never kept as a string. The header is
+       * already on the request; classifying it is the only thing done with it.
+       */
+      const client = classifyClient(request.headers["user-agent"]);
       for (const event of parsed.data) {
         // Absent stays absent rather than becoming an explicit undefined column value.
         const payload: AnalyticsEventPayload = {
@@ -77,7 +83,7 @@ export function registerEventRoutes(app: FastifyInstance, deps: EventRouteDepend
           ...(event.sessionId === undefined ? {} : { sessionId: event.sessionId }),
           ...(event.returning === undefined ? {} : { returning: event.returning }),
         };
-        store.record(payload).catch((error: unknown) => {
+        store.record(payload, client).catch((error: unknown) => {
           request.log.warn({ error: String(error) }, "analytics event not recorded");
         });
         deps.metrics?.increment("analytics_event_total");
