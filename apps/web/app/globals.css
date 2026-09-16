@@ -996,82 +996,32 @@ td {
   color: var(--ink-3);
 }
 
-.daily {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 160px;
-  margin: 14px 0 0;
-  padding: 0 0 20px;
-  list-style: none;
-  border-bottom: 1px solid var(--rule);
-}
-.daily li {
-  position: relative;
-  flex: 1 1 0;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-}
-.daily-bar {
-  display: block;
-  width: 100%;
-  background: var(--ink-2);
-}
-.daily-day {
-  position: absolute;
-  bottom: -18px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 9.5px;
-  color: var(--ink-3);
-}
-
-.shares {
+/*
+ * A list of counts. No bars: the page shows figures, and a figure reads better as a figure than
+ * as a rectangle somebody has to measure against its neighbour.
+ */
+.counts {
   display: grid;
-  gap: 10px;
   margin: 14px 0 0;
   padding: 0;
   list-style: none;
 }
-.shares li {
-  display: grid;
-  grid-template-columns: minmax(120px, 230px) 1fr 70px;
-  align-items: center;
-  gap: 14px;
+.counts li {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--rule-2);
 }
-.share-label {
+.count-label {
+  flex: 1 1 auto;
   font-size: 14px;
 }
-.share-track {
-  display: block;
-  height: 10px;
-  background: var(--rule-2);
-}
-.share-fill {
-  display: block;
-  height: 100%;
-  background: var(--ink-2);
-}
-.share-fill.tone-healthy {
-  background: var(--pass);
-}
-.share-fill.tone-recommendations,
-.share-fill.tone-no_confirmed_issues_incomplete {
-  background: var(--unknown);
-}
-.share-fill.tone-problems,
-.share-fill.tone-critical_problem {
-  background: var(--fail);
-}
-.share-value {
+.count-value {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--ink-2);
+  color: var(--ink);
 }
 .sub-heading {
   margin: 22px 0 0;
@@ -1081,18 +1031,6 @@ td {
 .footer-links {
   display: flex;
   gap: 18px;
-}
-
-@media (max-width: 680px) {
-  .shares li {
-    grid-template-columns: 1fr 60px;
-  }
-  .share-track {
-    display: none;
-  }
-  .daily-day {
-    display: none;
-  }
 }
 
 /*

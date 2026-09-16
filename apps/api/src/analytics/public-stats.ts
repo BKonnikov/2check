@@ -25,7 +25,6 @@ export interface PublicStats {
    * scan is a durable fact and an analytics event is a best-effort beacon.
    */
   readonly tools: Readonly<Record<string, number>>;
-  readonly byDay: readonly { readonly day: string; readonly scans: number }[];
   /** Median seconds from accepted to completed, over the last 30 days. */
   readonly typicalSeconds: number | null;
   readonly audience: {
@@ -47,7 +46,6 @@ const EMPTY: PublicStats = {
   scans: { total: 0, completed: 0, last30Days: 0, last24Hours: 0 },
   verdicts: {},
   tools: {},
-  byDay: [],
   typicalSeconds: null,
   audience: { sessions: 0, returningSessions: 0, views: 0, devices: [], browsers: [] },
 };
@@ -68,7 +66,7 @@ export function createPostgresPublicStats(
 ): PublicStatsSource {
   return {
     async read() {
-      const [scans, verdicts, tools, daily, duration, clients, report] = await Promise.all([
+      const [scans, verdicts, tools, duration, clients, report] = await Promise.all([
         pool.query<{
           total: string;
           completed: string;
@@ -102,13 +100,6 @@ export function createPostgresPublicStats(
                   count(*)::text as count
              from scans
             group by 1`,
-        ),
-        pool.query<{ day: string; scans: string }>(
-          `select to_char(date_trunc('day', started_at), 'YYYY-MM-DD') as day,
-                  count(*)::text as scans
-             from scans
-            where started_at > now() - interval '30 days'
-            group by 1 order by 1`,
         ),
         // The median rather than the mean: one scan that sat on a resolver timeout should not
         // decide the number a reader is shown.
@@ -160,7 +151,6 @@ export function createPostgresPublicStats(
         },
         verdicts: tally(verdicts.rows),
         tools: tally(tools.rows),
-        byDay: daily.rows.map((entry) => ({ day: entry.day, scans: Number(entry.scans) })),
         typicalSeconds:
           seconds === null || seconds === undefined ? null : Math.round(Number(seconds)),
         audience: {

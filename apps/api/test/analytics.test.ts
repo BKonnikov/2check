@@ -141,7 +141,6 @@ describe("PRD 28 — the statistics endpoint", () => {
     scans: { total: 1200, completed: 1180, last30Days: 310, last24Hours: 12 },
     verdicts: { HEALTHY: 800, PROBLEMS: 120 },
     tools: { home: 900, dns: 140, registry: 90, tls: 70 },
-    byDay: [{ day: "2026-09-15", scans: 12 }],
     typicalSeconds: 4,
     audience: {
       sessions: 140,
@@ -210,7 +209,6 @@ describe("the published counters are cached, not queried per visitor", () => {
           scans: { total: reads, completed: 0, last30Days: 0, last24Hours: 0 },
           verdicts: {},
           tools: {},
-          byDay: [],
           typicalSeconds: null,
           audience: { sessions: 0, returningSessions: 0, views: 0, devices: [], browsers: [] },
         };
