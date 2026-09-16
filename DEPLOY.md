@@ -194,14 +194,32 @@ docker compose -f docker-compose.prod.yml exec postgres \
 ## Выкладка новой версии
 
 ```bash
+./deploy.sh
+```
+
+Скрипт делает `git pull`, берёт `APPLICATION_RELEASE_VERSION` из текущего коммита, собирает
+образы, прогоняет миграцию, поднимает `api` и `web` и ждёт готовности.
+
+Порядок здесь — не стиль, а требование. Сервис отказывается записывать результаты, если версия
+схемы хранения в сборке не совпадает с версией в базе (§19.10), поэтому выкладка, где новый
+`api` стартовал раньше своей миграции, кладёт сайт на «Сервис временно не принимает проверки».
+Сборка ничего не запускает, поэтому собирать до миграции безопасно.
+
+Те же шаги вручную, если нужно выполнить их по одному:
+
+```bash
 git pull
-docker compose -f docker-compose.prod.yml build
+export APPLICATION_RELEASE_VERSION=$(git rev-parse --short HEAD)
+docker compose -f docker-compose.prod.yml build api web
 docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate
 docker compose -f docker-compose.prod.yml up -d api web
 ```
 
-Поднимайте `APPLICATION_RELEASE_VERSION` при каждой выкладке — по нему и манифесту определяется,
-что именно развёрнуто.
+`APPLICATION_RELEASE_VERSION` задаёт и тег образа, и версию, которую сервис сообщает в
+`/release`, — по ней развёрнутое возвращается к исходному коммиту. Если пропустить `export`
+и сразу запустить `migrate`, compose не найдёт образ этого релиза и попытается его скачать;
+ошибка выглядит как `pull access denied ... may require 'docker login'` и о настоящей причине
+не говорит ничего — образ просто ещё не собран.
 
 ## Откат
 

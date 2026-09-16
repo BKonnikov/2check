@@ -50,7 +50,15 @@ services:
 
   # PRD 27.4 — migrations are an explicit step, not a side effect of the service starting.
   # Run with: docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate
+  #
+  # It carries the same build context as the API rather than only naming the image: without it,
+  # compose can only run a tag that already exists locally and tries to pull one that does not,
+  # which fails as a login error and hides the real cause — the image for this release has not
+  # been built yet.
   migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     image: 2check/api:${APPLICATION_RELEASE_VERSION:-dev}
     profiles: ["migrate"]
     environment:
