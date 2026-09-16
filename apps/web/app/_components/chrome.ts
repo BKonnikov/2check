@@ -57,6 +57,7 @@ export interface Ui {
   readonly shareFooter: string;
   readonly shareCheckedAt: string;
   readonly shareChecksLabel: string;
+  readonly sharePartial: string;
   readonly shareNote: string;
   readonly recheck: string;
   readonly recheckNote: string;
@@ -222,6 +223,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareFooter: "Наблюдение из одной точки в один момент времени",
       shareCheckedAt: "Проверено",
       shareChecksLabel: "проверок пройдено",
+      sharePartial: "Частичная проверка",
       shareNote: "Уходит только картинка: ни ссылки, ни технических подробностей в ней нет.",
       recheck: "Проверить заново",
       recheckNote: "Запрос уйдёт к резолверам, реестру и серверу заново, мимо кэша.",
@@ -373,6 +375,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareFooter: "One observation, from one location, at one moment",
       shareCheckedAt: "Checked",
       shareChecksLabel: "checks passed",
+      sharePartial: "Partial check",
       shareNote: "Only the image travels: it carries no link and no technical detail.",
       recheck: "Check again",
       recheckNote:
@@ -533,6 +536,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareFooter: "Bitta joydan, bitta vaqtda qilingan kuzatuv",
       shareCheckedAt: "Tekshirilgan",
       shareChecksLabel: "tekshiruv o'tdi",
+      sharePartial: "Qisman tekshiruv",
       shareNote: "Faqat rasm yuboriladi: unda havola ham, texnik tafsilot ham yo'q.",
       recheck: "Qayta tekshirish",
       recheckNote: "So'rov rezolverlar, reestr va serverga keshdan o'tmasdan qaytadan yuboriladi.",

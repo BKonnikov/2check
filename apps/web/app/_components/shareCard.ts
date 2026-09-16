@@ -16,6 +16,12 @@ export interface ShareCardModel {
   readonly domain: string;
   /** AC-23.3 — a PARTIAL scan states neither an overall verdict nor an overall score. */
   readonly verdict?: string;
+  /**
+   * What stands in the verdict's place when there is no verdict to state. Without it a reader
+   * receives a card with one section on it and no way to tell whether the rest passed, failed or
+   * was never looked at.
+   */
+  readonly partialLabel?: string;
   readonly score?: number;
   readonly tone: "pass" | "warn" | "fail" | "neutral";
   readonly confidence: string;
@@ -128,7 +134,9 @@ export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui):
   return {
     // The canonical name, never the string the reader typed (AC-23.8, AC-24.7).
     domain: scan.canonicalDomain.unicodeHostname,
-    ...(verdictCode === undefined ? {} : { verdict: text(`verdict.${verdictCode}`, language) }),
+    ...(verdictCode === undefined
+      ? { partialLabel: ui.sharePartial }
+      : { verdict: text(`verdict.${verdictCode}`, language) }),
     ...(overall && summary?.score !== undefined ? { score: summary.score } : {}),
     tone: verdictCode === undefined ? "neutral" : (VERDICT_TONE[verdictCode] ?? "neutral"),
     confidence:
@@ -220,50 +228,118 @@ function wrap(
   return lines;
 }
 
-/** PRD 23.9 — the card is rendered on demand, in the browser, from the result already in hand. */
+/**
+ * PRD 23.9 — the card is rendered on demand, in the browser, from the result already in hand.
+ *
+ * The layout flows rather than sitting at fixed coordinates, and the card is only as tall as what
+ * it has to say. A single-category scan was previously drawn into a frame built for three
+ * categories and two issues, and arrived two thirds empty — which reads as a broken image rather
+ * than as a short answer.
+ */
+const MIN_HEIGHT = 400;
+const FOOTER_GAP = 34;
+
+interface Plan {
+  readonly height: number;
+  readonly domain: string;
+  readonly headline: readonly string[];
+  readonly issues: readonly string[];
+  readonly contentEnd: number;
+}
+
+function plan(context: CanvasRenderingContext2D, model: ShareCardModel): Plan {
+  const width = CARD.width - CARD.pad * 2;
+  // The score sits in the top right, so the lines beside it get less room.
+  const headroom = model.score === undefined ? width : width - 220;
+
+  context.font = font(CARD.sans, 52, "700");
+  const domain = wrap(context, model.domain, headroom, 1)[0] ?? model.domain;
+
+  const headlineText = model.verdict ?? model.partialLabel;
+  context.font = font(CARD.sans, 40, "700");
+  const headline = headlineText === undefined ? [] : wrap(context, headlineText, headroom, 2);
+
+  context.font = font(CARD.sans, 22, "600");
+  const issues = model.issues.map(
+    (issue) => wrap(context, issue.title, width, 1)[0] ?? issue.title,
+  );
+
+  let y = CARD.pad + 68;
+  if (headline.length > 0) {
+    y += 58 + (headline.length - 1) * 48;
+  }
+  if (model.confidence !== "") {
+    y += 40;
+  }
+  y += 38;
+  y += 36 + model.categories.length * 34;
+  if (issues.length > 0) {
+    y += 20 + issues.length * 52;
+  }
+
+  return {
+    height: Math.max(MIN_HEIGHT, y + FOOTER_GAP + 30),
+    domain,
+    headline,
+    issues,
+    contentEnd: y,
+  };
+}
+
 export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = CARD.width * CARD.scale;
-  canvas.height = CARD.height * CARD.scale;
+  // Provisional, so text can be measured; the real height comes from the plan below.
+  canvas.height = 1200 * CARD.scale;
   const context = canvas.getContext("2d");
   if (context === null) {
     throw new Error("canvas is unavailable");
   }
   context.scale(CARD.scale, CARD.scale);
+  const measured = plan(context, model);
+
+  // Resizing clears the canvas and resets the transform, which is exactly what is wanted here.
+  canvas.height = measured.height * CARD.scale;
+  context.scale(CARD.scale, CARD.scale);
+
   const tone = CARD.tones[model.tone];
-
-  context.fillStyle = CARD.paper;
-  context.fillRect(0, 0, CARD.width, CARD.height);
-  context.fillStyle = tone;
-  context.fillRect(0, 0, CARD.width, 6);
-
   const left = CARD.pad;
   const right = CARD.width - CARD.pad;
 
+  context.fillStyle = CARD.paper;
+  context.fillRect(0, 0, CARD.width, measured.height);
+  context.fillStyle = tone;
+  context.fillRect(0, 0, CARD.width, 6);
+
+  let y = CARD.pad + 6;
   context.fillStyle = CARD.faint;
   context.font = font(CARD.mono, 18);
-  context.fillText("2check.uz", left, CARD.pad + 6);
+  context.fillText("2check.uz", left, y);
 
+  y += 62;
   context.fillStyle = CARD.ink;
   context.font = font(CARD.sans, 52, "700");
-  const domain = wrap(context, model.domain, right - left - 220, 1);
-  context.fillText(domain[0] ?? model.domain, left, CARD.pad + 82);
+  context.fillText(measured.domain, left, y);
 
-  let y = CARD.pad + 158;
-  if (model.verdict !== undefined) {
-    context.fillStyle = tone;
+  if (measured.headline.length > 0) {
+    y += 58;
+    // A verdict is coloured by its own tone; "partial check" is a statement of scope, not a
+    // judgement, so it stays ink.
+    context.fillStyle = model.verdict === undefined ? CARD.muted : tone;
     context.font = font(CARD.sans, 40, "700");
-    for (const line of wrap(context, model.verdict, right - left - 220, 2)) {
-      context.fillText(line, left, y);
-      y += 48;
+    for (const [index, line] of measured.headline.entries()) {
+      context.fillText(line, left, y + index * 48);
     }
+    y += (measured.headline.length - 1) * 48;
   }
 
-  context.fillStyle = CARD.muted;
-  context.font = font(CARD.mono, 20);
-  context.fillText(model.confidence.toUpperCase(), left, y + 8);
+  if (model.confidence !== "") {
+    y += 40;
+    context.fillStyle = CARD.muted;
+    context.font = font(CARD.mono, 20);
+    context.fillText(model.confidence.toUpperCase(), left, y);
+  }
 
-  // The score sits in the top right, where the eye lands after the name.
   if (model.score !== undefined) {
     context.textAlign = "right";
     context.fillStyle = CARD.ink;
@@ -275,50 +351,49 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
     context.textAlign = "left";
   }
 
-  // The lower two thirds, from the top down: what was checked, then what to fix, then the footer.
-  const footerY = CARD.height - 36;
-
+  y += 38;
   context.strokeStyle = CARD.rule;
   context.beginPath();
-  context.moveTo(left, 300);
-  context.lineTo(right, 300);
+  context.moveTo(left, y);
+  context.lineTo(right, y);
   context.stroke();
 
-  let row = 334;
+  y += 36;
   for (const category of model.categories) {
     context.fillStyle = CARD.ink;
     context.font = font(CARD.sans, 23, "700");
-    context.fillText(category.name, left, row);
+    context.fillText(category.name, left, y);
 
     context.fillStyle = CARD.muted;
     context.font = font(CARD.mono, 17);
-    context.fillText(`${category.passed}/${category.total}`, left + 190, row);
+    context.fillText(`${category.passed}/${category.total}`, left + 190, y);
 
     context.fillStyle = CARD.faint;
-    context.font = font(CARD.mono, 17);
-    context.fillText(model.checksLabel, left + 260, row);
+    context.fillText(model.checksLabel, left + 260, y);
 
     context.textAlign = "right";
     // The colour belongs to this category's own outcome, not to the overall verdict.
     context.fillStyle = CARD.tones[category.tone];
     context.font = font(CARD.mono, 17, "600");
-    context.fillText(category.status.toUpperCase(), right, row);
+    context.fillText(category.status.toUpperCase(), right, y);
     context.textAlign = "left";
-    row += 34;
+    y += 34;
   }
 
-  row += 14;
-  for (const issue of model.issues) {
-    context.fillStyle = CARD.faint;
-    context.font = font(CARD.mono, 15);
-    context.fillText(issue.severity.toUpperCase(), left, row);
-    context.fillStyle = CARD.ink;
-    context.font = font(CARD.sans, 22, "600");
-    context.fillText(wrap(context, issue.title, right - left, 1)[0] ?? issue.title, left, row + 26);
-    row += 50;
+  if (measured.issues.length > 0) {
+    y += 20;
+    for (const [index, title] of measured.issues.entries()) {
+      context.fillStyle = CARD.faint;
+      context.font = font(CARD.mono, 15);
+      context.fillText((model.issues[index]?.severity ?? "").toUpperCase(), left, y);
+      context.fillStyle = CARD.ink;
+      context.font = font(CARD.sans, 22, "600");
+      context.fillText(title, left, y + 26);
+      y += 52;
+    }
   }
 
-  // Its own baseline, so a long line of categories cannot run into it.
+  const footerY = measured.height - FOOTER_GAP;
   context.fillStyle = CARD.faint;
   context.font = font(CARD.mono, 16);
   context.fillText(model.footer, left, footerY);

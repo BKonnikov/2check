@@ -71,6 +71,10 @@ describe("AC-23.8 — the share card carries nothing it should not", () => {
     }
   });
 
+  it("says nothing about a partial check when the scan was full", () => {
+    expect(buildShareCardModel(scan(), "ru", UI).partialLabel).toBeUndefined();
+  });
+
   it("shows at most two issues, however many there are", () => {
     const many = scan({
       summary: {
@@ -103,6 +107,8 @@ describe("AC-23.3 — a PARTIAL card states nothing about the whole domain", () 
     expect(model.verdict).toBeUndefined();
     expect(model.score).toBeUndefined();
     expect(model.tone).toBe("neutral");
+    // Something has to stand where the verdict would be, or the card looks like it lost it.
+    expect(model.partialLabel).toBe(UI.sharePartial);
     // What it did check is still named.
     expect(model.categories.map((category) => category.name)).toEqual(["SSL/TLS"]);
   });
