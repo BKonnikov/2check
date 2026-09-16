@@ -174,7 +174,13 @@ describe("AC-10.6 — differing fingerprints are not a failure", () => {
     };
     const checks = evaluateCertificateChecks(probes, OPTIONS);
     expect(checks.every((check) => check.status === "PASS")).toBe(true);
-    expect(checks[0]?.details?.fingerprintVariation).toBe(true);
+    // The fingerprints belong to the chain check, which is the one they say something about.
+    const chain = checks.find((check) => check.checkId === "tls.certificate.chain");
+    expect(chain?.details?.fingerprintVariation).toBe(true);
+    // And they are not repeated under the checks they had no part in deciding.
+    const validity = checks.find((check) => check.checkId === "tls.certificate.validity");
+    expect(validity?.details?.fingerprints).toBeUndefined();
+    expect(validity?.details?.validTo).toBeDefined();
   });
 });
 

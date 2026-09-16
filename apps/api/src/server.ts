@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import { cachePublicStats, createPostgresPublicStats } from "./analytics/public-stats.js";
 import { createPostgresAnalyticsStore } from "./analytics/store.js";
 import { buildApp } from "./app.js";
 import { createRedisCache } from "./cache/redis-cache.js";
@@ -33,11 +34,15 @@ function canStoreResults(): Promise<void> {
   return schemaCheck;
 }
 
+const analytics = createPostgresAnalyticsStore(pool);
+
 const app = buildApp({
   env,
   store,
   canStoreResults,
-  analytics: createPostgresAnalyticsStore(pool),
+  analytics,
+  // Five minutes: the page is public, and nobody watches a usage counter tick.
+  stats: cachePublicStats(createPostgresPublicStats(pool, analytics), 5 * 60_000),
   cache: createRedisCache(redis),
   // PRD 27.5 — the instance confirms its mandatory dependencies before it receives traffic.
   probes: [

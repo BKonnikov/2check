@@ -6,7 +6,11 @@ import type { Catalogue } from "../types.js";
  * резолверов описывается как расхождение, а NXDOMAIN не описывается как «домен свободен».
  */
 export const ru: Catalogue = {
-  "dns.name.existence.pass": { title: "Имя существует в DNS" },
+  "dns.name.existence.pass": {
+    title: "Имя существует в DNS",
+    explanation:
+      "Публичные резолверы знают это имя. Это ещё не значит, что сайт открывается, — только что в DNS оно есть.",
+  },
   "dns.name.existence.fail": {
     title: "Имя не существует в DNS",
     explanation: "Резолверы согласны, что такого имени в зоне нет.",
@@ -28,7 +32,11 @@ export const ru: Catalogue = {
     explanation: "Резолверы не дали достаточного числа согласованных ответов.",
   },
 
-  "dns.record.consistency.pass": { title: "Резолверы согласны по {recordType}" },
+  "dns.record.consistency.pass": {
+    title: "Резолверы согласны по {recordType}",
+    explanation:
+      "Мы спрашиваем несколько независимых публичных резолверов. Одинаковый ответ означает, что изменения разошлись и посетители увидят одно и то же, каким бы провайдером ни пользовались.",
+  },
   "dns.record.consistency.fail": {
     title: "Резолверы расходятся по {recordType}",
     explanation: "Одни резолверы видят запись, другие нет.",
@@ -36,7 +44,20 @@ export const ru: Catalogue = {
     recommendation: "Сверьте зону на всех авторитетных серверах и проверьте недавние изменения.",
   },
 
-  "registry.lookup.registered": { title: "Домен зарегистрирован" },
+  "registry.lookup.registered": {
+    title: "Домен зарегистрирован",
+    explanation: "Реестр зоны подтверждает регистрацию.",
+  },
+  "registry.lookup.registered.registrar": {
+    title: "Домен зарегистрирован, регистратор — {registrar}",
+    explanation:
+      "Регистратор — компания, через которую домен оплачивается и продлевается. Дат регистрации реестр в этом ответе не вернул.",
+  },
+  "registry.lookup.registered.record": {
+    title: "Домен зарегистрирован, регистратор — {registrar}",
+    explanation:
+      "Запись в реестре создана {createdAt}, оплачена до {expiresAt}. Регистратор — компания, через которую домен продлевают: к ней обращаются, если нужно изменить серверы имён или продлить срок. Серверы имён и статус записи — в технических подробностях.",
+  },
   "registry.lookup.not_registered": {
     title: "Реестр сообщает, что домен не зарегистрирован",
     explanation: "Авторитетная служба реестра подтвердила отсутствие регистрации.",
@@ -52,7 +73,11 @@ export const ru: Catalogue = {
       "Проверка регистрации сейчас охватывает только зону .uz. Это ограничение сервиса, а не проблема домена.",
   },
 
-  "tls.connection.pass": { title: "Соединение по {ipFamily} установлено, протокол {protocol}" },
+  "tls.connection.pass": {
+    title: "Соединение по {ipFamily} установлено, протокол {protocol}",
+    explanation:
+      "Мы подключились к порту 443 и договорились о защищённом канале. Версия протокола — то, чем шифруется трафик между браузером и сервером; сегодня актуальны TLSv1.2 и TLSv1.3.",
+  },
   "tls.connection.fail": {
     title: "Не удалось установить TLS-соединение по {ipFamily}",
     explanation: "Соединение или рукопожатие не завершилось.",
@@ -78,7 +103,11 @@ export const ru: Catalogue = {
   },
   "tls.connection.not_applicable": { title: "Адреса {ipFamily} нет, подключаться не к чему" },
 
-  "tls.certificate.validity.pass": { title: "Сертификат действует" },
+  "tls.certificate.validity.pass": {
+    title: "Сертификат действует ещё {daysRemaining} дн.",
+    explanation:
+      "У каждого сертификата есть срок. Когда он заканчивается, браузеры перестают открывать сайт без предупреждения, поэтому продлевать его лучше заранее.",
+  },
   "tls.certificate.validity.fail": {
     title: "Сертификат вне срока действия",
     explanation: "Срок сертификата истёк или ещё не начался.",
@@ -87,7 +116,11 @@ export const ru: Catalogue = {
   },
   "tls.certificate.validity.blocked": { title: "Сертификат не оценивался" },
 
-  "tls.certificate.hostname.pass": { title: "Сертификат покрывает это имя хоста" },
+  "tls.certificate.hostname.pass": {
+    title: "Сертификат покрывает это имя хоста",
+    explanation:
+      "Сертификат выписан на список имён. Проверяемое имя в этом списке есть — напрямую или через маску вида *.example.uz.",
+  },
   "tls.certificate.hostname.fail": {
     title: "Сертификат не покрывает это имя хоста",
     explanation: "Имени нет среди альтернативных имён субъекта в сертификате.",
@@ -96,7 +129,11 @@ export const ru: Catalogue = {
   },
   "tls.certificate.hostname.blocked": { title: "Соответствие имени не оценивалось" },
 
-  "tls.certificate.chain.pass": { title: "Цепочка сертификатов доверенная" },
+  "tls.certificate.chain.pass": {
+    title: "Цепочка сертификатов доверенная",
+    explanation:
+      "Сертификат сайта подписан промежуточным центром, тот — корневым, а корневому доверяет операционная система. Эта последовательность подписей и есть цепочка: она выстроилась до конца, значит браузер примет сертификат без предупреждений.",
+  },
   "tls.certificate.chain.fail": {
     title: "Цепочка сертификатов недоверенная",
     explanation:

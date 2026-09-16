@@ -216,3 +216,55 @@ describe("PRD 13.6 — the Uzbek catalogue", () => {
     expect(message.explanation).toContain("cheklovi");
   });
 });
+
+/**
+ * PRD 13.6 — a date inside a message is a date, not the machine string it travelled as. The
+ * registry answers in ISO; a reader does not read ISO.
+ */
+describe("dates inside messages are written the reader's way", () => {
+  const params = {
+    registrar: 'ООО "Billur Com"',
+    createdAt: "2024-06-20T00:00:00.000Z",
+    expiresAt: "2027-06-20T00:00:00.000Z",
+  };
+
+  it("renders a registry date in the language of the message", () => {
+    const ru = resolveMessage({ titleCode: "registry.lookup.registered.record", params }, "ru");
+    expect(ru.explanation).toContain("20 июня 2024");
+    expect(ru.explanation).toContain("20 июня 2027");
+    expect(ru.explanation).not.toContain("2024-06-20");
+
+    const en = resolveMessage({ titleCode: "registry.lookup.registered.record", params }, "en");
+    expect(en.explanation).toContain("20 June 2024");
+  });
+
+  it("names the registrar in the title", () => {
+    const message = resolveMessage(
+      { titleCode: "registry.lookup.registered.record", params },
+      "ru",
+    );
+    // AC-13.8 — a parameter is plain text, so the quotes in a registrar's name are escaped.
+    expect(message.title).toContain("Billur Com");
+    expect(message.title).not.toContain("<");
+  });
+
+  it("leaves a value that is not a date alone", () => {
+    const message = resolveMessage(
+      { titleCode: "tls.connection.pass", params: { ipFamily: "IPv4", protocol: "TLSv1.3" } },
+      "ru",
+    );
+    expect(message.title).toContain("TLSv1.3");
+  });
+
+  it("does not shift a calendar date across time zones", () => {
+    // Rendered in UTC on purpose, so the server and the browser produce the same string.
+    const message = resolveMessage(
+      {
+        titleCode: "registry.lookup.registered.record",
+        params: { ...params, expiresAt: "2027-06-20T23:30:00.000Z" },
+      },
+      "en",
+    );
+    expect(message.explanation).toContain("20 June 2027");
+  });
+});

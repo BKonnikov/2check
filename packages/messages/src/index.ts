@@ -29,16 +29,50 @@ function escapeMarkup(value: string | number | boolean): string {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
+const DATE_LOCALE: Readonly<Record<Language, string>> = {
+  ru: "ru-RU",
+  uz: "uz-UZ",
+  en: "en-GB",
+};
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+/**
+ * PRD 13.6 — a date inside a message is written the way the reader's language writes dates.
+ * A registry timestamp is a calendar fact rather than an instant, so it is rendered in UTC:
+ * the same string then comes out of the server and out of the browser, whatever zone either
+ * of them is in.
+ */
+function localizeDate(value: string, language: Language): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString(DATE_LOCALE[language], {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function interpolate(
   template: string,
   params: Readonly<Record<string, string | number | boolean>> | undefined,
+  language: Language,
 ): string {
   if (params === undefined) {
     return template;
   }
   return template.replaceAll(/\{(\w+)\}/g, (match, key: string) => {
     const value = params[key];
-    return value === undefined ? match : escapeMarkup(value);
+    if (value === undefined) {
+      return match;
+    }
+    if (typeof value === "string" && ISO_DATE.test(value)) {
+      return escapeMarkup(localizeDate(value, language));
+    }
+    return escapeMarkup(value);
   });
 }
 
@@ -52,16 +86,16 @@ export function resolveMessage(descriptor: MessageDescriptor, language: Language
     const entry = CATALOGUES[candidate][descriptor.titleCode];
     if (entry !== undefined) {
       return {
-        title: interpolate(entry.title, descriptor.params),
+        title: interpolate(entry.title, descriptor.params, candidate),
         ...(entry.explanation === undefined
           ? {}
-          : { explanation: interpolate(entry.explanation, descriptor.params) }),
+          : { explanation: interpolate(entry.explanation, descriptor.params, candidate) }),
         ...(entry.impact === undefined
           ? {}
-          : { impact: interpolate(entry.impact, descriptor.params) }),
+          : { impact: interpolate(entry.impact, descriptor.params, candidate) }),
         ...(entry.recommendation === undefined
           ? {}
-          : { recommendation: interpolate(entry.recommendation, descriptor.params) }),
+          : { recommendation: interpolate(entry.recommendation, descriptor.params, candidate) }),
         language: candidate,
         titleCode: descriptor.titleCode,
       };

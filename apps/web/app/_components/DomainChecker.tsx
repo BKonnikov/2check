@@ -143,12 +143,33 @@ function message(descriptor: MessageDescriptorView, language: Language) {
  * dates, the registration record. It is fetched on first open rather than with the result,
  * because most readers never ask for it.
  */
-function renderValue(value: unknown, ui: Ui): ReactNode {
+const ISO_MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+/**
+ * A name as it stands in the certificate is prefixed with the kind of name it is — "DNS:olx.uz".
+ * The prefix is how the certificate is encoded, not something a reader asked about.
+ */
+function certificateName(entry: string): string {
+  return entry.replace(/^(DNS|IP Address|URI|email):/i, "");
+}
+
+function renderValue(value: unknown, ui: Ui, language: Language, key?: string): ReactNode {
   if (value === null || value === undefined || value === "") {
     return ui.none;
   }
   if (typeof value === "boolean") {
     return value ? ui.yes : ui.no;
+  }
+  // A moment is shown as a moment. Nobody reads 2026-10-29T12:17:53.000Z as a date.
+  if (typeof value === "string" && ISO_MOMENT.test(value)) {
+    return (
+      <time dateTime={value} suppressHydrationWarning title={value}>
+        {moment(value, language)}
+      </time>
+    );
+  }
+  if (typeof value === "string" && key === "subjectAltNames") {
+    return certificateName(value);
   }
   if (Array.isArray(value)) {
     if (value.length === 0) {
@@ -172,6 +193,9 @@ function renderValue(value: unknown, ui: Ui): ReactNode {
         </ul>
       );
     }
+    if (key === "subjectAltNames") {
+      return value.map((entry) => certificateName(String(entry))).join(" · ");
+    }
     return value.map((entry) => String(entry)).join(", ");
   }
   if (typeof value === "object") {
@@ -183,19 +207,30 @@ function renderValue(value: unknown, ui: Ui): ReactNode {
     }
     return (
       <ul className="detail-sub">
-        {entries.map(([key, nested]) => (
-          <li key={key}>
-            <span className="detail-key">{ui.detailLabels[key] ?? key}</span>
-            <span>{renderValue(nested, ui)}</span>
+        {entries.map(([nestedKey, nested]) => (
+          <li key={nestedKey}>
+            <span className="detail-key">{ui.detailLabels[nestedKey] ?? nestedKey}</span>
+            <span>{renderValue(nested, ui, language, nestedKey)}</span>
           </li>
         ))}
       </ul>
     );
   }
-  return String(value);
+  const scalar = String(value);
+  // Machine words like REPRESENTATIVE are a contract value, not something to put in front of a
+  // reader untranslated.
+  return ui.detailLabels[scalar] ?? scalar;
 }
 
-function DetailRows({ source, ui }: { source: Record<string, unknown>; ui: Ui }) {
+function DetailRows({
+  source,
+  ui,
+  language,
+}: {
+  source: Record<string, unknown>;
+  ui: Ui;
+  language: Language;
+}) {
   const rows = Object.entries(source).filter(([key]) => key !== "kind");
   if (rows.length === 0) {
     return null;
@@ -205,7 +240,13 @@ function DetailRows({ source, ui }: { source: Record<string, unknown>; ui: Ui })
       {rows.map(([key, value]) => (
         <div className="detail-row" key={key}>
           <dt>{ui.detailLabels[key] ?? key}</dt>
-          <dd>{renderValue(value, ui)}</dd>
+          <dd>
+            {renderValue(value, ui, language, key)}
+            {/* A label alone does not explain a wildcard, a fingerprint or a chain. */}
+            {ui.detailHints[key] !== undefined && (
+              <span className="detail-hint">{ui.detailHints[key]}</span>
+            )}
+          </dd>
         </div>
       ))}
     </dl>
@@ -216,11 +257,13 @@ function TechnicalDetails({
   scanId,
   named,
   ui,
+  language,
   onOpen,
 }: {
   scanId: string;
   named: ReadonlyMap<string, { title: string; status: string }>;
   ui: Ui;
+  language: Language;
   onOpen: () => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -270,12 +313,24 @@ function TechnicalDetails({
                   {known !== undefined && <StatusMark status={known.status} ui={ui} />}
                 </div>
                 <span className="check-id">{check.checkId}</span>
-                <DetailRows source={check.target as unknown as Record<string, unknown>} ui={ui} />
+                <DetailRows
+                  language={language}
+                  source={check.target as unknown as Record<string, unknown>}
+                  ui={ui}
+                />
                 {check.source !== undefined && (
-                  <DetailRows source={check.source as unknown as Record<string, unknown>} ui={ui} />
+                  <DetailRows
+                    language={language}
+                    source={check.source as unknown as Record<string, unknown>}
+                    ui={ui}
+                  />
                 )}
                 {check.details !== undefined && (
-                  <DetailRows source={check.details as Record<string, unknown>} ui={ui} />
+                  <DetailRows
+                    language={language}
+                    source={check.details as Record<string, unknown>}
+                    ui={ui}
+                  />
                 )}
               </div>
             );
@@ -571,7 +626,14 @@ export default function DomainChecker({
               const resolved = message(check.message, language);
               return (
                 <li key={check.checkId}>
-                  <span className="check-title">{resolved.title || check.checkId}</span>
+                  <span className="check-title">
+                    {resolved.title || check.checkId}
+                    {/* What the check actually looked at, for a reader who has not met the
+                        term before. A passing check needs this as much as a failing one. */}
+                    {resolved.explanation !== undefined && (
+                      <span className="check-explanation">{resolved.explanation}</span>
+                    )}
+                  </span>
                   <span className="check-meta">
                     <Freshness freshness={check.freshness} ui={ui} language={language} />
                     <StatusMark status={check.status} ui={ui} />
@@ -586,6 +648,7 @@ export default function DomainChecker({
       {/* PRD 23.6 — technical detail is a disclosure, closed by default and keyboard operable. */}
       {scan !== null && scan.executionState === "COMPLETED" && domain !== undefined && (
         <TechnicalDetails
+          language={language}
           onOpen={() => track("technical_details_opened", dimensions)}
           scanId={scan.scanId}
           named={

@@ -72,8 +72,18 @@ function verifyChain(
   return STOPPED_BEFORE_THE_CHAIN.has(authorizationError) ? "NOT_VERIFIED" : "UNTRUSTED";
 }
 
+/**
+ * A distinguished name as a person would recognise it. An issuer's common name is often an
+ * internal label — "YR2", "R11" — which answers "who issued this?" with nothing at all, so the
+ * organisation is named alongside it whenever the certificate carries one.
+ */
 function describe(name: { CN?: string; O?: string } | undefined): string {
-  return name?.CN ?? name?.O ?? "";
+  const common = name?.CN ?? "";
+  const organisation = name?.O ?? "";
+  if (common === "" || organisation === "" || common === organisation) {
+    return common === "" ? organisation : common;
+  }
+  return `${common} (${organisation})`;
 }
 
 function toCertificate(

@@ -154,10 +154,31 @@ function eventDate(events: readonly RdapEvent[] | undefined, action: string): st
 }
 
 /**
- * PRD 9.4 — normalize an RDAP domain object.
- * Returns null when the payload is not a usable domain object: an unusable response is
- * indeterminate (PRD 9.2), never evidence that the domain is free.
+ * WHOIS has no date format, only conventions: .uz answers 20-Jun-2024, others answer
+ * 2024-06-20 or 20.06.2024. Only these recognised shapes are normalised, because the built-in
+ * parser is far too willing — it reads "sometime in 2005" as the first of January — and a
+ * guessed date presented as a fact is worse than the registry's own wording.
  */
+const ISO_LIKE = /^\d{4}-\d{2}-\d{2}([T\s][\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
+const DOTTED = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+const DAY_MONTH_YEAR = /^\d{1,2}-[A-Za-z]{3}-\d{4}$/;
+
+function toIsoDate(value: string | undefined): string | null {
+  if (value === undefined || value.trim() === "") {
+    return null;
+  }
+  const trimmed = value.trim();
+  const dotted = DOTTED.exec(trimmed);
+  const recognised =
+    dotted !== null || ISO_LIKE.test(trimmed) || DAY_MONTH_YEAR.test(trimmed.replace(/\s+/g, "-"));
+  if (!recognised) {
+    return trimmed;
+  }
+  const candidate = dotted === null ? trimmed : `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+  const parsed = new Date(candidate);
+  return Number.isNaN(parsed.getTime()) ? trimmed : parsed.toISOString();
+}
+
 export function normalizeRdapDomain(
   payload: unknown,
   freshness: CheckFreshness,
@@ -197,6 +218,9 @@ export function normalizeRdapDomain(
     ),
     createdAt: eventDate(domain.events, "registration"),
     expiresAt: eventDate(domain.events, "expiration"),
+    updatedAt:
+      eventDate(domain.events, "last changed") ??
+      eventDate(domain.events, "last update of rdap database"),
     nameServers: (domain.nameservers ?? [])
       .map((server) => server.ldhName?.replace(/\.$/, ""))
       .filter((name): name is string => name !== undefined && name !== ""),
@@ -225,6 +249,7 @@ const WHOIS_KEYS: Readonly<Record<string, readonly string[]>> = {
   registryDomain: ["domain name", "domain"],
   registrar: ["registrar", "registrar name", "sponsoring registrar"],
   createdAt: ["creation date", "created", "created on", "registered on", "registration date"],
+  updatedAt: ["updated date", "last updated", "modified", "changed", "last modified"],
   expiresAt: [
     "expiration date",
     "expiry date",
@@ -287,8 +312,9 @@ export function parseWhoisRecord(
     registration: {
       registryDomain: registryDomain.toLowerCase().replace(/\.$/, ""),
       registrar: decodeOrNull(first("registrar")),
-      createdAt: first("createdAt") ?? null,
-      expiresAt: first("expiresAt") ?? null,
+      createdAt: toIsoDate(first("createdAt")),
+      expiresAt: toIsoDate(first("expiresAt")),
+      updatedAt: toIsoDate(first("updatedAt")),
       nameServers: collectWhoisValues(lines, WHOIS_KEYS.nameServer ?? []).map(
         (value) => value.split(/\s+/)[0]?.toLowerCase().replace(/\.$/, "") ?? value,
       ),
@@ -406,13 +432,34 @@ export function evaluateRegistryLookup(
   };
 
   if (resolution.outcome === "REGISTERED") {
+    /**
+     * PRD 13.7 and AC-9.5 — the registry record is what a reader came for. "The domain is
+     * registered" answers none of "since when?", "through whom?", "until when?", and all three
+     * are public facts of the registry: only the registrant's own details are held back. They
+     * travel as message parameters, which is the Public level, so the answer is on the result
+     * itself rather than behind the technical disclosure.
+     */
+    const record = resolution.registration;
+    const registrar = record?.registrar ?? undefined;
+    const createdAt = record?.createdAt ?? undefined;
+    const expiresAt = record?.expiresAt ?? undefined;
+    const known = registrar !== undefined && createdAt !== undefined && expiresAt !== undefined;
+    const titleCode = known
+      ? "registry.lookup.registered.record"
+      : registrar === undefined
+        ? "registry.lookup.registered"
+        : "registry.lookup.registered.registrar";
     return {
       checkId,
       category: "registry",
       status: "PASS",
       severity: "none" as Severity,
       target,
-      message: { titleCode: "registry.lookup.registered" },
+      message: known
+        ? { titleCode, params: { registrar, createdAt, expiresAt } }
+        : registrar === undefined
+          ? { titleCode }
+          : { titleCode, params: { registrar } },
       details: resolution.registration,
       source,
       freshness: options.freshness,

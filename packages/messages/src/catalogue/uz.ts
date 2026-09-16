@@ -12,7 +12,11 @@ import type { Catalogue } from "../types.js";
  * the fact rather than reassuring, and no causal claim is made that the data does not support.
  */
 export const uz: Catalogue = {
-  "dns.name.existence.pass": { title: "Nom DNS da mavjud" },
+  "dns.name.existence.pass": {
+    title: "Nom DNS da mavjud",
+    explanation:
+      "Ommaviy rezolverlar bu nomni biladi. Bu hali sayt ochiladi degani emas — faqat DNS da nom bor degani.",
+  },
   "dns.name.existence.fail": {
     title: "Nom DNS da mavjud emas",
     explanation: "Rezolverlar bu nom DNS zonasida yo'qligiga qo'shiladi.",
@@ -34,7 +38,11 @@ export const uz: Catalogue = {
     explanation: "Rezolverlar yetarlicha mos javob bermadi.",
   },
 
-  "dns.record.consistency.pass": { title: "Rezolverlar {recordType} bo'yicha bir xil javob berdi" },
+  "dns.record.consistency.pass": {
+    title: "Rezolverlar {recordType} bo'yicha bir xil javob berdi",
+    explanation:
+      "Biz bir nechta mustaqil ommaviy rezolverdan so'raymiz. Javoblar bir xil bo'lsa, o'zgarish tarqalgan va tashrifchilar qaysi provayderdan foydalanishidan qat'i nazar bir xil natijani ko'radi.",
+  },
   "dns.record.consistency.fail": {
     title: "Rezolverlar {recordType} bo'yicha turlicha javob berdi",
     explanation: "Ba'zi rezolverlar yozuvni ko'radi, ba'zilari ko'rmaydi.",
@@ -43,7 +51,20 @@ export const uz: Catalogue = {
       "Zonani barcha vakolatli serverlarda solishtiring va so'nggi o'zgarishlarni tekshiring.",
   },
 
-  "registry.lookup.registered": { title: "Domen ro'yxatdan o'tgan" },
+  "registry.lookup.registered": {
+    title: "Domen ro'yxatdan o'tgan",
+    explanation: "Zona reestri ro'yxatdan o'tganini tasdiqlaydi.",
+  },
+  "registry.lookup.registered.registrar": {
+    title: "Domen {registrar} orqali ro'yxatdan o'tgan",
+    explanation:
+      "Registrator — domen to'lanadigan va uzaytiriladigan kompaniya. Reestr bu javobda sanalarni qaytarmadi.",
+  },
+  "registry.lookup.registered.record": {
+    title: "Domen {registrar} orqali ro'yxatdan o'tgan",
+    explanation:
+      "Reestrdagi yozuv {createdAt} sanasida yaratilgan va {expiresAt} gacha to'langan. Registrator — domen uzaytiriladigan kompaniya: nom serverlarini o'zgartirish yoki muddatni uzaytirish uchun unga murojaat qilinadi. Nom serverlari va yozuv holati texnik tafsilotlarda.",
+  },
   "registry.lookup.not_registered": {
     title: "Reyestr domen ro'yxatdan o'tmagan deb xabar qilmoqda",
     explanation: "Vakolatli reyestr xizmati ro'yxat yo'qligini tasdiqladi.",
@@ -59,7 +80,11 @@ export const uz: Catalogue = {
       "Ro'yxatni tekshirish hozircha faqat .uz zonasini qamrab oladi. Bu xizmatning cheklovi, domenning muammosi emas.",
   },
 
-  "tls.connection.pass": { title: "{ipFamily} orqali ulanish o'rnatildi, protokol {protocol}" },
+  "tls.connection.pass": {
+    title: "{ipFamily} orqali ulanish o'rnatildi, protokol {protocol}",
+    explanation:
+      "Biz 443-portga ulandik va himoyalangan kanal haqida kelishdik. Protokol versiyasi — brauzer bilan server orasidagi trafikni shifrlaydigan narsa; bugun TLSv1.2 va TLSv1.3 dolzarb.",
+  },
   "tls.connection.fail": {
     title: "{ipFamily} orqali TLS ulanishini o'rnatib bo'lmadi",
     explanation: "Manzil javob berdi, lekin ulanish yoki qo'l siqish yakunlanmadi.",
@@ -88,7 +113,11 @@ export const uz: Catalogue = {
   },
   "tls.connection.not_applicable": { title: "{ipFamily} manzili yo'q, ulanadigan joy yo'q" },
 
-  "tls.certificate.validity.pass": { title: "Sertifikat amal qilmoqda" },
+  "tls.certificate.validity.pass": {
+    title: "Sertifikat yana {daysRemaining} kun amal qiladi",
+    explanation:
+      "Har bir sertifikatning muddati bor. Muddat tugagach, brauzerlar saytni ogohlantirishsiz ochmay qo'yadi, shuning uchun uni oldindan uzaytirgan ma'qul.",
+  },
   "tls.certificate.validity.fail": {
     title: "Sertifikat amal qilish muddatidan tashqarida",
     explanation: "Sertifikat muddati tugagan yoki hali boshlanmagan.",
@@ -97,7 +126,11 @@ export const uz: Catalogue = {
   },
   "tls.certificate.validity.blocked": { title: "Sertifikat baholanmadi" },
 
-  "tls.certificate.hostname.pass": { title: "Sertifikat bu xost nomini qamrab oladi" },
+  "tls.certificate.hostname.pass": {
+    title: "Sertifikat bu xost nomini qamrab oladi",
+    explanation:
+      "Sertifikat nomlar ro'yxati uchun beriladi. Tekshirilayotgan nom shu ro'yxatda bor — to'g'ridan-to'g'ri yoki *.example.uz ko'rinishidagi niqob orqali.",
+  },
   "tls.certificate.hostname.fail": {
     title: "Sertifikat bu xost nomini qamrab olmaydi",
     explanation: "Nom sertifikatdagi muqobil sub'ekt nomlari orasida yo'q.",
@@ -106,7 +139,11 @@ export const uz: Catalogue = {
   },
   "tls.certificate.hostname.blocked": { title: "Nom mosligi baholanmadi" },
 
-  "tls.certificate.chain.pass": { title: "Sertifikatlar zanjiri ishonchli" },
+  "tls.certificate.chain.pass": {
+    title: "Sertifikatlar zanjiri ishonchli",
+    explanation:
+      "Sayt sertifikatini oraliq markaz imzolagan, uni esa ildiz markaz, ildiz markazga esa operatsion tizim ishonadi. Shu imzolar ketma-ketligi zanjir deyiladi: u oxirigacha qurildi, demak brauzer sertifikatni ogohlantirishsiz qabul qiladi.",
+  },
   "tls.certificate.chain.fail": {
     title: "Sertifikatlar zanjiri ishonchsiz",
     explanation:

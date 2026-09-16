@@ -57,6 +57,7 @@ const PERMITTED_DETAIL_FIELDS: Readonly<Record<ScanCategory, readonly string[]>>
     "registrar",
     "createdAt",
     "expiresAt",
+    "updatedAt",
     "nameServers",
     "status",
     "rawStatus",

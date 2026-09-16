@@ -10,6 +10,7 @@ import {
   type Locale,
 } from "../../_components/chrome";
 import HeaderNav from "../../_components/HeaderNav";
+import { STATS } from "../../_components/stats";
 import "../../globals.css";
 
 export function generateStaticParams() {
@@ -76,8 +77,9 @@ export default async function LocaleLayout({
         <footer className="site-footer">
           <div>
             <p>{ui.footerNote}</p>
-            <p>
+            <p className="footer-links">
               <a href={`/${key}/about`}>{ui.aboutNav}</a>
+              <a href={`/${key}/stats`}>{STATS[key].nav}</a>
             </p>
           </div>
         </footer>

@@ -348,6 +348,10 @@ h1 {
   color: var(--ink-3);
   margin: 0 0 40px;
 }
+/* A hint that closes a page is a footnote, not the next line of the paragraph above it. */
+.section + .hint {
+  margin-top: 28px;
+}
 
 button.secondary {
   border: 1px solid var(--ink);
@@ -629,6 +633,15 @@ ul {
   flex: 1 1 55%;
   min-width: 0;
 }
+/* What the check looked at, for a reader meeting the term for the first time. */
+.check-explanation {
+  display: block;
+  margin-top: 4px;
+  max-width: 62ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
 .check-meta {
   display: flex;
   align-items: baseline;
@@ -821,6 +834,16 @@ details.section[open] > summary {
 .detail-key {
   color: var(--ink-3);
 }
+/* A label names a field; this says what the field is. */
+.detail-hint {
+  display: block;
+  margin-top: 5px;
+  max-width: 62ch;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
 
 @media (max-width: 680px) {
   .detail-row,
@@ -923,5 +946,139 @@ td {
   }
   .tiles {
     gap: 22px;
+  }
+}
+
+/*
+ * PRD 28 — the published statistics.
+ *
+ * Same rule as everywhere else: colour means status. The verdict bars borrow the status colours
+ * because they are statuses; every other bar is ink, because a count is not an outcome.
+ */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--rule-2);
+  border: 1px solid var(--rule-2);
+}
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 16px;
+  background: var(--sheet);
+}
+.figure-value {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.figure-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.daily {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 160px;
+  margin: 14px 0 0;
+  padding: 0 0 20px;
+  list-style: none;
+  border-bottom: 1px solid var(--rule);
+}
+.daily li {
+  position: relative;
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.daily-bar {
+  display: block;
+  width: 100%;
+  background: var(--ink-2);
+}
+.daily-day {
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+
+.shares {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.shares li {
+  display: grid;
+  grid-template-columns: minmax(120px, 230px) 1fr 70px;
+  align-items: center;
+  gap: 14px;
+}
+.share-label {
+  font-size: 14px;
+}
+.share-track {
+  display: block;
+  height: 10px;
+  background: var(--rule-2);
+}
+.share-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-2);
+}
+.share-fill.tone-healthy {
+  background: var(--pass);
+}
+.share-fill.tone-recommendations,
+.share-fill.tone-no_confirmed_issues_incomplete {
+  background: var(--unknown);
+}
+.share-fill.tone-problems,
+.share-fill.tone-critical_problem {
+  background: var(--fail);
+}
+.share-value {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-2);
+}
+.sub-heading {
+  margin: 22px 0 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.footer-links {
+  display: flex;
+  gap: 18px;
+}
+
+@media (max-width: 680px) {
+  .shares li {
+    grid-template-columns: 1fr 60px;
+  }
+  .share-track {
+    display: none;
+  }
+  .daily-day {
+    display: none;
   }
 }

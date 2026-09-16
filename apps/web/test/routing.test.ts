@@ -7,6 +7,7 @@ import {
   localeAlternates,
   negotiateLocale,
 } from "../app/_components/chrome";
+import { STATS } from "../app/_components/stats";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 
@@ -128,6 +129,14 @@ describe("AC-13.7 — the interface is translated, not duplicated", () => {
       ...Object.values(chrome.toolBody).flat(),
       ...Object.values(chrome.ui).flatMap((value) =>
         typeof value === "string" ? [value] : Object.values(value),
+      ),
+      // PRD 28 — the statistics page is chrome too, and is held to the same rule.
+      ...Object.values(STATS[locale]).flatMap((value: unknown) =>
+        typeof value === "string"
+          ? [value]
+          : Array.isArray(value)
+            ? (value as string[])
+            : Object.values(value as Record<string, string>),
       ),
     ];
   }

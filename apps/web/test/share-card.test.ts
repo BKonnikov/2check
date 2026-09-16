@@ -163,3 +163,76 @@ describe("the card says what was checked, not only that it was", () => {
     expect(buildShareCardModel(withoutTime, "ru", UI).checkedAt).toBeUndefined();
   });
 });
+
+/**
+ * The complaint the listing answers: "SSL/TLS — 4/4 проверок пройдено" scores the test rather
+ * than describing the domain. A reader wants to know what was found, not that somebody was
+ * satisfied.
+ */
+describe("a narrow scan says what it found, not how many boxes it ticked", () => {
+  function tlsOnly(checks: readonly Record<string, unknown>[]) {
+    return scan({
+      mode: "PARTIAL",
+      categories: [{ category: "tls", status: "PASS", checks }],
+      summary: { state: "FINAL", confidence: { level: "HIGH" }, issues: [] },
+    });
+  }
+
+  it("names each check, with the measurement the message carries", () => {
+    const model = buildShareCardModel(
+      tlsOnly([
+        {
+          status: "PASS",
+          message: {
+            titleCode: "tls.connection.pass",
+            params: { ipFamily: "IPv4", protocol: "TLSv1.3" },
+          },
+        },
+        {
+          status: "PASS",
+          message: { titleCode: "tls.certificate.validity.pass", params: { daysRemaining: 178 } },
+        },
+      ]),
+      "ru",
+      UI,
+    );
+    expect(model.checks?.map((check) => check.title)).toEqual([
+      "Соединение по IPv4 установлено, протокол TLSv1.3",
+      "Сертификат действует ещё 178 дн.",
+    ]);
+    expect(model.moreChecks).toBeUndefined();
+  });
+
+  it("puts the findings above the reassurances", () => {
+    const model = buildShareCardModel(
+      tlsOnly([
+        { status: "NOT_APPLICABLE", message: { titleCode: "tls.certificate.validity.blocked" } },
+        { status: "PASS", message: { titleCode: "tls.certificate.hostname.pass" } },
+        { status: "FAIL", message: { titleCode: "tls.certificate.chain.fail" } },
+        { status: "UNKNOWN", message: { titleCode: "tls.certificate.chain.unknown" } },
+      ]),
+      "ru",
+      UI,
+    );
+    expect(model.checks?.map((check) => check.tone)).toEqual(["fail", "warn", "pass", "neutral"]);
+  });
+
+  it("counts the checks it had no room for instead of dropping them silently", () => {
+    const model = buildShareCardModel(
+      tlsOnly(
+        Array.from({ length: 9 }, () => ({
+          status: "PASS",
+          message: { titleCode: "tls.certificate.hostname.pass" },
+        })),
+      ),
+      "ru",
+      UI,
+    );
+    expect(model.checks).toHaveLength(6);
+    expect(model.moreChecks).toBe("и ещё 3");
+  });
+
+  it("leaves a full scan to its categories, which are its summary", () => {
+    expect(buildShareCardModel(scan(), "ru", UI).checks).toBeUndefined();
+  });
+});

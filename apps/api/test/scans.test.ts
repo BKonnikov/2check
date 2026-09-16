@@ -533,11 +533,21 @@ describe("PRD 6.4 and 23.6 — Public and Technical exposure", () => {
     expect(registry?.details?.registrar).toBe("UZINFOCOM");
     expect(registry?.details?.nameServers).toEqual(["ns.uz"]);
 
-    const certificate = byId.get("tls.certificate.validity") as {
+    // Each certificate check publishes what decided it, and not the whole certificate.
+    const validity = byId.get("tls.certificate.validity") as {
       details?: Record<string, unknown>;
     };
-    expect(certificate?.details?.issuer).toBeDefined();
-    expect(certificate?.details?.validTo).toBeDefined();
+    expect(validity?.details?.validTo).toBeDefined();
+    expect(validity?.details?.daysRemaining).toBeDefined();
+    expect(validity?.details?.issuer).toBeUndefined();
+
+    const chain = byId.get("tls.certificate.chain") as { details?: Record<string, unknown> };
+    expect(chain?.details?.issuer).toBeDefined();
+
+    const hostname = byId.get("tls.certificate.hostname") as {
+      details?: Record<string, unknown>;
+    };
+    expect(hostname?.details?.subjectAltNames).toBeDefined();
     await instance.close();
   });
 

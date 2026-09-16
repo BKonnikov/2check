@@ -47,6 +47,8 @@ export interface Ui {
   readonly none: string;
   /** PRD 6.5 — the values stay machine-readable; only the field names are translated. */
   readonly detailLabels: Readonly<Record<string, string>>;
+  /** A sentence under a technical row, for the rows whose label is not self-explanatory. */
+  readonly detailHints: Readonly<Record<string, string>>;
   readonly technicalFields: Readonly<Record<"name" | "ascii" | "suffix" | "registrable", string>>;
   readonly tableHeads: Readonly<Record<"check" | "status" | "reason" | "observed", string>>;
   readonly share: string;
@@ -57,6 +59,8 @@ export interface Ui {
   readonly shareFooter: string;
   readonly shareCheckedAt: string;
   readonly shareChecksLabel: string;
+  /** Carries a {count} placeholder. */
+  readonly shareMoreChecks: string;
   readonly sharePartial: string;
   readonly shareNote: string;
   readonly recheck: string;
@@ -177,6 +181,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         valueVariation: "Значения расходятся",
         registrar: "Регистратор",
         createdAt: "Зарегистрирован",
+        updatedAt: "Запись изменена",
         expiresAt: "Действует до",
         nameServers: "Серверы имён",
         status: "Статус регистрации",
@@ -197,9 +202,37 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         fingerprints: "Отпечатки",
         fingerprintVariation: "Отпечатки различаются",
         chainErrorCode: "Код проверки цепочки",
+        endpointCoverage: "Охват точек подключения",
+        hostnameChecked: "Проверяемое имя",
+        IPV4: "по IPv4",
+        IPV6: "по IPv6",
+        REPRESENTATIVE: "одна представительная точка",
         value: "указано",
         redacted: "скрыто реестром",
         unavailable: "недоступно",
+      },
+      detailHints: {
+        hostname: "Имя, которое мы отправили серверу в запросе и для которого сверяли сертификат.",
+        subjectAltNames:
+          "Имена, для которых сертификат действителен. Звёздочка заменяет ровно одну часть имени: *.example.uz покрывает www.example.uz, но не a.b.example.uz и не сам example.uz — поэтому голое имя обычно перечисляют отдельно.",
+        issuer:
+          "Удостоверяющий центр, который выпустил сертификат, и организация, которой он принадлежит. Браузеры доверяют не сертификату, а этому центру.",
+        fingerprints:
+          "Короткая свёртка (SHA-256) самого сертификата — его отпечаток. По ней сверяют, что на каждом адресе отдают именно тот сертификат, который вы установили.",
+        fingerprintVariation:
+          "Если адресов несколько и отпечатки разошлись, значит на разных серверах стоят разные сертификаты. Само по себе это не ошибка, но чаще всего это забытое обновление на одном из них.",
+        evaluatedFamilies:
+          "Семейства адресов, по которым удалось подключиться и получить сертификат: IPv4, IPv6 или оба.",
+        endpointCoverage:
+          "Мы подключаемся к одному адресу из каждого семейства, а не ко всем сразу. Для большинства сайтов этого достаточно, но за балансировщиком отдельные серверы могут отвечать иначе.",
+        daysRemaining:
+          "Сколько дней остаётся у сертификата с самым близким концом срока среди проверенных адресов.",
+        chainErrorCode:
+          "Код, которым библиотека TLS объяснила отказ. Его стоит переслать администратору сайта как есть.",
+        answersByProvider: "Что именно ответил каждый публичный резолвер на наш запрос.",
+        valueVariation:
+          "Резолверы вернули запись, но с разными значениями. Обычно это нормальная балансировка или ещё не разошедшееся обновление.",
+        rawStatus: "Статус так, как его словами вернул реестр домена, без нашей трактовки.",
       },
       technicalNote:
         "Ниже — то же самое, но так, как проверки называются внутри 2check. Это нужно, если вы пересылаете результат администратору сайта или хостингу: по идентификатору и коду они сразу поймут, о какой проверке речь.",
@@ -223,6 +256,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareFooter: "Наблюдение из одной точки в один момент времени",
       shareCheckedAt: "Проверено",
       shareChecksLabel: "проверок пройдено",
+      shareMoreChecks: "и ещё {count}",
       sharePartial: "Частичная проверка",
       shareNote: "Уходит только картинка: ни ссылки, ни технических подробностей в ней нет.",
       recheck: "Проверить заново",
@@ -329,6 +363,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         valueVariation: "Values differ",
         registrar: "Registrar",
         createdAt: "Registered",
+        updatedAt: "Record last changed",
         expiresAt: "Expires",
         nameServers: "Name servers",
         status: "Registration status",
@@ -349,9 +384,38 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         fingerprints: "Fingerprints",
         fingerprintVariation: "Fingerprints differ",
         chainErrorCode: "Chain verification code",
+        endpointCoverage: "Endpoint coverage",
+        hostnameChecked: "Name checked",
+        IPV4: "over IPv4",
+        IPV6: "over IPv6",
+        REPRESENTATIVE: "one representative endpoint",
         value: "present",
         redacted: "redacted by the registry",
         unavailable: "unavailable",
+      },
+      detailHints: {
+        hostname:
+          "The name we sent to the server, and the name the certificate was checked against.",
+        subjectAltNames:
+          "The names this certificate is valid for. An asterisk stands for exactly one label: *.example.uz covers www.example.uz, but neither a.b.example.uz nor example.uz itself — which is why the bare name is usually listed separately.",
+        issuer:
+          "The authority that issued the certificate, and the organisation behind it. Browsers trust the authority, not the certificate.",
+        fingerprints:
+          "A short digest (SHA-256) of the certificate itself. Use it to confirm that every address serves the certificate you installed.",
+        fingerprintVariation:
+          "If there are several addresses and the fingerprints differ, the servers are holding different certificates. That is not a fault in itself, but it is most often a renewal that reached only one of them.",
+        evaluatedFamilies:
+          "The address families we could connect over and get a certificate from: IPv4, IPv6 or both.",
+        endpointCoverage:
+          "We connect to one address per family rather than to all of them. That is enough for most sites, though behind a load balancer individual servers can answer differently.",
+        daysRemaining:
+          "Days left on the certificate that expires soonest among the addresses checked.",
+        chainErrorCode:
+          "The code the TLS library gave for the refusal. Worth forwarding to the site administrator as it stands.",
+        answersByProvider: "What each public resolver actually answered.",
+        valueVariation:
+          "The resolvers returned the record with differing values. Usually ordinary load balancing, or an update that has not propagated yet.",
+        rawStatus: "The status in the registry's own words, before we interpret it.",
       },
       technicalNote:
         "The same results under the names 2check uses internally. Useful when you forward the result to a site administrator or a hosting provider: the identifier and the code tell them exactly which check is meant.",
@@ -375,6 +439,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareFooter: "One observation, from one location, at one moment",
       shareCheckedAt: "Checked",
       shareChecksLabel: "checks passed",
+      shareMoreChecks: "and {count} more",
       sharePartial: "Partial check",
       shareNote: "Only the image travels: it carries no link and no technical detail.",
       recheck: "Check again",
@@ -490,6 +555,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         valueVariation: "Qiymatlar farq qiladi",
         registrar: "Registrator",
         createdAt: "Ro'yxatdan o'tgan",
+        updatedAt: "Yozuv o'zgartirilgan",
         expiresAt: "Amal qilish muddati",
         nameServers: "Nom serverlari",
         status: "Ro'yxatdan o'tish holati",
@@ -510,9 +576,37 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         fingerprints: "Barmoq izlari",
         fingerprintVariation: "Barmoq izlari farq qiladi",
         chainErrorCode: "Zanjir tekshiruvi kodi",
+        endpointCoverage: "Ulanish nuqtalari qamrovi",
+        hostnameChecked: "Tekshirilgan nom",
+        IPV4: "IPv4 orqali",
+        IPV6: "IPv6 orqali",
+        REPRESENTATIVE: "bitta vakil nuqta",
         value: "ko'rsatilgan",
         redacted: "reestr tomonidan yashirilgan",
         unavailable: "mavjud emas",
+      },
+      detailHints: {
+        hostname: "Serverga so'rovda yuborilgan va sertifikat solishtirilgan nom.",
+        subjectAltNames:
+          "Sertifikat amal qiladigan nomlar. Yulduzcha nomning aynan bitta qismini almashtiradi: *.example.uz www.example.uz ni qamraydi, lekin a.b.example.uz ni ham, example.uz ning o'zini ham qamramaydi — shuning uchun yalang'och nom odatda alohida yoziladi.",
+        issuer:
+          "Sertifikatni chiqargan guvohlik markazi va u tegishli tashkilot. Brauzerlar sertifikatga emas, shu markazga ishonadi.",
+        fingerprints:
+          "Sertifikatning o'zidan olingan qisqa svertka (SHA-256) — uning barmoq izi. Har bir manzilda aynan siz o'rnatgan sertifikat berilayotganini shu bo'yicha tekshiriladi.",
+        fingerprintVariation:
+          "Manzillar bir nechta bo'lib, barmoq izlari farq qilsa, serverlarda turli sertifikatlar turibdi. Bu o'z-o'zidan xato emas, lekin ko'pincha ulardan birida yangilanish o'tkazib yuborilgan bo'ladi.",
+        evaluatedFamilies:
+          "Ulanib, sertifikat olishga muvaffaq bo'lgan manzil oilalari: IPv4, IPv6 yoki ikkalasi.",
+        endpointCoverage:
+          "Biz har bir oiladan bitta manzilga ulanamiz, hammasiga emas. Ko'pchilik saytlar uchun bu yetarli, ammo balansirovchi ortidagi alohida serverlar boshqacha javob berishi mumkin.",
+        daysRemaining:
+          "Tekshirilgan manzillar orasida muddati eng yaqin tugaydigan sertifikatga qancha kun qolgani.",
+        chainErrorCode:
+          "TLS kutubxonasi rad etishni tushuntirgan kod. Uni sayt ma'muriga o'zgartirmasdan yuborish foydali.",
+        answersByProvider: "Har bir ommaviy rezolver aynan nima javob bergani.",
+        valueVariation:
+          "Rezolverlar yozuvni qaytardi, lekin qiymatlari har xil. Odatda bu oddiy balanslash yoki hali tarqalmagan yangilanish.",
+        rawStatus: "Holat reestrning o'z so'zlari bilan, biz talqin qilmasdan.",
       },
       technicalNote:
         "Xuddi shu natijalar, lekin 2check ichida ishlatiladigan nomlar bilan. Natijani sayt ma'muriga yoki hosting provayderiga yuborsangiz, identifikator va kod bo'yicha ular qaysi tekshiruv haqida ekanini darhol tushunadi.",
@@ -536,6 +630,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareFooter: "Bitta joydan, bitta vaqtda qilingan kuzatuv",
       shareCheckedAt: "Tekshirilgan",
       shareChecksLabel: "tekshiruv o'tdi",
+      shareMoreChecks: "va yana {count}",
       sharePartial: "Qisman tekshiruv",
       shareNote: "Faqat rasm yuboriladi: unda havola ham, texnik tafsilot ham yo'q.",
       recheck: "Qayta tekshirish",

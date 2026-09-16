@@ -6,7 +6,11 @@ import type { Catalogue } from "../types.js";
  * disagreement, not as "DNS propagation"; NXDOMAIN is not reported as "available to buy".
  */
 export const en: Catalogue = {
-  "dns.name.existence.pass": { title: "The name exists in DNS" },
+  "dns.name.existence.pass": {
+    title: "The name exists in DNS",
+    explanation:
+      "Public resolvers know this name. That does not yet mean the site opens — only that DNS has it.",
+  },
   "dns.name.existence.fail": {
     title: "The name does not exist in DNS",
     explanation: "The resolvers agree that this name is not registered in the DNS zone.",
@@ -29,7 +33,11 @@ export const en: Catalogue = {
     explanation: "The resolvers did not produce enough agreeing answers.",
   },
 
-  "dns.record.consistency.pass": { title: "The resolvers agree about {recordType}" },
+  "dns.record.consistency.pass": {
+    title: "The resolvers agree about {recordType}",
+    explanation:
+      "We ask several independent public resolvers. The same answer from all of them means the change has propagated and visitors see the same thing whichever provider they use.",
+  },
   "dns.record.consistency.fail": {
     title: "The resolvers disagree about {recordType}",
     explanation: "Some resolvers see the record and others do not.",
@@ -37,7 +45,20 @@ export const en: Catalogue = {
     recommendation: "Compare the zone on every authoritative server and check recent changes.",
   },
 
-  "registry.lookup.registered": { title: "The domain is registered" },
+  "registry.lookup.registered": {
+    title: "The domain is registered",
+    explanation: "The registry for this zone confirms the registration.",
+  },
+  "registry.lookup.registered.registrar": {
+    title: "The domain is registered through {registrar}",
+    explanation:
+      "The registrar is the company the domain is paid and renewed through. The registry returned no dates in this answer.",
+  },
+  "registry.lookup.registered.record": {
+    title: "The domain is registered through {registrar}",
+    explanation:
+      "The registry record was created on {createdAt} and is paid up to {expiresAt}. The registrar is the company the domain is renewed through — the one to contact to change name servers or extend the term. Name servers and record status are in the technical detail.",
+  },
   "registry.lookup.not_registered": {
     title: "The registry reports the domain as not registered",
     explanation: "The authoritative registry service confirmed there is no registration.",
@@ -53,7 +74,11 @@ export const en: Catalogue = {
       "Registration lookup currently covers the .uz zone only. This is a limitation of 2check, not a problem with the domain.",
   },
 
-  "tls.connection.pass": { title: "Connected over {ipFamily} using {protocol}" },
+  "tls.connection.pass": {
+    title: "Connected over {ipFamily} using {protocol}",
+    explanation:
+      "We reached port 443 and negotiated a secure channel. The protocol version is what encrypts traffic between browser and server; TLSv1.2 and TLSv1.3 are the current ones.",
+  },
   "tls.connection.fail": {
     title: "Could not establish a TLS connection over {ipFamily}",
     explanation: "The connection or the handshake did not complete.",
@@ -83,7 +108,11 @@ export const en: Catalogue = {
   },
   "tls.connection.not_applicable": { title: "No {ipFamily} address, so nothing to connect to" },
 
-  "tls.certificate.validity.pass": { title: "The certificate is within its validity period" },
+  "tls.certificate.validity.pass": {
+    title: "The certificate is valid for another {daysRemaining} days",
+    explanation:
+      "Every certificate has a term. Once it ends, browsers stop opening the site without a warning, so renewing well ahead is the safe course.",
+  },
   "tls.certificate.validity.fail": {
     title: "The certificate is outside its validity period",
     explanation: "The certificate has expired or is not valid yet.",
@@ -92,7 +121,11 @@ export const en: Catalogue = {
   },
   "tls.certificate.validity.blocked": { title: "The certificate was not evaluated" },
 
-  "tls.certificate.hostname.pass": { title: "The certificate covers this hostname" },
+  "tls.certificate.hostname.pass": {
+    title: "The certificate covers this hostname",
+    explanation:
+      "A certificate is issued for a list of names. The name being checked is on that list — either outright or through a wildcard such as *.example.uz.",
+  },
   "tls.certificate.hostname.fail": {
     title: "The certificate does not cover this hostname",
     explanation: "The hostname is not present among the certificate's subject alternative names.",
@@ -101,7 +134,11 @@ export const en: Catalogue = {
   },
   "tls.certificate.hostname.blocked": { title: "The hostname match was not evaluated" },
 
-  "tls.certificate.chain.pass": { title: "The certificate chain is trusted" },
+  "tls.certificate.chain.pass": {
+    title: "The certificate chain is trusted",
+    explanation:
+      "The site's certificate is signed by an intermediate authority, that one by a root, and the root is trusted by the operating system. That sequence of signatures is the chain: it was built all the way, so a browser will accept the certificate without warnings.",
+  },
   "tls.certificate.chain.fail": {
     title: "The certificate chain is not trusted",
     explanation:

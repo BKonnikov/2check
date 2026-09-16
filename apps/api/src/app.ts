@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import type { PublicStatsSource } from "./analytics/public-stats.js";
+import { createEmptyPublicStats } from "./analytics/public-stats.js";
 import type { AnalyticsStore } from "./analytics/store.js";
 import { createInMemoryAnalyticsStore } from "./analytics/store.js";
 import { createInMemoryCache, createSingleFlight } from "./cache/reusable-cache.js";
@@ -8,6 +10,7 @@ import { createMetrics, type Metrics } from "./observability/metrics.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { type ReadinessProbe, registerHealthRoutes } from "./routes/health.js";
 import { registerScanRoutes } from "./routes/scans.js";
+import { registerStatsRoutes } from "./routes/stats.js";
 import { type AdmissionControl, createAdmissionControl } from "./scan/admission.js";
 import type { ScanDependencies } from "./scan/orchestrator.js";
 import { buildExecutionContext } from "./scan/orchestrator.js";
@@ -25,6 +28,8 @@ export interface AppOptions extends ScanDependencies {
   readonly canStoreResults?: () => Promise<void>;
   /** PRD 28 — product analytics. Absent means a private in-process store. */
   readonly analytics?: AnalyticsStore;
+  /** PRD 28 — the published counters. Absent means the statistics page has nothing to show. */
+  readonly stats?: PublicStatsSource;
 }
 
 export function buildApp({
@@ -38,6 +43,7 @@ export function buildApp({
   }),
   canStoreResults,
   analytics = createInMemoryAnalyticsStore(),
+  stats = createEmptyPublicStats(),
   ...deps
 }: AppOptions): FastifyInstance {
   const app = Fastify({
@@ -63,8 +69,14 @@ export function buildApp({
     reply.header("referrer-policy", "no-referrer");
     reply.header("x-content-type-options", "nosniff");
     reply.header("x-frame-options", "DENY");
-    // PRD 25.4 — scan resources are never cached by shared infrastructure.
-    reply.header("cache-control", "no-store");
+    /**
+     * PRD 25.4 — scan resources are never cached by shared infrastructure. The published
+     * counters are the one exception: they are the same aggregate for every caller and carry
+     * nothing about anybody, so the route that serves them sets its own header and keeps it.
+     */
+    if (reply.getHeader("cache-control") === undefined) {
+      reply.header("cache-control", "no-store");
+    }
     return payload;
   });
 
@@ -73,6 +85,7 @@ export function buildApp({
     executionContext: buildExecutionContext(env.SECURITY_INTERNAL_DENYLIST),
   });
   registerEventRoutes(app, { analytics, metrics });
+  registerStatsRoutes(app, { stats });
   registerScanRoutes(app, {
     store: store ?? createInMemoryScanStore(),
     metrics,

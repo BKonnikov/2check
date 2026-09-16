@@ -247,6 +247,8 @@ export interface NormalizedDomainRegistration {
   readonly registrar: string | null;
   readonly createdAt: string | null;
   readonly expiresAt: string | null;
+  /** PRD 9.4 — when the registry record was last changed, where the source reports it. */
+  readonly updatedAt?: string | null;
   readonly nameServers: readonly string[];
   readonly status: RegistrationStatus;
   readonly rawStatus: readonly string[];

@@ -37,6 +37,20 @@ export interface ShareCardModel {
     readonly tone: "pass" | "warn" | "fail" | "neutral";
   }[];
   readonly issues: readonly { readonly title: string; readonly severity: string }[];
+  /**
+   * The checks themselves, under the category they belong to. A tally — "4/4 passed" — scores
+   * the test rather than describing the domain: it tells a reader that somebody was satisfied,
+   * not what was found. The resolved titles say the findings out loud — which protocol the
+   * server negotiated, how long the certificate still has — and a scan of one category has the
+   * room for them.
+   */
+  readonly checks?: readonly {
+    readonly title: string;
+    readonly status: string;
+    readonly tone: ShareCardModel["tone"];
+  }[];
+  /** Already phrased, e.g. "и ещё 3", when the category holds more checks than the card lists. */
+  readonly moreChecks?: string;
   readonly footer: string;
   /** The word after the ratio, e.g. "проверок пройдено". */
   readonly checksLabel: string;
@@ -53,6 +67,10 @@ interface ScanLike {
     readonly status: string;
     readonly checks?: readonly {
       readonly status?: string;
+      readonly message?: {
+        readonly titleCode: string;
+        readonly params?: Record<string, unknown>;
+      };
       readonly freshness?: { readonly checkedAt?: string };
     }[];
   }[];
@@ -81,6 +99,20 @@ const STATUS_TONE: Readonly<Record<string, ShareCardModel["tone"]>> = {
   FAIL: "fail",
   UNKNOWN: "warn",
   NOT_APPLICABLE: "neutral",
+};
+
+/** How many check lines fit under a category before the card starts counting the rest. */
+const MAX_LISTED_CHECKS = 6;
+
+/**
+ * Which checks earn a line when they do not all fit. A finding is news; a pass is reassurance;
+ * "does not apply" is neither, and goes last.
+ */
+const CHECK_PRIORITY: Readonly<Record<string, number>> = {
+  FAIL: 0,
+  UNKNOWN: 1,
+  PASS: 2,
+  NOT_APPLICABLE: 3,
 };
 
 /** At most this many issues reach the card; the rest stay on the page. */
@@ -156,6 +188,35 @@ export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui):
       title: text(issue.message.titleCode, language, issue.message.params),
       severity: ui.severityLabels[issue.severity as keyof Ui["severityLabels"]] ?? issue.severity,
     })),
+    ...(() => {
+      // Only a scan of one category has room to name its checks. A full scan runs fifteen of
+      // them, and there the categories are the summary — with the issues saying what went wrong.
+      const single = scan.categories.length === 1 ? scan.categories[0] : undefined;
+      const checks = single?.checks ?? [];
+      if (checks.length === 0) {
+        return {};
+      }
+      // Stable, so checks of equal standing keep the order the scan produced them in.
+      const ordered = [...checks].sort(
+        (left, right) =>
+          (CHECK_PRIORITY[left.status ?? ""] ?? 9) - (CHECK_PRIORITY[right.status ?? ""] ?? 9),
+      );
+      const listed = ordered.slice(0, MAX_LISTED_CHECKS);
+      const hidden = ordered.length - listed.length;
+      return {
+        checks: listed.map((check) => ({
+          title:
+            check.message === undefined
+              ? (check.status ?? "")
+              : text(check.message.titleCode, language, check.message.params),
+          status: ui.statusWords[check.status as keyof Ui["statusWords"]] ?? check.status ?? "",
+          tone: STATUS_TONE[check.status ?? ""] ?? "neutral",
+        })),
+        ...(hidden > 0
+          ? { moreChecks: ui.shareMoreChecks.replace("{count}", String(hidden)) }
+          : {}),
+      };
+    })(),
     footer: ui.shareFooter,
     checksLabel: ui.shareChecksLabel,
     ...(() => {
@@ -273,6 +334,9 @@ function plan(context: CanvasRenderingContext2D, model: ShareCardModel): Plan {
   }
   y += 38;
   y += 36 + model.categories.length * 34;
+  if (model.checks !== undefined) {
+    y += 6 + model.checks.length * 32 + (model.moreChecks === undefined ? 0 : 26);
+  }
   if (issues.length > 0) {
     y += 20 + issues.length * 52;
   }
@@ -378,6 +442,38 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
     context.fillText(category.status.toUpperCase(), right, y);
     context.textAlign = "left";
     y += 34;
+  }
+
+  // The findings themselves, indented under the category that produced them.
+  if (model.checks !== undefined) {
+    y += 6;
+    const indent = left + 22;
+    for (const check of model.checks) {
+      context.fillStyle = CARD.faint;
+      context.font = font(CARD.mono, 15);
+      context.fillText("—", left, y);
+
+      context.fillStyle = CARD.ink;
+      context.font = font(CARD.sans, 21, "600");
+      context.fillText(
+        wrap(context, check.title, right - indent - 200, 1)[0] ?? check.title,
+        indent,
+        y,
+      );
+
+      context.textAlign = "right";
+      context.fillStyle = CARD.tones[check.tone];
+      context.font = font(CARD.mono, 16, "600");
+      context.fillText(check.status.toUpperCase(), right, y);
+      context.textAlign = "left";
+      y += 32;
+    }
+    if (model.moreChecks !== undefined) {
+      context.fillStyle = CARD.faint;
+      context.font = font(CARD.mono, 16);
+      context.fillText(model.moreChecks, indent, y);
+      y += 26;
+    }
   }
 
   if (measured.issues.length > 0) {

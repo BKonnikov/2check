@@ -200,6 +200,35 @@ describe("PRD 9.4 — WHOIS reading", () => {
   it("recognizes an explicit not-found answer", () => {
     expect(parseWhoisRecord("No match for EXAMPLE.UZ", FRESHNESS).notFound).toBe(true);
   });
+
+  /**
+   * The .uz registry writes its dates as 20-Jun-2024. They are normalised here so the interface
+   * can show them in the reader's own language instead of passing the registry's habits through.
+   */
+  it("normalises the date shapes WHOIS servers actually use", () => {
+    const uz = parseWhoisRecord(
+      [
+        "Domain Name: 2CHECK.UZ",
+        "Registrar: Billur Com",
+        "Creation Date: 20-Jun-2024",
+        "Expiration Date: 20-Jun-2027",
+        "Updated Date: 07-May-2026",
+        "Status: ACTIVE",
+      ].join("\n"),
+      FRESHNESS,
+    ).registration;
+    expect(uz?.createdAt).toBe("2024-06-20T00:00:00.000Z");
+    expect(uz?.expiresAt).toBe("2027-06-20T00:00:00.000Z");
+    expect(uz?.updatedAt).toBe("2026-05-07T00:00:00.000Z");
+  });
+
+  it("passes a date it cannot read through rather than guessing at it", () => {
+    const parsed = parseWhoisRecord(
+      ["Domain Name: example.uz", "Creation Date: sometime in 2005"].join("\n"),
+      FRESHNESS,
+    ).registration;
+    expect(parsed?.createdAt).toBe("sometime in 2005");
+  });
 });
 
 describe("AC-9.1 and AC-9.2 — transport strategy", () => {
@@ -263,6 +292,55 @@ describe("AC-9.6 and AC-9.8 — the registry check", () => {
       registryProvider: "UzRegistryProvider",
       transportsUsed: ["RDAP"],
     });
+  });
+
+  /**
+   * The registry record is what a reader came for. "The domain is registered" answers none of
+   * "since when", "through whom" or "until when", and none of those are personal data.
+   */
+  it("carries the registrar and the dates in the public message", () => {
+    const check = evaluateRegistryLookup(
+      {
+        outcome: "REGISTERED",
+        registration: normalizeRdapDomain(RDAP_FIXTURE, FRESHNESS),
+        transportsUsed: ["RDAP"],
+      },
+      options,
+    );
+    expect(check.message.titleCode).toBe("registry.lookup.registered.record");
+    expect(check.message.params?.registrar).toBeDefined();
+    expect(check.message.params?.createdAt).toBeDefined();
+    expect(check.message.params?.expiresAt).toBeDefined();
+    // AC-9.5 — the registrant is not among them, whatever the registry returned.
+    expect(JSON.stringify(check.message.params)).not.toContain("registrant");
+  });
+
+  it("says only what it knows when the registry returned no dates", () => {
+    const check = evaluateRegistryLookup(
+      {
+        outcome: "REGISTERED",
+        registration: {
+          registryDomain: "example.uz",
+          registrar: null,
+          createdAt: null,
+          expiresAt: null,
+          nameServers: [],
+          status: "ACTIVE",
+          rawStatus: ["ACTIVE"],
+          registrant: {
+            name: { state: "unavailable" },
+            email: { state: "unavailable" },
+            phone: { state: "unavailable" },
+            address: { state: "unavailable" },
+          },
+          freshness: FRESHNESS,
+        },
+        transportsUsed: ["RDAP"],
+      },
+      options,
+    );
+    expect(check.message.titleCode).toBe("registry.lookup.registered");
+    expect(check.message.params).toBeUndefined();
   });
 
   it("fails only on a confirmed absence", () => {

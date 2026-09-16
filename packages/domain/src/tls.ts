@@ -287,17 +287,33 @@ export function evaluateCertificateChecks(
   const chainErrorCode = assessments.find((entry) => entry.certificate.chainErrorCode !== undefined)
     ?.certificate.chainErrorCode;
 
-  const details: TlsCertificateDetails = {
-    evaluatedFamilies: families,
-    ...(chainErrorCode === undefined ? {} : { chainErrorCode }),
-    daysRemaining,
-    validFrom: soonest.certificate.validFrom,
-    validTo: soonest.certificate.validTo,
-    issuer: soonest.certificate.issuer,
-    subjectAltNames: soonest.certificate.subjectAltNames,
-    fingerprints,
-    fingerprintVariation,
+  /**
+   * PRD 6.4 — each check carries the facts that decided it, and not the rest of the certificate.
+   * All three used to publish one shared object, so a reader who opened the technical panel met
+   * the same fifteen rows three times over and had no way to tell which of them the check in
+   * front of them had actually looked at.
+   */
+  const perCheck: Readonly<Record<string, TlsCertificateDetails>> = {
+    "tls.certificate.validity": {
+      evaluatedFamilies: families,
+      daysRemaining,
+      validFrom: soonest.certificate.validFrom,
+      validTo: soonest.certificate.validTo,
+    },
+    "tls.certificate.hostname": {
+      evaluatedFamilies: families,
+      subjectAltNames: soonest.certificate.subjectAltNames,
+    },
+    "tls.certificate.chain": {
+      evaluatedFamilies: families,
+      ...(chainErrorCode === undefined ? {} : { chainErrorCode }),
+      issuer: soonest.certificate.issuer,
+      fingerprints,
+      fingerprintVariation,
+    },
   };
+  const detailsFor = (checkId: string): TlsCertificateDetails =>
+    perCheck[checkId] ?? { evaluatedFamilies: families };
 
   const verdicts: readonly (readonly [string, boolean, boolean])[] = [
     ["tls.certificate.validity", expired, false],
@@ -314,16 +330,26 @@ export function evaluateCertificateChecks(
         severity: "none" as Severity,
         reasonCode: "chain_not_verified",
         message: { titleCode: `${checkId}.unknown` },
-        details,
+        details: detailsFor(checkId),
       };
     }
+    const titleCode = `${checkId}.${failed ? "fail" : "pass"}`;
     return {
       ...shared,
       checkId,
       status: failed ? ("FAIL" as const) : ("PASS" as const),
       severity: (failed ? "critical" : "none") as Severity,
-      message: { titleCode: `${checkId}.${failed ? "fail" : "pass"}` },
-      details,
+      /**
+       * PRD 13.7 — a message may carry the measurement it is about. "The certificate is valid"
+       * answers less than half of what a reader came with; "valid for another 178 days" answers
+       * all of it. The number is a machine value (PRD 6.5), so it needs no translation, and it
+       * travels as a message parameter, which is public — the date it came from stays technical.
+       */
+      message:
+        titleCode === "tls.certificate.validity.pass"
+          ? { titleCode, params: { daysRemaining } }
+          : { titleCode },
+      details: detailsFor(checkId),
     };
   });
 }
