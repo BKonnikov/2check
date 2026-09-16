@@ -67,6 +67,20 @@ export const uz: Catalogue = {
     recommendation:
       "Bu manzilda 443-port xizmat ko'rsatayotganini va TLS xizmati ishga tushganini tekshiring.",
   },
+  "tls.connection.fail.timeout": {
+    title: "Server {ipFamily} orqali javob bermadi",
+    explanation: "443-portga ulanish boshlandi, ammo kutish tugaguncha javob kelmadi.",
+    impact: "{ipFamily} orqali keladigan tashrifchilar saytni xavfsiz ocholmaydi.",
+    recommendation:
+      "Bu manzilda 443-port ochiqligini va uni tarmoqlararo ekran to'smayotganini tekshiring.",
+  },
+  "tls.connection.fail.refused": {
+    title: "Server {ipFamily} orqali ulanishni rad etdi",
+    explanation: "Manzil rad javobi berdi: 443-portda ulanishlarni hech kim qabul qilmayapti.",
+    impact: "{ipFamily} orqali keladigan tashrifchilar saytni xavfsiz ocholmaydi.",
+    recommendation:
+      "Bu manzilda TLS xizmati ishlayotganini va 443-portni tinglayotganini tekshiring.",
+  },
   "tls.connection.unknown": {
     title: "{ipFamily} orqali TLS ulanishini tekshirib bo'lmadi",
     explanation:

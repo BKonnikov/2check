@@ -50,6 +50,21 @@ const IPV6_RANGES: Record<string, Subnet[]> = {
   ],
 };
 
+/**
+ * PRD 15.10 and 20.6 — a denylist entry is validated where addresses are understood, and at
+ * startup rather than at scan time. A malformed entry there would make classifyAddress refuse
+ * every address, which is safe but silently turns the scanner off; catching it in configuration
+ * turns it into a service that will not start.
+ */
+export function isValidCidr(value: string): boolean {
+  try {
+    ipaddr.parseCIDR(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface SecurityPolicy {
   readonly policyVersion: string;
   /** PRD 15.10 — deployment-specific CIDRs; changing the effective list changes securityPolicyVersion. */

@@ -1,8 +1,9 @@
 import type { DnsProviderResult, DnsQType, WebScanResponse } from "@2check/contracts";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
-import { type Env, loadEnv } from "../src/config/env.js";
+import { ConfigurationError, type Env, loadEnv } from "../src/config/env.js";
 import { createAdmissionControl } from "../src/scan/admission.js";
+import { securityPolicyVersion } from "../src/scan/orchestrator.js";
 import { createInMemoryScanStore } from "../src/scan/store.js";
 
 const env: Env = loadEnv({
@@ -296,5 +297,82 @@ describe("PRD 27.5 and AC-16.9 — a result that cannot be stored is not accepte
     // It is a projection, not a write: the record itself is untouched, so a late snapshot wins.
     expect((await store.get("stuck"))?.executionState).toBe("RUNNING");
     await app.close();
+  });
+});
+
+/**
+ * PRD 15.10 and AC-15.7 — the deployment names the addresses it cannot observe truthfully, and
+ * the scanner then says so instead of drawing a verdict from a view nobody else shares.
+ */
+describe("PRD 15.10 — the internal infrastructure denylist", () => {
+  const base = {
+    LOG_LEVEL: "silent",
+    REDIS_URL: "redis://127.0.0.1:6379",
+    DATABASE_URL: "postgres://twocheck:twocheck@127.0.0.1:5432/twocheck",
+    APPLICATION_RELEASE_VERSION: "0.0.0-test",
+  };
+
+  it("reads a comma-separated list and ignores the spaces around it", () => {
+    const parsed = loadEnv({
+      ...base,
+      SECURITY_INTERNAL_DENYLIST: "91.216.37.0/24, 2001:db8::/32",
+    });
+    expect(parsed.SECURITY_INTERNAL_DENYLIST).toEqual(["91.216.37.0/24", "2001:db8::/32"]);
+  });
+
+  it("is empty by default, so naming nothing changes nothing", () => {
+    expect(loadEnv(base).SECURITY_INTERNAL_DENYLIST).toEqual([]);
+  });
+
+  /** PRD 20.6 — a malformed entry stops the service rather than silently widening what is probed. */
+  it.each(["91.216.37.0", "not-a-cidr", "91.216.37.0/99"])("refuses to start on %j", (entry) => {
+    expect(() => loadEnv({ ...base, SECURITY_INTERNAL_DENYLIST: entry })).toThrow(
+      ConfigurationError,
+    );
+  });
+
+  it("does not probe a denied address, and says so rather than failing the domain", async () => {
+    let probed = 0;
+    const app = buildApp({
+      env: loadEnv({ ...base, SECURITY_INTERNAL_DENYLIST: "93.184.216.0/24" }),
+      dnsQuery: answering,
+      tlsProbe: async (address: string) => {
+        probed += 1;
+        return { kind: "ABSENT" as const, address } as never;
+      },
+    });
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/web/v1/scans",
+      payload: { input: "example.uz", mode: "PARTIAL", selectedCategories: ["tls"] },
+    });
+    const scanId = created.json().scanId as string;
+
+    let body: WebScanResponse | undefined;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const response = await app.inject({ method: "GET", url: `/api/web/v1/scans/${scanId}` });
+      body = response.json() as WebScanResponse;
+      if (body.executionState === "COMPLETED" || body.executionState === "FAILED") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(probed).toBe(0);
+    const checks = body?.categories.flatMap((category) => category.checks) ?? [];
+    expect(checks.length).toBeGreaterThan(0);
+    // Not a defect of the domain: nothing was observed, so nothing is claimed.
+    expect(checks.every((check) => check.status !== "FAIL")).toBe(true);
+    expect(checks.some((check) => check.reasonCode === "ssrf_policy_block")).toBe(true);
+    await app.close();
+  });
+
+  it("records the list in the security policy version a scan ran under", () => {
+    const plain = loadEnv(base);
+    const denied = loadEnv({ ...base, SECURITY_INTERNAL_DENYLIST: "91.216.37.0/24" });
+    expect(securityPolicyVersion(plain.SECURITY_INTERNAL_DENYLIST)).toBe("slice-1");
+    expect(securityPolicyVersion(denied.SECURITY_INTERNAL_DENYLIST)).not.toBe("slice-1");
+    // The same list in a different order is the same policy.
+    expect(securityPolicyVersion(["a/1", "b/2"])).toBe(securityPolicyVersion(["b/2", "a/1"]));
   });
 });

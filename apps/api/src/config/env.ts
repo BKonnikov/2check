@@ -1,3 +1,4 @@
+import { isValidCidr } from "@2check/domain";
 import { z } from "zod";
 
 /**
@@ -16,6 +17,28 @@ const schema = z.object({
   SCAN_DEADLINE_MS: z.coerce.number().int().min(1000).max(300_000).default(30_000),
   SCAN_MAX_CONCURRENT: z.coerce.number().int().min(1).max(64).default(4),
   SCAN_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(12),
+  /**
+   * PRD 15.10 and AC-15.7 — CIDRs this deployment must not probe, comma-separated.
+   *
+   * The intended use is the scanner's own neighbourhood: addresses it cannot observe truthfully
+   * from where it stands, typically because the path from here to them is not the path a visitor
+   * takes. Naming them produces an honest "could not check" instead of a confident verdict drawn
+   * from a view nobody else shares. Empty by default, and a malformed entry stops startup rather
+   * than silently widening what gets probed.
+   */
+  SECURITY_INTERNAL_DENYLIST: z
+    .string()
+    .default("")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry !== ""),
+    )
+    .refine(
+      (entries) => entries.every((entry) => isValidCidr(entry)),
+      "each entry must be a CIDR such as 91.216.37.0/24 or 2001:db8::/32",
+    ),
 });
 
 export type Env = Readonly<z.infer<typeof schema>>;

@@ -68,7 +68,8 @@ describe("AC-13.2 — fact, then impact, then recommendation", () => {
           continue;
         }
         if (entry.impact !== undefined || entry.recommendation !== undefined) {
-          expect(code).toMatch(/\.fail$/);
+          // A confirmed failure may be qualified further — tls.connection.fail.timeout.
+          expect(code).toMatch(/\.fail(\.|$)/);
         }
       }
     }

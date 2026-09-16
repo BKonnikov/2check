@@ -303,3 +303,31 @@ describe("AC-10.10 — the TLS target and source contract", () => {
     });
   });
 });
+
+/**
+ * PRD 13.1 — both are a FAIL of the connection, but "did not answer" and "refused" send whoever
+ * comes to fix it to different places.
+ */
+describe("PRD 13.1 — a connection failure says which kind it was", () => {
+  function connection(failureCode: string) {
+    const probes: TlsProbes = {
+      IPV4: { kind: "TARGET_FAILURE", address: "1.2.3.4", failureCode },
+      IPV6: { kind: "ABSENT" },
+    };
+    return evaluateConnectionCheck("IPV4", probes.IPV4, OPTIONS);
+  }
+
+  it.each([
+    ["connection_timeout", "tls.connection.fail.timeout"],
+    ["ETIMEDOUT", "tls.connection.fail.timeout"],
+    ["ECONNREFUSED", "tls.connection.fail.refused"],
+    ["ECONNRESET", "tls.connection.fail"],
+    ["handshake_failed", "tls.connection.fail"],
+  ])("reports %s as %s", (failureCode, titleCode) => {
+    const check = connection(failureCode);
+    expect(check.status).toBe("FAIL");
+    expect(check.message.titleCode).toBe(titleCode);
+    // The machine-readable code is unchanged: only the wording is more precise.
+    expect(check.details?.failureCode).toBe(failureCode);
+  });
+});

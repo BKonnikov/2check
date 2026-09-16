@@ -70,7 +70,7 @@ export function buildApp({
 
   registerHealthRoutes(app, env, probes, metrics, {
     storageSchemaVersion: STORAGE_SCHEMA_VERSION,
-    executionContext: buildExecutionContext(),
+    executionContext: buildExecutionContext(env.SECURITY_INTERNAL_DENYLIST),
   });
   registerEventRoutes(app, { analytics, metrics });
   registerScanRoutes(app, {
@@ -78,6 +78,7 @@ export function buildApp({
     metrics,
     admission,
     scanDeadlineMs: env.SCAN_DEADLINE_MS,
+    internalInfrastructureDenylist: env.SECURITY_INTERNAL_DENYLIST,
     ...(canStoreResults === undefined ? {} : { canStoreResults }),
     // One cache and one single-flight registry per process, so reuse and coalescing actually span
     // scans rather than being private to each one.

@@ -233,7 +233,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       cacheMode,
       visibleCategories: requested,
       canonicalDomain: storedDomain,
-      executionContext: buildExecutionContext(),
+      executionContext: buildExecutionContext(deps.internalInfrastructureDenylist),
       startedAt: new Date().toISOString(),
       executionState: "PENDING",
       categories: [],

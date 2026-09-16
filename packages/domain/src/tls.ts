@@ -102,6 +102,24 @@ export interface TlsConnectionDetails {
 }
 
 /** PRD 10.8 and AC-10.5, AC-10.7, AC-10.8 — one connection check per address family. */
+/**
+ * PRD 13.1 — a message states the fact, and "did not answer" is a different fact from "refused".
+ *
+ * Both are a FAIL of the connection, and both carry the same machine-readable code in the
+ * technical view, but they send whoever comes to fix it to different places: silence usually
+ * means a closed port or a firewall swallowing the packet, a refusal means nothing is listening
+ * on a reachable address.
+ */
+const TIMED_OUT = new Set(["connection_timeout", "ETIMEDOUT"]);
+const REFUSED = new Set(["ECONNREFUSED"]);
+
+function connectionFailureTitle(failureCode: string): string {
+  if (TIMED_OUT.has(failureCode)) {
+    return "tls.connection.fail.timeout";
+  }
+  return REFUSED.has(failureCode) ? "tls.connection.fail.refused" : "tls.connection.fail";
+}
+
 export function evaluateConnectionCheck(
   family: TlsIpFamily,
   outcome: TlsProbeOutcome,
@@ -144,7 +162,10 @@ export function evaluateConnectionCheck(
         ...base,
         status: "FAIL",
         severity: "critical" as Severity,
-        message: { titleCode: "tls.connection.fail", params: { ipFamily: FAMILY_LABEL[family] } },
+        message: {
+          titleCode: connectionFailureTitle(outcome.failureCode),
+          params: { ipFamily: FAMILY_LABEL[family] },
+        },
         details: { address: outcome.address, failureCode: outcome.failureCode },
       };
     case "SCANNER_FAILURE":

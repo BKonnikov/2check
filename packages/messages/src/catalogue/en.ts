@@ -56,10 +56,25 @@ export const en: Catalogue = {
   "tls.connection.pass": { title: "Connected over {ipFamily} using {protocol}" },
   "tls.connection.fail": {
     title: "Could not establish a TLS connection over {ipFamily}",
-    explanation: "The address answered, but the connection or the handshake did not complete.",
+    explanation: "The connection or the handshake did not complete.",
     impact: "Browsers reaching the site over {ipFamily} cannot open it securely.",
     recommendation:
       "Check that port 443 is served on this address and that the TLS service is running.",
+  },
+  "tls.connection.fail.timeout": {
+    title: "The server did not answer over {ipFamily}",
+    explanation:
+      "A connection to port 443 was started, but nothing answered before the wait ran out.",
+    impact: "Visitors arriving over {ipFamily} will not be able to open the site securely.",
+    recommendation: "Check that port 443 is open on this address and not dropped by a firewall.",
+  },
+  "tls.connection.fail.refused": {
+    title: "The server refused the connection over {ipFamily}",
+    explanation:
+      "The address answered with a refusal: nothing is accepting connections on port 443.",
+    impact: "Visitors arriving over {ipFamily} will not be able to open the site securely.",
+    recommendation:
+      "Check that the TLS service is running and listening on port 443 at this address.",
   },
   "tls.connection.unknown": {
     title: "Could not check the TLS connection over {ipFamily}",

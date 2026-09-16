@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   CategoryResult,
   DnsProviderResult,
@@ -67,6 +68,8 @@ export interface ScanDependencies {
   readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
   /** PRD 22.2 — the budget for the whole scan, not for one provider call. */
   readonly scanDeadlineMs?: number;
+  /** PRD 15.10 — addresses this deployment must not probe. */
+  readonly internalInfrastructureDenylist?: readonly string[];
   /** PRD 21.3 — somewhere to say why a scan fell over, instead of swallowing the error. */
   readonly logger?: { error(details: Record<string, unknown>, message: string): void };
 }
@@ -79,10 +82,25 @@ export interface ScanDependencies {
 export const DEFAULT_SCAN_DEADLINE_MS = 30_000;
 
 /** PRD 16.4 — pinned for the whole scan. */
-export function buildExecutionContext(): ExecutionContext {
+/**
+ * PRD 15.10 and AC-15.7 — the effective denylist is part of the security policy, so changing it
+ * changes the version. A scan carries the version it ran under; without this, two scans made
+ * under different rules would be indistinguishable afterwards.
+ */
+export function securityPolicyVersion(denylist: readonly string[] = []): string {
+  if (denylist.length === 0) {
+    return "slice-1";
+  }
+  const digest = createHash("sha256")
+    .update([...denylist].sort().join(","))
+    .digest("hex");
+  return `slice-1+${digest.slice(0, 8)}`;
+}
+
+export function buildExecutionContext(denylist: readonly string[] = []): ExecutionContext {
   return {
     healthPolicyVersion: "slice-1",
-    securityPolicyVersion: "slice-1",
+    securityPolicyVersion: securityPolicyVersion(denylist),
     orchestrationConfigVersion: "slice-1",
     cacheContractVersion: "slice-1",
     resolverSetVersion: DEFAULT_RESOLVER_SET_VERSION,
@@ -110,11 +128,15 @@ function isIpv6(address: string): boolean {
 async function sealAddressCandidates(
   record: ScanRecord,
   results: readonly DnsProviderResult[],
+  deps: ScanDependencies,
 ): Promise<readonly string[]> {
   const sealed = collectAddressCandidates(results);
   record.sealedDnsAddressCandidates = sealed;
   record.securityValidation = validateTarget(sealed, {
     policyVersion: record.executionContext.securityPolicyVersion,
+    ...(deps.internalInfrastructureDenylist === undefined
+      ? {}
+      : { internalInfrastructureDenylist: deps.internalInfrastructureDenylist }),
   });
   return sealed;
 }
@@ -183,7 +205,7 @@ export async function runScan(
     for (const category of record.visibleCategories) {
       if (category === "dns") {
         const results = await dnsOnce();
-        await sealAddressCandidates(record, results);
+        await sealAddressCandidates(record, results, deps);
 
         const checks = [evaluateNameExistence(results, dnsOptions)];
         for (const qtype of DEFAULT_QTYPES) {
@@ -270,7 +292,7 @@ export async function runScan(
 
       if (category === "tls") {
         const results = await dnsOnce();
-        const sealed = await sealAddressCandidates(record, results);
+        const sealed = await sealAddressCandidates(record, results, deps);
         const tlsOptions = { hostname: qname, freshness: freshnessNow() };
         const decision = record.securityValidation?.decision ?? "INDETERMINATE";
 
