@@ -50,7 +50,7 @@ export function toPublicCategories(
  */
 const PERMITTED_DETAIL_FIELDS: Readonly<Record<ScanCategory, readonly string[]>> = {
   // PRD 8.3 — what each resolver saw, and whether their answers agreed.
-  dns: ["state", "providerStates", "answersByProvider", "valueVariation"],
+  dns: ["state", "providerStates", "answersByProvider", "valueVariation", "recognisedServices"],
   // PRD 9.4 — registration facts. `registrant` is rebuilt below; its values never travel.
   registry: [
     "registryDomain",

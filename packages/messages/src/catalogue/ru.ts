@@ -23,6 +23,11 @@ export const ru: Catalogue = {
   },
 
   "dns.record.resolve.present": { title: "Записи {recordType} найдены" },
+  "dns.record.resolve.present.mail": {
+    title: "Почта домена принимается сервисом {service}",
+    explanation:
+      "Записи MX указывают, куда доставляется почта для этого домена, и здесь они указывают на {service}. Это наблюдение по записям, а не утверждение о том, чем пользуются внутри компании: записи могли остаться от прежней настройки.",
+  },
   "dns.record.resolve.absent": { title: "Запись {recordType} не обнаружена" },
   "dns.record.resolve.name_not_found": {
     title: "Имя не существует, поэтому {recordType} не оценивалась",

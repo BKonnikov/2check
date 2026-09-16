@@ -252,3 +252,69 @@ describe("AC-8.10 — the DNS target and source contract", () => {
     });
   });
 });
+
+/**
+ * PRD 13.5 — the wording stays about the records. An MX record says where mail is delivered;
+ * it does not say what an organisation has bought, and the message must not either.
+ */
+describe("PRD 8.3 — the MX check says where the mail goes", () => {
+  it("names the mail service in the message and in the details", () => {
+    const mx = ["10 aspmx.l.google.com", "20 alt1.aspmx.l.google.com"];
+    const check = evaluateResolveCheck(
+      "MX",
+      [answer("google", "MX", "ANSWER", mx), answer("cloudflare", "MX", "ANSWER", mx)],
+      OPTIONS,
+    );
+    expect(check.status).toBe("PASS");
+    expect(check.message.titleCode).toBe("dns.record.resolve.present.mail");
+    expect(check.message.params?.service).toBe("Google Workspace");
+    expect(check.details?.recognisedServices).toEqual([{ name: "Google Workspace", kind: "mail" }]);
+  });
+
+  it("falls back to the plain wording when the exchanger is not one it knows", () => {
+    const mx = ["10 mail.example.uz"];
+    const check = evaluateResolveCheck(
+      "MX",
+      [answer("google", "MX", "ANSWER", mx), answer("cloudflare", "MX", "ANSWER", mx)],
+      OPTIONS,
+    );
+    expect(check.message.titleCode).toBe("dns.record.resolve.present");
+    expect(check.details?.recognisedServices).toBeUndefined();
+  });
+
+  it("does not claim a mail service from a record type that says nothing about mail", () => {
+    const check = evaluateResolveCheck(
+      "A",
+      [
+        answer("google", "A", "ANSWER", ["93.184.216.34"]),
+        answer("cloudflare", "A", "ANSWER", ["93.184.216.34"]),
+      ],
+      OPTIONS,
+    );
+    expect(check.message.titleCode).toBe("dns.record.resolve.present");
+  });
+
+  it("keeps the plain wording when MX resolves to nothing", () => {
+    const check = evaluateResolveCheck(
+      "MX",
+      [answer("google", "MX", "NODATA"), answer("cloudflare", "MX", "NODATA")],
+      OPTIONS,
+    );
+    expect(check.message.titleCode).toBe("dns.record.resolve.absent");
+  });
+
+  it("collects the services named in TXT", () => {
+    const txt = ["v=spf1 include:_spf.google.com -all", "google-site-verification=abc"];
+    const check = evaluateResolveCheck(
+      "TXT",
+      [answer("google", "TXT", "ANSWER", txt), answer("cloudflare", "TXT", "ANSWER", txt)],
+      OPTIONS,
+    );
+    // A token is not a verdict, so it stays in the detail rather than in the title.
+    expect(check.message.titleCode).toBe("dns.record.resolve.present");
+    expect(check.details?.recognisedServices?.map((service) => service.name)).toEqual([
+      "Google Workspace",
+      "Google Search Console",
+    ]);
+  });
+});

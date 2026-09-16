@@ -29,6 +29,11 @@ export const uz: Catalogue = {
   },
 
   "dns.record.resolve.present": { title: "{recordType} yozuvlari topildi" },
+  "dns.record.resolve.present.mail": {
+    title: "Domen pochtasi {service} xizmatiga yetkaziladi",
+    explanation:
+      "MX yozuvlari domen pochtasi qayerga yetkazilishini ko'rsatadi va bu yerda ular {service} ga ishora qiladi. Bu yozuvlarni o'qish natijasi, kompaniya ichida nimadan foydalanishi haqidagi da'vo emas: yozuvlar eski sozlamadan qolgan bo'lishi mumkin.",
+  },
   "dns.record.resolve.absent": { title: "{recordType} yozuvi topilmadi" },
   "dns.record.resolve.name_not_found": {
     title: "Nom mavjud emas, shuning uchun {recordType} baholanmadi",

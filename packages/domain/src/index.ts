@@ -5,5 +5,6 @@ export * from "./category.js";
 export * from "./dns.js";
 export * from "./registry.js";
 export * from "./security-validation.js";
+export * from "./services.js";
 export * from "./summary.js";
 export * from "./tls.js";

@@ -826,7 +826,11 @@ details.section[open] > summary {
   display: grid;
   gap: 2px;
 }
-.detail-sub li {
+/*
+ * The child combinator matters: this used to be a descendant selector, so every answer line
+ * nested inside a row became a two-column grid and wrapped inside a 170px column.
+ */
+.detail-sub > li {
   display: grid;
   grid-template-columns: 170px 1fr;
   gap: 12px;
@@ -847,7 +851,7 @@ details.section[open] > summary {
 
 @media (max-width: 680px) {
   .detail-row,
-  .detail-sub li {
+  .detail-sub > li {
     grid-template-columns: 1fr;
     gap: 0;
   }
@@ -1081,4 +1085,34 @@ td {
   .daily-day {
     display: none;
   }
+}
+
+/*
+ * PRD 8.3 — one answer per line, so two resolvers can be compared by eye.
+ *
+ * The answers get the whole width rather than the narrow second column the other sub-lists use:
+ * a TXT record is long, and wrapping "10 aspmx.l.google.com" across three lines is the thing
+ * this block exists to stop.
+ */
+.detail-sub > li.answer-group {
+  display: block;
+}
+.detail-sub > li.answer-group + li.answer-group {
+  margin-top: 12px;
+}
+li.answer-group > .detail-key {
+  display: block;
+  margin-bottom: 4px;
+}
+.answers {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /*
+   * break-word, never anywhere: `overflow-wrap: anywhere` also shrinks the box's intrinsic
+   * width, which collapsed this column to about thirty characters and wrapped every hostname.
+   */
+  overflow-wrap: break-word;
 }

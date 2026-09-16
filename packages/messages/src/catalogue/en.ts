@@ -24,6 +24,11 @@ export const en: Catalogue = {
   },
 
   "dns.record.resolve.present": { title: "{recordType} records were found" },
+  "dns.record.resolve.present.mail": {
+    title: "Mail for this domain is delivered to {service}",
+    explanation:
+      "MX records say where mail for a domain is delivered, and these point at {service}. That is a reading of the records, not a claim about what the organisation uses: records can outlive the arrangement that created them.",
+  },
   "dns.record.resolve.absent": { title: "No {recordType} record was found" },
   "dns.record.resolve.name_not_found": {
     title: "The name does not exist, so {recordType} was not evaluated",

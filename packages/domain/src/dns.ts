@@ -8,6 +8,7 @@ import type {
   DnsRecordState,
   Severity,
 } from "@2check/contracts";
+import { type RecognisedService, recogniseServices } from "./services.js";
 
 /** PRD 8.4 — the default minimum quorum. */
 export const DEFAULT_MINIMUM_QUORUM = 2;
@@ -34,6 +35,8 @@ export interface DnsResolveDetails {
   readonly providerStates: readonly ProviderRecordState[];
   readonly answersByProvider: Readonly<Record<string, readonly string[]>>;
   readonly valueVariation?: boolean;
+  /** PRD 8.3 — the services these records point at, where the records name one. */
+  readonly recognisedServices?: readonly RecognisedService[];
 }
 
 /**
@@ -192,11 +195,23 @@ export function evaluateResolveCheck(
   const checkId = `dns.${qtype.toLowerCase()}.resolve`;
   const determined = quorum.state !== "INDETERMINATE";
 
+  const answers = answersByProvider(results);
+  const recognisedServices = recogniseServices(qtype, answers);
+
   const details: DnsResolveDetails = {
     state: quorum.state,
     providerStates: states,
-    answersByProvider: answersByProvider(results),
+    answersByProvider: answers,
+    ...(recognisedServices.length === 0 ? {} : { recognisedServices }),
   };
+
+  /**
+   * PRD 13.5 — where the mail goes is the point of an MX record, and "10 aspmx.l.google.com"
+   * does not say it to anyone who does not already know. The wording stays about the record:
+   * it says the records point at a service, never that the domain's owner uses one.
+   */
+  const mailProvider =
+    qtype === "MX" && quorum.state === "PRESENT" ? recognisedServices[0]?.name : undefined;
 
   const base = {
     checkId,
@@ -206,8 +221,14 @@ export function evaluateResolveCheck(
     target: target(options.qname, qtype),
     message: {
       // PRD 13.4 — the wording states what was found, so the code carries the state itself.
-      titleCode: `dns.record.resolve.${determined ? quorum.state.toLowerCase() : "unknown"}`,
-      params: { recordType: qtype },
+      titleCode:
+        mailProvider === undefined
+          ? `dns.record.resolve.${determined ? quorum.state.toLowerCase() : "unknown"}`
+          : "dns.record.resolve.present.mail",
+      params:
+        mailProvider === undefined
+          ? { recordType: qtype }
+          : { recordType: qtype, service: mailProvider },
     },
     details,
     source: sourceOf(results, options.resolverSetVersion),

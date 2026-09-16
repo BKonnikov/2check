@@ -49,6 +49,9 @@ export interface Ui {
   readonly detailLabels: Readonly<Record<string, string>>;
   /** A sentence under a technical row, for the rows whose label is not self-explanatory. */
   readonly detailHints: Readonly<Record<string, string>>;
+  /** Stands in for the resolver names when every resolver answered the same. */
+  readonly allResolvers: string;
+  readonly serviceKinds: Readonly<Record<"mail" | "sender" | "verification", string>>;
   readonly technicalFields: Readonly<Record<"name" | "ascii" | "suffix" | "registrable", string>>;
   readonly tableHeads: Readonly<Record<"check" | "status" | "reason" | "observed", string>>;
   readonly share: string;
@@ -178,6 +181,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         state: "Состояние записи",
         providerStates: "Состояние по резолверам",
         answersByProvider: "Ответы резолверов",
+        recognisedServices: "Распознанные сервисы",
         valueVariation: "Значения расходятся",
         registrar: "Регистратор",
         createdAt: "Зарегистрирован",
@@ -233,6 +237,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         valueVariation:
           "Резолверы вернули запись, но с разными значениями. Обычно это нормальная балансировка или ещё не разошедшееся обновление.",
         rawStatus: "Статус так, как его словами вернул реестр домена, без нашей трактовки.",
+        recognisedServices:
+          "Сервисы, на которые указывают эти записи. Записи говорят о маршрутизации и о выданных подтверждениях, а не о том, чем пользуются внутри компании: токен может пережить сервис, который его просил.",
+      },
+      allResolvers: "все резолверы",
+      serviceKinds: {
+        mail: "почта",
+        sender: "отправка писем",
+        verification: "подтверждение домена",
       },
       technicalNote:
         "Ниже — то же самое, но так, как проверки называются внутри 2check. Это нужно, если вы пересылаете результат администратору сайта или хостингу: по идентификатору и коду они сразу поймут, о какой проверке речь.",
@@ -360,6 +372,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         state: "Record state",
         providerStates: "State per resolver",
         answersByProvider: "Answers per resolver",
+        recognisedServices: "Services recognised",
         valueVariation: "Values differ",
         registrar: "Registrar",
         createdAt: "Registered",
@@ -416,6 +429,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         valueVariation:
           "The resolvers returned the record with differing values. Usually ordinary load balancing, or an update that has not propagated yet.",
         rawStatus: "The status in the registry's own words, before we interpret it.",
+        recognisedServices:
+          "The services these records point at. Records describe routing and issued verifications, not what an organisation uses inside: a token can outlive the service that asked for it.",
+      },
+      allResolvers: "all resolvers",
+      serviceKinds: {
+        mail: "mail",
+        sender: "sends mail",
+        verification: "domain verification",
       },
       technicalNote:
         "The same results under the names 2check uses internally. Useful when you forward the result to a site administrator or a hosting provider: the identifier and the code tell them exactly which check is meant.",
@@ -552,6 +573,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         state: "Yozuv holati",
         providerStates: "Rezolverlar bo'yicha holat",
         answersByProvider: "Rezolverlar javoblari",
+        recognisedServices: "Aniqlangan xizmatlar",
         valueVariation: "Qiymatlar farq qiladi",
         registrar: "Registrator",
         createdAt: "Ro'yxatdan o'tgan",
@@ -607,6 +629,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         valueVariation:
           "Rezolverlar yozuvni qaytardi, lekin qiymatlari har xil. Odatda bu oddiy balanslash yoki hali tarqalmagan yangilanish.",
         rawStatus: "Holat reestrning o'z so'zlari bilan, biz talqin qilmasdan.",
+        recognisedServices:
+          "Bu yozuvlar ishora qilayotgan xizmatlar. Yozuvlar marshrutlash va berilgan tasdiqlar haqida gapiradi, kompaniya ichida nimadan foydalanishi haqida emas: token uni so'ragan xizmatdan uzoqroq yashashi mumkin.",
+      },
+      allResolvers: "barcha rezolverlar",
+      serviceKinds: {
+        mail: "pochta",
+        sender: "xat yuborish",
+        verification: "domen tasdig'i",
       },
       technicalNote:
         "Xuddi shu natijalar, lekin 2check ichida ishlatiladigan nomlar bilan. Natijani sayt ma'muriga yoki hosting provayderiga yuborsangiz, identifikator va kod bo'yicha ular qaysi tekshiruv haqida ekanini darhol tushunadi.",

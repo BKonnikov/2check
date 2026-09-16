@@ -153,6 +153,98 @@ function certificateName(entry: string): string {
   return entry.replace(/^(DNS|IP Address|URI|email):/i, "");
 }
 
+/**
+ * Answers sort the way a reader expects to read them: an MX record by its priority, everything
+ * else alphabetically. Resolvers answer in whatever order they please, and an unordered list is
+ * impossible to compare against the one below it.
+ */
+function compareAnswers(left: string, right: string): number {
+  const a = /^(\d+)\s+(.*)$/.exec(left);
+  const b = /^(\d+)\s+(.*)$/.exec(right);
+  if (a !== null && b !== null) {
+    const byPriority = Number(a[1]) - Number(b[1]);
+    return byPriority === 0 ? (a[2] ?? "").localeCompare(b[2] ?? "") : byPriority;
+  }
+  return left.localeCompare(right);
+}
+
+export interface AnswerGroup {
+  readonly providers: readonly string[];
+  readonly answers: readonly string[];
+}
+
+/**
+ * Resolvers that answered identically are one group. Exported because this is the rule the
+ * block is for, and it is worth a test rather than an eyeball.
+ */
+export function groupAnswers(value: Record<string, unknown>): readonly AnswerGroup[] {
+  const groups = new Map<string, { providers: string[]; answers: string[] }>();
+  for (const [provider, answers] of Object.entries(value)) {
+    const list = (Array.isArray(answers) ? answers.map(String) : []).sort(compareAnswers);
+    const signature = JSON.stringify(list);
+    const group = groups.get(signature);
+    if (group === undefined) {
+      groups.set(signature, { providers: [provider], answers: list });
+    } else {
+      group.providers.push(provider);
+    }
+  }
+  return [...groups.values()];
+}
+
+/**
+ * PRD 8.3 — what each resolver answered.
+ *
+ * Four resolvers usually answer identically, and printing the same thirty TXT records four times
+ * over is how a disclosure becomes unreadable. Identical answers are therefore shown once, named
+ * for the resolvers that gave them; only a resolver that actually differs gets its own block,
+ * which is also the case worth looking at.
+ */
+function AnswersByProvider({ value, ui }: { value: Record<string, unknown>; ui: Ui }) {
+  const entries = groupAnswers(value);
+  const unanimous = entries.length === 1;
+
+  return (
+    <ul className="detail-sub">
+      {entries.map((group) => (
+        <li className="answer-group" key={group.providers.join(",")}>
+          <span className="detail-key">
+            {unanimous ? ui.allResolvers : group.providers.join(", ")}
+          </span>
+          {group.answers.length === 0 ? (
+            <span>{ui.none}</span>
+          ) : (
+            <ul className="answers">
+              {group.answers.map((answer) => (
+                <li key={answer}>{answer}</li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** PRD 8.3 — the services the records point at, named rather than left as raw tokens. */
+function RecognisedServices({ value, ui }: { value: readonly unknown[]; ui: Ui }) {
+  return (
+    <ul className="detail-sub">
+      {value.map((entry) => {
+        const service = entry as { name?: string; kind?: string };
+        return (
+          <li key={`${service.kind}-${service.name}`}>
+            <span className="detail-key">
+              {ui.serviceKinds[service.kind as keyof Ui["serviceKinds"]] ?? service.kind}
+            </span>
+            <span>{service.name}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function renderValue(value: unknown, ui: Ui, language: Language, key?: string): ReactNode {
   if (value === null || value === undefined || value === "") {
     return ui.none;
@@ -174,6 +266,9 @@ function renderValue(value: unknown, ui: Ui, language: Language, key?: string): 
   if (Array.isArray(value)) {
     if (value.length === 0) {
       return ui.none;
+    }
+    if (key === "recognisedServices") {
+      return <RecognisedServices ui={ui} value={value} />;
     }
     // A list of records — one per resolver, say — reads as rows, not as "[object Object]".
     if (
@@ -199,6 +294,9 @@ function renderValue(value: unknown, ui: Ui, language: Language, key?: string): 
     return value.map((entry) => String(entry)).join(", ");
   }
   if (typeof value === "object") {
+    if (key === "answersByProvider") {
+      return <AnswersByProvider ui={ui} value={value as Record<string, unknown>} />;
+    }
     const entries = Object.entries(value as Record<string, unknown>);
     // PRD 9.4 — a registrant field carries a state and never a value, so it reads as one word.
     if (entries.length === 1 && entries[0]?.[0] === "state") {
