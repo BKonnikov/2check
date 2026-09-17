@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 
 const API_PREFIX = "/api/web";
 
+const NULL_BODY_STATUS = new Set([204, 205, 304]);
+
 function apiOrigin(): string {
   return process.env.API_ORIGIN ?? "http://127.0.0.1:3001";
 }
@@ -28,6 +30,18 @@ async function forward(request: NextRequest, path: readonly string[]): Promise<R
       : { body: await request.text() }),
     cache: "no-store",
   });
+
+  /**
+   * 204, 205 and 304 are null-body statuses: constructing a Response with a body — even the
+   * empty string `text()` returns — throws, and the throw becomes a 500 from this route.
+   *
+   * The analytics endpoint answers 204 by design (PRD 28), so every event the browser sent was
+   * turned into a 500 here and no usage was ever recorded. It failed silently because the beacon
+   * has nobody to report to and analytics is deliberately not a dependency of a scan (AC-28.6).
+   */
+  if (NULL_BODY_STATUS.has(response.status)) {
+    return new Response(null, { status: response.status });
+  }
 
   return new Response(await response.text(), {
     status: response.status,
