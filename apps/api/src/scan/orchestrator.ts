@@ -302,7 +302,9 @@ export async function runScan(
             buildCategoryResult(
               "tls",
               evaluateTlsBlockedChecks(
-                decision === "BLOCK" ? "ssrf_policy_block" : "security_validation_incomplete",
+                // The validation already decided why; repeating the decision here would let the
+                // two drift apart, which is how "our own network" became "could not be checked".
+                record.securityValidation?.reasonCode ?? "security_validation_incomplete",
                 tlsOptions,
               ),
             ),

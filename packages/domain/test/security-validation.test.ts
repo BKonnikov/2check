@@ -107,3 +107,33 @@ describe("AC-15.2 — safety that cannot be proven blocks access", () => {
     expect(allowed.decision === "ALLOW" && allowed.reasonCode === undefined).toBe(true);
   });
 });
+
+/**
+ * PRD 15.10 — the deployment's own addresses are blocked like any other forbidden range. What
+ * differs is only what can honestly be said about the block, and the reason code is what carries
+ * that difference through to the wording.
+ */
+describe("a block on the deployment's own infrastructure says so", () => {
+  const policy = {
+    policyVersion: "test-1",
+    internalInfrastructureDenylist: ["91.216.37.0/24"],
+  };
+
+  it("names it as our own network rather than as a policy violation", () => {
+    const result = validateTarget(["91.216.37.41"], policy);
+    expect(result.decision).toBe("BLOCK");
+    expect(result.reasonCode).toBe("own_infrastructure_not_observed");
+  });
+
+  it("is an ordinary policy block as soon as any other forbidden address is in the set", () => {
+    // One private address among them is a finding about the domain, not about our network.
+    const result = validateTarget(["91.216.37.41", "10.0.0.5"], policy);
+    expect(result.decision).toBe("BLOCK");
+    expect(result.reasonCode).toBe("ssrf_policy_block");
+  });
+
+  it("leaves an address outside the list to the ordinary rules", () => {
+    expect(validateTarget(["93.184.216.34"], policy).decision).toBe("ALLOW");
+    expect(validateTarget(["127.0.0.1"], policy).reasonCode).toBe("ssrf_policy_block");
+  });
+});

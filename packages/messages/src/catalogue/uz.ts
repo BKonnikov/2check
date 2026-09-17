@@ -112,6 +112,11 @@ export const uz: Catalogue = {
     recommendation:
       "Bu manzilda TLS xizmati ishlayotganini va 443-portni tinglayotganini tekshiring.",
   },
+  "tls.connection.own_infrastructure": {
+    title: "Bu domen 2check'ning o'z infratuzilmasida joylashgan",
+    explanation:
+      "2check o'z manzillarini tekshirmaydi: o'z tarmog'i ichidan o'ziga qarash — xizmat va'da qilgan tashqi nigoh emas, natija ishonchli bo'lmaydi. Bu domenning ulanishi va sertifikatini boshqa vosita bilan tekshiring.",
+  },
   "tls.connection.unknown": {
     title: "{ipFamily} orqali TLS ulanishini tekshirib bo'lmadi",
     explanation:

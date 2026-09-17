@@ -145,17 +145,24 @@ export function validateTarget(
     };
   }
 
-  const blockedAddressCount = classes.filter(
-    (addressClass) => addressClass !== "PUBLIC_ALLOWED",
-  ).length;
+  const blocked = classes.filter((addressClass) => addressClass !== "PUBLIC_ALLOWED");
 
-  if (blockedAddressCount > 0) {
+  if (blocked.length > 0) {
+    /**
+     * PRD 15.10 — a target blocked only because it is this deployment's own infrastructure is
+     * still blocked, and the connection is refused exactly as before. It is separated here only
+     * so the reader can be told the truth: the service does not observe itself from outside.
+     * A single address of any other forbidden class makes it an ordinary policy block again.
+     */
+    const ownInfrastructure = blocked.every(
+      (addressClass) => addressClass === "FORBIDDEN_INTERNAL_INFRASTRUCTURE",
+    );
     return {
       decision: "BLOCK",
       policyVersion: policy.policyVersion,
       checkedAddressCount: addresses.length,
-      blockedAddressCount,
-      reasonCode: "ssrf_policy_block",
+      blockedAddressCount: blocked.length,
+      reasonCode: ownInfrastructure ? "own_infrastructure_not_observed" : "ssrf_policy_block",
     };
   }
 

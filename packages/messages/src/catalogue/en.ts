@@ -107,6 +107,11 @@ export const en: Catalogue = {
     recommendation:
       "Check that the TLS service is running and listening on port 443 at this address.",
   },
+  "tls.connection.own_infrastructure": {
+    title: "This domain is hosted on 2check's own infrastructure",
+    explanation:
+      "2check does not check its own addresses: looking at itself from inside its own network is not the outside view the service promises, and the result would not be trustworthy. Check this domain's connection and certificate with another tool.",
+  },
   "tls.connection.unknown": {
     title: "Could not check the TLS connection over {ipFamily}",
     explanation:

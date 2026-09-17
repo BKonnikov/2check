@@ -106,9 +106,17 @@ export const ADDRESS_CLASSES = [
 ] as const;
 export type AddressClass = (typeof ADDRESS_CLASSES)[number];
 
-/** PRD 15.6–15.8 — the two security reason codes, separated by execution stage. */
+/**
+ * PRD 15.6–15.8 — the security reason codes, separated by execution stage.
+ *
+ * `own_infrastructure_not_observed` is a block like the others at the network layer and nothing
+ * else: it says the addresses are the deployment's own (PRD 15.10), which is a limit of this
+ * installation rather than anything about the domain. It exists so the wording can say that
+ * instead of implying the check failed or that the domain points somewhere it should not.
+ */
 export const SECURITY_REASON_CODES = [
   "ssrf_policy_block",
+  "own_infrastructure_not_observed",
   "security_validation_incomplete",
 ] as const;
 export type SecurityReasonCode = (typeof SECURITY_REASON_CODES)[number];

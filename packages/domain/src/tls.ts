@@ -374,12 +374,22 @@ export function evaluateTlsChecks(
 export function evaluateTlsBlockedChecks(
   reasonCode:
     | "ssrf_policy_block"
+    | "own_infrastructure_not_observed"
     | "security_validation_incomplete"
     | "dns_quorum_not_reached"
     | "scan_deadline_exceeded",
   options: TlsEvaluationOptions,
 ): CheckResult<TlsConnectionDetails | TlsCertificateDetails>[] {
   const dependsOn = ["tls.connection.ipv4", "tls.connection.ipv6"];
+  /**
+   * PRD 13.5 — "could not be checked" is the wrong thing to say when nothing was attempted and
+   * nothing went wrong. The addresses are this installation's own, so the honest sentence is
+   * that the service does not observe itself, and that is a limit of the service.
+   */
+  const titleCode =
+    reasonCode === "own_infrastructure_not_observed"
+      ? "tls.connection.own_infrastructure"
+      : "tls.connection.unknown";
   const connections = (["IPV4", "IPV6"] as const).map((family) => {
     const checkId = `tls.connection.${family.toLowerCase()}`;
     return {
@@ -389,7 +399,7 @@ export function evaluateTlsBlockedChecks(
       severity: "none" as Severity,
       target: target(options.hostname, family),
       reasonCode,
-      message: { titleCode: "tls.connection.unknown", params: { ipFamily: FAMILY_LABEL[family] } },
+      message: { titleCode, params: { ipFamily: FAMILY_LABEL[family] } },
       source: SOURCE,
       freshness: options.freshness,
     };

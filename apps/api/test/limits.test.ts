@@ -363,7 +363,17 @@ describe("PRD 15.10 — the internal infrastructure denylist", () => {
     expect(checks.length).toBeGreaterThan(0);
     // Not a defect of the domain: nothing was observed, so nothing is claimed.
     expect(checks.every((check) => check.status !== "FAIL")).toBe(true);
-    expect(checks.some((check) => check.reasonCode === "ssrf_policy_block")).toBe(true);
+    /**
+     * And not an SSRF attempt either. A target blocked only because it is this deployment's own
+     * infrastructure carries its own reason, so the reader can be told the truth — the service
+     * does not observe itself — rather than "the check could not be completed".
+     */
+    expect(checks.some((check) => check.reasonCode === "own_infrastructure_not_observed")).toBe(
+      true,
+    );
+    expect(
+      checks.some((check) => check.message.titleCode === "tls.connection.own_infrastructure"),
+    ).toBe(true);
     await app.close();
   });
 
