@@ -34,8 +34,9 @@ export const en: Catalogue = {
     title: "The name does not exist, so {recordType} was not evaluated",
   },
   "dns.record.resolve.unknown": {
-    title: "Could not check the {recordType} record",
-    explanation: "The resolvers did not produce enough agreeing answers.",
+    title: "The resolvers did not agree about {recordType}",
+    explanation:
+      "There were not enough answers in agreement to draw a conclusion. Just after a zone is changed this is ordinary: some resolvers still hold the previous answer and will hold it until their cache expires.",
   },
 
   "dns.record.consistency.pass": {
@@ -45,7 +46,8 @@ export const en: Catalogue = {
   },
   "dns.record.consistency.fail": {
     title: "The resolvers disagree about {recordType}",
-    explanation: "Some resolvers see the record and others do not.",
+    explanation:
+      "Some resolvers see the record and others do not. Most often this is a recent change to the zone that has not reached every cache yet; less often, the authoritative servers themselves differ.",
     impact: "Visitors may get different answers depending on which resolver they use.",
     recommendation: "Compare the zone on every authoritative server and check recent changes.",
   },

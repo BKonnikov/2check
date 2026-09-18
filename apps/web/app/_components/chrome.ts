@@ -235,7 +235,9 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
           "Код, которым библиотека TLS объяснила отказ. Его стоит переслать администратору сайта как есть.",
         answersByProvider: "Что именно ответил каждый публичный резолвер на наш запрос.",
         valueVariation:
-          "Резолверы вернули запись, но с разными значениями. Обычно это нормальная балансировка или ещё не разошедшееся обновление.",
+          "Говорит, вернули ли резолверы запись с разными значениями. Само по себе расхождение обычно означает балансировку или ещё не разошедшееся обновление, а не ошибку.",
+        providerStates:
+          "Как ответил каждый резолвер. В проверке существования имени это сводный голос по всем типам записей сразу, поэтому он может отличаться от состояния конкретной записи ниже.",
         rawStatus: "Статус так, как его словами вернул реестр домена, без нашей трактовки.",
         recognisedServices:
           "Сервисы, на которые указывают эти записи. Записи говорят о маршрутизации и о выданных подтверждениях, а не о том, чем пользуются внутри компании: токен может пережить сервис, который его просил.",
@@ -427,7 +429,9 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
           "The code the TLS library gave for the refusal. Worth forwarding to the site administrator as it stands.",
         answersByProvider: "What each public resolver actually answered.",
         valueVariation:
-          "The resolvers returned the record with differing values. Usually ordinary load balancing, or an update that has not propagated yet.",
+          "Says whether the resolvers returned the record with differing values. A difference on its own usually means load balancing or an update still propagating, not a fault.",
+        providerStates:
+          "How each resolver answered. On the name-existence check this is a combined vote across every record type, so it can differ from the state of the individual record below.",
         rawStatus: "The status in the registry's own words, before we interpret it.",
         recognisedServices:
           "The services these records point at. Records describe routing and issued verifications, not what an organisation uses inside: a token can outlive the service that asked for it.",
@@ -627,7 +631,9 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
           "TLS kutubxonasi rad etishni tushuntirgan kod. Uni sayt ma'muriga o'zgartirmasdan yuborish foydali.",
         answersByProvider: "Har bir ommaviy rezolver aynan nima javob bergani.",
         valueVariation:
-          "Rezolverlar yozuvni qaytardi, lekin qiymatlari har xil. Odatda bu oddiy balanslash yoki hali tarqalmagan yangilanish.",
+          "Rezolverlar yozuvni har xil qiymat bilan qaytarganini bildiradi. Farqning o'zi odatda balanslash yoki hali tarqalmagan yangilanish degani, xato emas.",
+        providerStates:
+          "Har bir rezolver qanday javob bergani. Nom mavjudligi tekshiruvida bu barcha yozuv turlari bo'yicha umumiy ovoz, shuning uchun quyidagi alohida yozuv holatidan farq qilishi mumkin.",
         rawStatus: "Holat reestrning o'z so'zlari bilan, biz talqin qilmasdan.",
         recognisedServices:
           "Bu yozuvlar ishora qilayotgan xizmatlar. Yozuvlar marshrutlash va berilgan tasdiqlar haqida gapiradi, kompaniya ichida nimadan foydalanishi haqida emas: token uni so'ragan xizmatdan uzoqroq yashashi mumkin.",

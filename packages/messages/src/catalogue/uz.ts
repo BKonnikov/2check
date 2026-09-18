@@ -39,8 +39,9 @@ export const uz: Catalogue = {
     title: "Nom mavjud emas, shuning uchun {recordType} baholanmadi",
   },
   "dns.record.resolve.unknown": {
-    title: "{recordType} yozuvini tekshirib bo'lmadi",
-    explanation: "Rezolverlar yetarlicha mos javob bermadi.",
+    title: "Rezolverlar {recordType} bo'yicha kelisha olmadi",
+    explanation:
+      "Xulosa chiqarish uchun bir-biriga mos javoblar yetarli bo'lmadi. Zona o'zgartirilgandan keyin bu odatiy hol: ba'zi rezolverlar oldingi javobni kesh muddati tugaguncha eslab turadi.",
   },
 
   "dns.record.consistency.pass": {
@@ -50,7 +51,8 @@ export const uz: Catalogue = {
   },
   "dns.record.consistency.fail": {
     title: "Rezolverlar {recordType} bo'yicha turlicha javob berdi",
-    explanation: "Ba'zi rezolverlar yozuvni ko'radi, ba'zilari ko'rmaydi.",
+    explanation:
+      "Ba'zi rezolverlar yozuvni ko'radi, ba'zilari ko'rmaydi. Ko'pincha bu zonadagi yaqinda qilingan o'zgarish hali barcha keshlarga yetib bormagani; kamroq hollarda vakolatli serverlarning o'zi farq qiladi.",
     impact: "Tashrifchilar qaysi rezolverdan foydalanishiga qarab turlicha javob olishi mumkin.",
     recommendation:
       "Zonani barcha vakolatli serverlarda solishtiring va so'nggi o'zgarishlarni tekshiring.",

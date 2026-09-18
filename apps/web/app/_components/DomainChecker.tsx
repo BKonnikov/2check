@@ -320,6 +320,14 @@ function renderValue(value: unknown, ui: Ui, language: Language, key?: string): 
   return ui.detailLabels[scalar] ?? scalar;
 }
 
+function isSilent(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Object.values(value).every((answers) => Array.isArray(answers) && answers.length === 0)
+  );
+}
+
 function DetailRows({
   source,
   ui,
@@ -329,7 +337,14 @@ function DetailRows({
   ui: Ui;
   language: Language;
 }) {
-  const rows = Object.entries(source).filter(([key]) => key !== "kind");
+  const rows = Object.entries(source)
+    .filter(([key]) => key !== "kind")
+    /**
+     * A row of answers where nobody answered anything says nothing. The name-existence check
+     * aggregates across record types and carries no answers of its own, so it printed "all
+     * resolvers —" and left the reader looking for the meaning of a dash.
+     */
+    .filter(([key, value]) => key !== "answersByProvider" || !isSilent(value));
   if (rows.length === 0) {
     return null;
   }

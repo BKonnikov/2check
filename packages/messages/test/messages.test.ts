@@ -97,22 +97,24 @@ describe("AC-13.2 — fact, then impact, then recommendation", () => {
 });
 
 describe("AC-13.2 and AC-13.3 — wording for UNKNOWN", () => {
+  /**
+   * The rule is that nothing is concluded and nobody is accused — not that every such title
+   * uses the same phrase. "Could not be checked" is wrong when the check ran perfectly well and
+   * the resolvers simply disagreed, so each code states what actually happened.
+   */
   it.each([
-    "dns.record.resolve.unknown",
-    "tls.connection.unknown",
-    "registry.lookup.indeterminate",
-  ])("%s says the check did not complete, without accusing the target", (code) => {
-    const ru = resolveMessage(
-      { titleCode: code, params: { recordType: "A", ipFamily: "IPV4" } },
-      "ru",
-    );
-    const en = resolveMessage(
-      { titleCode: code, params: { recordType: "A", ipFamily: "IPV4" } },
-      "en",
-    );
-    expect(ru.title.toLowerCase()).toContain("не удалось");
-    expect(en.title.toLowerCase()).toMatch(/could not/);
-    expect(ru.title.toLowerCase()).not.toMatch(/ошибка домена|неисправн/);
+    ["dns.record.resolve.unknown", /не сошлись/, /did not agree/],
+    ["tls.connection.unknown", /не удалось/, /could not/],
+    ["registry.lookup.indeterminate", /не удалось/, /could not/],
+  ])("%s states what happened without accusing the target", (code, ru, en) => {
+    const params = { recordType: "A", ipFamily: "IPV4" };
+    const russian = resolveMessage({ titleCode: code, params }, "ru");
+    const english = resolveMessage({ titleCode: code, params }, "en");
+    expect(russian.title.toLowerCase()).toMatch(ru);
+    expect(english.title.toLowerCase()).toMatch(en);
+    for (const title of [russian.title.toLowerCase(), english.title.toLowerCase()]) {
+      expect(title).not.toMatch(/ошибка домена|неисправн|broken|misconfigur/);
+    }
   });
 
   it("carries no impact or recommendation, because nothing was confirmed", () => {
@@ -201,13 +203,13 @@ describe("PRD 13.6 — the Uzbek catalogue", () => {
     expect(joined).not.toMatch(/[\u0400-\u04FF]/);
   });
 
-  it("says a check could not be completed without accusing the target", () => {
+  it("says what happened without accusing the target", () => {
     const message = resolveMessage(
       { titleCode: "dns.record.resolve.unknown", params: { recordType: "A" } },
       "uz",
     );
     expect(message.language).toBe("uz");
-    expect(message.title.toLowerCase()).toContain("bo'lmadi");
+    expect(message.title.toLowerCase()).toContain("kelisha olmadi");
   });
 
   it("explains provider_not_supported as a limit of the service", () => {
