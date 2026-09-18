@@ -43,6 +43,12 @@ export const uz: Catalogue = {
     explanation:
       "Xulosa chiqarish uchun bir-biriga mos javoblar yetarli bo'lmadi. Zona o'zgartirilgandan keyin bu odatiy hol: ba'zi rezolverlar oldingi javobni kesh muddati tugaguncha eslab turadi.",
   },
+  "dns.record.resolve.unknown.split": {
+    title: "Rezolverlar {recordType} bo'yicha kelisha olmadi",
+    fact: "Yozuvni ko'radi: {seeing}. Ko'rmaydi: {missing}",
+    explanation:
+      "Xulosa chiqarish uchun bir-biriga mos javoblar yetarli bo'lmadi. Zona o'zgartirilgandan keyin bu odatiy hol: ba'zi rezolverlar oldingi javobni kesh muddati tugaguncha eslab turadi.",
+  },
 
   "dns.record.consistency.pass": {
     title: "Rezolverlar {recordType} bo'yicha bir xil javob berdi",
@@ -51,11 +57,12 @@ export const uz: Catalogue = {
   },
   "dns.record.consistency.fail": {
     title: "Rezolverlar {recordType} bo'yicha turlicha javob berdi",
+    fact: "Yozuvni ko'radi: {seeing}. Ko'rmaydi: {missing}",
     explanation:
       "Ba'zi rezolverlar yozuvni ko'radi, ba'zilari ko'rmaydi. Ko'pincha bu zonadagi yaqinda qilingan o'zgarish hali barcha keshlarga yetib bormagani; kamroq hollarda vakolatli serverlarning o'zi farq qiladi.",
     impact: "Tashrifchilar qaysi rezolverdan foydalanishiga qarab turlicha javob olishi mumkin.",
     recommendation:
-      "Zonani barcha vakolatli serverlarda solishtiring va so'nggi o'zgarishlarni tekshiring.",
+      "Yozuv yaqinda qo'shilgan yoki o'zgartirilgan bo'lsa, bir necha daqiqa kutib, tekshiruvni qayta ishga tushiring. Farq saqlanib qolsa, zonani barcha vakolatli serverlarda solishtiring.",
   },
 
   "registry.lookup.registered": {

@@ -38,6 +38,12 @@ export const en: Catalogue = {
     explanation:
       "There were not enough answers in agreement to draw a conclusion. Just after a zone is changed this is ordinary: some resolvers still hold the previous answer and will hold it until their cache expires.",
   },
+  "dns.record.resolve.unknown.split": {
+    title: "The resolvers did not agree about {recordType}",
+    fact: "See the record: {seeing}. Do not: {missing}",
+    explanation:
+      "There were not enough answers in agreement to draw a conclusion. Just after a zone is changed this is ordinary: some resolvers still hold the previous answer and will hold it until their cache expires.",
+  },
 
   "dns.record.consistency.pass": {
     title: "The resolvers agree about {recordType}",
@@ -46,10 +52,12 @@ export const en: Catalogue = {
   },
   "dns.record.consistency.fail": {
     title: "The resolvers disagree about {recordType}",
+    fact: "See the record: {seeing}. Do not: {missing}",
     explanation:
       "Some resolvers see the record and others do not. Most often this is a recent change to the zone that has not reached every cache yet; less often, the authoritative servers themselves differ.",
     impact: "Visitors may get different answers depending on which resolver they use.",
-    recommendation: "Compare the zone on every authoritative server and check recent changes.",
+    recommendation:
+      "If the record was added or changed recently, wait a few minutes and run the check again. If the split persists, compare the zone on every authoritative server.",
   },
 
   "registry.lookup.registered": {

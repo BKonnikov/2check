@@ -318,3 +318,52 @@ describe("PRD 8.3 — the MX check says where the mail goes", () => {
     ]);
   });
 });
+
+/**
+ * PRD 8.7 — "the resolvers disagree" leaves a reader to open the technical panel and work out
+ * which resolver is which. Both sides are named instead.
+ */
+describe("a split between resolvers says which side each one is on", () => {
+  const seen = ["91.216.37.41"];
+
+  function split(qtype: "A") {
+    return [
+      answer("google", qtype, "NXDOMAIN"),
+      answer("cloudflare", qtype, "NXDOMAIN"),
+      answer("yandex-basic", qtype, "ANSWER", seen),
+      answer("quad9-unfiltered", qtype, "ANSWER", seen),
+    ];
+  }
+
+  it("names who sees the record and who does not, with the resolver profile intact", () => {
+    const check = evaluateResolverConsistency("A", split("A"), OPTIONS);
+    expect(check.status).toBe("FAIL");
+    expect(check.message.params?.seeing).toBe("Yandex Basic, Quad9 Unfiltered");
+    expect(check.message.params?.missing).toBe("Google, Cloudflare");
+  });
+
+  it("carries the same two lists on the resolve check that could not conclude", () => {
+    const check = evaluateResolveCheck("A", split("A"), OPTIONS);
+    expect(check.status).toBe("UNKNOWN");
+    expect(check.message.titleCode).toBe("dns.record.resolve.unknown.split");
+    expect(check.message.params?.missing).toBe("Google, Cloudflare");
+  });
+
+  it("keeps the plain wording when there are no two sides to name", () => {
+    // Everybody timed out: nothing was seen and nothing was denied.
+    const check = evaluateResolveCheck(
+      "A",
+      [failure("google", "A", "TIMEOUT"), failure("cloudflare", "A", "TIMEOUT")],
+      OPTIONS,
+    );
+    expect(check.message.titleCode).toBe("dns.record.resolve.unknown");
+    expect(check.message.params?.seeing).toBeUndefined();
+  });
+
+  it("says nothing of the kind when the resolvers agree", () => {
+    const agreed = ["google", "cloudflare"].map((name) => answer(name, "A", "ANSWER", seen));
+    const check = evaluateResolverConsistency("A", agreed, OPTIONS);
+    expect(check.status).toBe("PASS");
+    expect(check.message.params?.seeing).toBeUndefined();
+  });
+});

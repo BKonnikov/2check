@@ -143,6 +143,42 @@ function providerStates(results: readonly DnsProviderResult[]): ProviderRecordSt
   return results.map((result) => ({ provider: result.provider, state: deriveRecordState(result) }));
 }
 
+/**
+ * A resolver's own name, as a proper noun. The profile matters and is kept: quad9-unfiltered
+ * and the filtered Quad9 legitimately answer differently, and a reader comparing our result
+ * with their own query needs to know which one was asked.
+ */
+function resolverLabel(provider: string): string {
+  return provider
+    .split("-")
+    .map((part) => (part === "" ? part : part[0]?.toUpperCase() + part.slice(1)))
+    .join(" ");
+}
+
+/**
+ * PRD 8.7 — who sees the record and who does not.
+ *
+ * "The resolvers disagree" leaves a reader to open the technical panel and work out which is
+ * which. Both lists are returned only when the split is the one worth naming: some resolvers
+ * hold the record and others say the name is not there at all, which is what a zone change
+ * mid-propagation looks like.
+ */
+function splitBySight(
+  states: readonly ProviderRecordState[],
+): { readonly seeing: string; readonly missing: string } | undefined {
+  const seeing = states.filter((entry) => entry.state === "PRESENT");
+  const missing = states.filter(
+    (entry) => entry.state === "ABSENT" || entry.state === "NAME_NOT_FOUND",
+  );
+  if (seeing.length === 0 || missing.length === 0) {
+    return undefined;
+  }
+  return {
+    seeing: seeing.map((entry) => resolverLabel(entry.provider)).join(", "),
+    missing: missing.map((entry) => resolverLabel(entry.provider)).join(", "),
+  };
+}
+
 function answersByProvider(
   results: readonly DnsProviderResult[],
 ): Record<string, readonly string[]> {
@@ -197,6 +233,7 @@ export function evaluateResolveCheck(
 
   const answers = answersByProvider(results);
   const recognisedServices = recogniseServices(qtype, answers);
+  const split = splitBySight(states);
 
   const details: DnsResolveDetails = {
     state: quorum.state,
@@ -221,14 +258,22 @@ export function evaluateResolveCheck(
     target: target(options.qname, qtype),
     message: {
       // PRD 13.4 — the wording states what was found, so the code carries the state itself.
+      /**
+       * When the resolvers split into "sees it" and "does not", saying which is which is the
+       * whole answer; without both lists there is nothing to name, so the plain wording stands.
+       */
       titleCode:
-        mailProvider === undefined
-          ? `dns.record.resolve.${determined ? quorum.state.toLowerCase() : "unknown"}`
-          : "dns.record.resolve.present.mail",
+        mailProvider !== undefined
+          ? "dns.record.resolve.present.mail"
+          : determined
+            ? `dns.record.resolve.${quorum.state.toLowerCase()}`
+            : split === undefined
+              ? "dns.record.resolve.unknown"
+              : "dns.record.resolve.unknown.split",
       params:
-        mailProvider === undefined
-          ? { recordType: qtype }
-          : { recordType: qtype, service: mailProvider },
+        mailProvider !== undefined
+          ? { recordType: qtype, service: mailProvider }
+          : { recordType: qtype, ...(determined || split === undefined ? {} : split) },
     },
     details,
     source: sourceOf(results, options.resolverSetVersion),
@@ -340,7 +385,9 @@ export function evaluateResolverConsistency(
     target: target(options.qname, qtype),
     message: {
       titleCode: `dns.record.consistency.${status.toLowerCase()}`,
-      params: { recordType: qtype },
+      // `disagrees` is exactly the condition under which both lists exist, so a failing
+      // consistency check can always name the two sides.
+      params: { recordType: qtype, ...(disagrees ? (splitBySight(states) ?? {}) : {}) },
     },
     details,
     source: sourceOf(results, options.resolverSetVersion),
