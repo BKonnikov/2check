@@ -78,6 +78,8 @@ export interface Ui {
   readonly aboutHeading: string;
   readonly scopeNote: string;
   readonly footerNote: string;
+  readonly visitorAddress: string;
+  readonly visitorAddressNote: string;
 }
 
 interface Chrome {
@@ -288,6 +290,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       scopeNote: "Эта страница запускает только одну проверку. Все три — на главной.",
       footerNote:
         "2check показывает то, что видно снаружи: ответы публичных резолверов, данные о регистрации и предъявленный сертификат.",
+      visitorAddress: "Ваш адрес:",
+      visitorAddressNote: "Показан только вам и нигде не сохраняется.",
     },
     scanTitle: "Результат проверки",
     scanMissing: "Такое сканирование не найдено или срок его хранения истёк.",
@@ -483,6 +487,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       scopeNote: "This page runs a single check. All three are on the home page.",
       footerNote:
         "2check reports what is visible from outside: the answers of public resolvers, registration data and the certificate that is presented.",
+      visitorAddress: "Your address:",
+      visitorAddressNote: "Shown to you alone and stored nowhere.",
     },
     scanTitle: "Scan result",
     scanMissing: "This scan is unknown or has expired.",
@@ -684,6 +690,8 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       scopeNote: "Bu sahifa faqat bitta tekshiruvni ishga tushiradi. Uchalasi bosh sahifada.",
       footerNote:
         "2check tashqaridan ko'rinadigan narsani ko'rsatadi: ommaviy rezolverlar javobi, ro'yxatdan o'tish ma'lumotlari va taqdim etilgan sertifikat.",
+      visitorAddress: "Sizning manzilingiz:",
+      visitorAddressNote: "Faqat sizga ko'rsatiladi va hech qayerda saqlanmaydi.",
     },
   },
 };

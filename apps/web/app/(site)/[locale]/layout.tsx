@@ -11,6 +11,7 @@ import {
 } from "../../_components/chrome";
 import HeaderNav from "../../_components/HeaderNav";
 import { STATS } from "../../_components/stats";
+import VisitorAddress from "../../_components/VisitorAddress";
 import "../../globals.css";
 
 export function generateStaticParams() {
@@ -81,6 +82,7 @@ export default async function LocaleLayout({
               <a href={`/${key}/about`}>{ui.aboutNav}</a>
               <a href={`/${key}/stats`}>{STATS[key].nav}</a>
             </p>
+            <VisitorAddress label={ui.visitorAddress} note={ui.visitorAddressNote} />
           </div>
         </footer>
       </body>
