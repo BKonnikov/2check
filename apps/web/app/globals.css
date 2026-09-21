@@ -1023,7 +1023,9 @@ td {
 }
 .footer-links {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
 }
 
 /*
@@ -1056,18 +1058,23 @@ li.answer-group > .detail-key {
   overflow-wrap: break-word;
 }
 
-/* The visitor's own address, shown back to them and kept nowhere. */
+/*
+ * The visitor's own address: one more item in the footer's row, not a block of its own. It is
+ * pushed to the end of the row so the links stay where a reader already looks for them.
+ */
 .visitor {
-  margin: 14px 0 0;
-  font-family: var(--mono);
-  font-size: 12px;
+  margin-left: auto;
   color: var(--ink-3);
 }
 .visitor-address {
-  color: var(--ink);
+  color: var(--ink-2);
   user-select: all;
 }
-.visitor-note {
-  display: block;
-  margin-top: 3px;
+
+@media (max-width: 680px) {
+  /* Too narrow for one row: it wraps under the links rather than squeezing them. */
+  .visitor {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }

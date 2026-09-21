@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 
 /**
- * "Your address" in the footer.
+ * "Your address", as one more item in the footer's own row of links.
+ *
+ * It sits inline on purpose: as a paragraph of its own with an explanatory line under it, it
+ * made the footer half again as tall for a detail most visitors never need. What it does and
+ * does not do with the address is explained where such things belong, on the colophon.
  *
  * Fetched rather than rendered on the server so the pages stay static: only this line is
  * per-visitor. If the request fails, or the deployment sits behind a proxy chain that says
@@ -33,9 +37,8 @@ export default function VisitorAddress({ label, note }: { label: string; note: s
   }
 
   return (
-    <p className="visitor">
+    <span className="visitor" title={note}>
       {label} <span className="visitor-address">{address}</span>
-      <span className="visitor-note">{note}</span>
-    </p>
+    </span>
   );
 }

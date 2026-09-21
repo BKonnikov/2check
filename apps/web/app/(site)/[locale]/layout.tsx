@@ -81,8 +81,8 @@ export default async function LocaleLayout({
             <p className="footer-links">
               <a href={`/${key}/about`}>{ui.aboutNav}</a>
               <a href={`/${key}/stats`}>{STATS[key].nav}</a>
+              <VisitorAddress label={ui.visitorAddress} note={ui.visitorAddressNote} />
             </p>
-            <VisitorAddress label={ui.visitorAddress} note={ui.visitorAddressNote} />
           </div>
         </footer>
       </body>
