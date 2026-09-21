@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { clientAddress } from "../../../_components/clientAddress";
 
 /**
  * Forwards the browser's calls to the internal web API.
@@ -22,9 +23,24 @@ async function forward(request: NextRequest, path: readonly string[]): Promise<R
   const { search } = new URL(request.url);
   const target = `${apiOrigin()}${API_PREFIX}/${path.join("/")}${search}`;
 
+  /**
+   * PRD 22.2 — the API rate-limits per caller, and until now every caller was this application.
+   * Nothing carried the visitor's address across the proxy, so all visitors shared one bucket:
+   * a single busy client could spend everyone's quota, and no single client was ever limited.
+   *
+   * The address is asserted here and always overwritten, never passed through from the incoming
+   * request, so a header a client invented cannot reach the API untouched. It is best-effort
+   * fairness rather than protection: X-Forwarded-For can be claimed, which is why a flood is
+   * stopped at the edge by TCP source address instead.
+   */
+  const caller = clientAddress(request.headers);
+
   const response = await fetch(target, {
     method: request.method,
-    headers: { "content-type": request.headers.get("content-type") ?? "application/json" },
+    headers: {
+      "content-type": request.headers.get("content-type") ?? "application/json",
+      ...(caller === undefined ? {} : { "x-forwarded-for": caller }),
+    },
     ...(request.method === "GET" || request.method === "HEAD"
       ? {}
       : { body: await request.text() }),
