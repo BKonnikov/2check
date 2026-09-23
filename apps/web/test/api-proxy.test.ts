@@ -113,6 +113,20 @@ describe("the proxy tells the API who is calling", () => {
     expect(seen.headers?.get("x-forwarded-for")).toBe("10.0.0.1");
   });
 
+  it("forwards the browser's User-Agent, which is what classifies the client", async () => {
+    const seen = captured();
+    await POST(
+      new Request("https://2check.uz/api/web/v1/events", {
+        method: "POST",
+        body: "[]",
+        headers: { "content-type": "application/json", "user-agent": "Mozilla/5.0 (iPhone)" },
+        // biome-ignore lint/suspicious/noExplicitAny: NextRequest is structurally a Request here.
+      }) as any,
+      context(["v1", "events"]),
+    );
+    expect(seen.headers?.get("user-agent")).toBe("Mozilla/5.0 (iPhone)");
+  });
+
   it("says nothing when no proxy declared the caller", async () => {
     const seen = captured();
     await GET(

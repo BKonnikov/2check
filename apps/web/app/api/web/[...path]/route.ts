@@ -35,11 +35,21 @@ async function forward(request: NextRequest, path: readonly string[]): Promise<R
    */
   const caller = clientAddress(request.headers);
 
+  /**
+   * PRD 28.3 — the API reads the User-Agent to derive the coarse client class it stores, and
+   * discards the string itself. Without this line the only User-Agent it ever saw was this
+   * server's own fetch, so every visit was recorded as an unrecognised desktop browser and the
+   * statistics page said so in earnest. Nothing new is stored by forwarding it: the header goes
+   * to the process that was always meant to read it.
+   */
+  const agent = request.headers.get("user-agent");
+
   const response = await fetch(target, {
     method: request.method,
     headers: {
       "content-type": request.headers.get("content-type") ?? "application/json",
       ...(caller === undefined ? {} : { "x-forwarded-for": caller }),
+      ...(agent === null ? {} : { "user-agent": agent }),
     },
     ...(request.method === "GET" || request.method === "HEAD"
       ? {}
