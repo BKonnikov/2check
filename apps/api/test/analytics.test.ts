@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { classifyClient } from "../src/analytics/client.js";
-import { cachePublicStats } from "../src/analytics/public-stats.js";
+import { cachePublicStats, tallyClients } from "../src/analytics/public-stats.js";
 import { createInMemoryAnalyticsStore } from "../src/analytics/store.js";
 import { buildApp } from "../src/app.js";
 import { type Env, loadEnv } from "../src/config/env.js";
@@ -303,5 +303,37 @@ describe("PRD 28.3 — the client is classified, never recorded", () => {
     expect(JSON.stringify(store.events)).not.toContain("537.36");
     expect(analyticsEventSchema.safeParse({ ...VALID, deviceKind: "mobile" }).success).toBe(false);
     await instance.close();
+  });
+});
+
+/**
+ * The statistics page names every class it shows. A key the copy has no name for prints raw, so
+ * the only keys allowed out of here are the ones the enumerations already define.
+ */
+describe("PRD 28 — sessions by client class", () => {
+  const rows = [
+    { device_kind: "desktop", browser: "chrome", sessions: "7" },
+    { device_kind: "mobile", browser: "safari", sessions: "3" },
+    // Recorded before the client columns existed.
+    { device_kind: null, browser: null, sessions: "4" },
+  ];
+
+  it("folds rows with no class into the enumeration's own catch-all", () => {
+    expect(tallyClients(rows, "device_kind")).toEqual([
+      { key: "desktop", sessions: 7 },
+      { key: "unknown", sessions: 4 },
+      { key: "mobile", sessions: 3 },
+    ]);
+    expect(tallyClients(rows, "browser")).toEqual([
+      { key: "chrome", sessions: 7 },
+      { key: "other", sessions: 4 },
+      { key: "safari", sessions: 3 },
+    ]);
+  });
+
+  it("adds an unclassified row to a class of the same name rather than beside it", () => {
+    const withOther = [...rows, { device_kind: "unknown", browser: "other", sessions: "2" }];
+    expect(tallyClients(withOther, "device_kind")).toContainEqual({ key: "unknown", sessions: 6 });
+    expect(tallyClients(withOther, "browser")).toContainEqual({ key: "other", sessions: 6 });
   });
 });

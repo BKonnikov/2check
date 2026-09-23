@@ -183,7 +183,9 @@ export default function StatsView({
               locale={key}
               rows={stats.audience.devices.map((entry) => ({
                 key: entry.key,
-                label: copy.deviceNames[entry.key] ?? entry.key,
+                // Never the raw key: an unnamed class would print an English enum value on a
+                // Russian page, which is how "other" once got in front of a reader.
+                label: copy.deviceNames[entry.key] ?? copy.deviceNames.unknown ?? entry.key,
                 value: entry.sessions,
               }))}
             />

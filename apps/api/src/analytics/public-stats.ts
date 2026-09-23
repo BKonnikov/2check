@@ -51,6 +51,34 @@ function tally(rows: readonly { key: string | null; count: string }[]): Record<s
   return totals;
 }
 
+/**
+ * Rows recorded before the client columns existed hold null in them. Null is not a class of its
+ * own: each enumeration already has a name for "we could not tell" — `unknown` for a device,
+ * `other` for a browser — and folding into those keeps every key one the interface can name.
+ * Inventing a key here is how "other" once appeared on a Russian page, untranslated.
+ */
+const UNCLASSIFIED = { device_kind: "unknown", browser: "other" } as const;
+
+export interface ClientRow {
+  readonly device_kind: string | null;
+  readonly browser: string | null;
+  readonly sessions: string;
+}
+
+export function tallyClients(
+  rows: readonly ClientRow[],
+  column: "device_kind" | "browser",
+): readonly { readonly key: string; readonly sessions: number }[] {
+  const totals = new Map<string, number>();
+  for (const entry of rows) {
+    const key = entry[column] ?? UNCLASSIFIED[column];
+    totals.set(key, (totals.get(key) ?? 0) + Number(entry.sessions));
+  }
+  return [...totals.entries()]
+    .map(([key, sessions]) => ({ key, sessions }))
+    .sort((left, right) => right.sessions - left.sessions);
+}
+
 export function createPostgresPublicStats(
   pool: Pool,
   analytics?: AnalyticsStore,
@@ -83,7 +111,7 @@ export function createPostgresPublicStats(
         ),
         // Sessions, not events: the question is how many people came with what, not how many
         // times each of them clicked.
-        pool.query<{ device_kind: string | null; browser: string | null; sessions: string }>(
+        pool.query<ClientRow>(
           `select device_kind, browser, count(distinct session_id)::text as sessions
              from analytics_events
             where occurred_at > now() - interval '30 days'
@@ -96,19 +124,6 @@ export function createPostgresPublicStats(
 
       const row = scans.rows[0];
 
-      const tallyRows = (
-        column: "device_kind" | "browser",
-      ): readonly { key: string; sessions: number }[] => {
-        const totals = new Map<string, number>();
-        for (const entry of clients.rows) {
-          const key = (column === "device_kind" ? entry.device_kind : entry.browser) ?? "other";
-          totals.set(key, (totals.get(key) ?? 0) + Number(entry.sessions));
-        }
-        return [...totals.entries()]
-          .map(([key, sessions]) => ({ key, sessions }))
-          .sort((left, right) => right.sessions - left.sessions);
-      };
-
       return {
         generatedAt: new Date().toISOString(),
         scansTotal: Number(row?.total ?? 0),
@@ -117,8 +132,8 @@ export function createPostgresPublicStats(
         audience: {
           sessions: report?.sessions ?? 0,
           returningSessions: report?.returningSessions ?? 0,
-          devices: tallyRows("device_kind"),
-          browsers: tallyRows("browser"),
+          devices: tallyClients(clients.rows, "device_kind"),
+          browsers: tallyClients(clients.rows, "browser"),
         },
       };
     },
