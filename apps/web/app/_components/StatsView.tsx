@@ -175,6 +175,7 @@ export default function StatsView({
             { key: "returning", label: copy.returning, value: stats.audience.returningSessions },
           ]}
         />
+        <p className="counts-note">{copy.sessionsNote}</p>
         {deviceTotal > 0 && (
           <>
             <h3 className="sub-heading">{copy.devicesHeading}</h3>

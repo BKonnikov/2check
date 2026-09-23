@@ -16,6 +16,8 @@ export interface StatsCopy {
   readonly scansTotal: string;
   readonly sessions: string;
   readonly returning: string;
+  /** What the two figures above count, so the number is not read as a headcount. */
+  readonly sessionsNote: string;
   readonly verdictsHeading: string;
   /** The three groups the verdicts are collapsed into on this page. */
   readonly verdictGroups: Readonly<Record<"clean" | "notes" | "problems", string>>;
@@ -43,6 +45,8 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     scansTotal: "проверок сделано",
     sessions: "Всего заходов",
     returning: "Из них повторных",
+    sessionsNote:
+      "Заход — это одна вкладка браузера, а не один человек: тот же посетитель в новой вкладке посчитается ещё раз. «Повторные» — те, кто уже был здесь раньше.",
     verdictsHeading: "Что нашли у доменов",
     verdictGroups: {
       clean: "Всё в порядке",
@@ -85,6 +89,8 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     scansTotal: "checks done",
     sessions: "Visits in total",
     returning: "Of those, repeat visits",
+    sessionsNote:
+      "A visit is one browser tab, not one person: the same reader in a second tab is counted again. \u201cRepeat\u201d means a browser that has been here before.",
     verdictsHeading: "What the domains turned out like",
     verdictGroups: {
       clean: "All fine",
@@ -128,6 +134,8 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
     scansTotal: "tekshiruv bajarilgan",
     sessions: "Jami tashriflar",
     returning: "Shundan takroriylari",
+    sessionsNote:
+      "Tashrif \u2014 bu bitta brauzer varag'i (tab), bitta odam emas: o'sha tashrifchi yangi varaqda yana hisoblanadi. \u00abTakroriy\u00bb \u2014 bu yerda ilgari bo'lgan brauzer.",
     verdictsHeading: "Domenlar qanday chiqdi",
     verdictGroups: {
       clean: "Hammasi joyida",

@@ -12,8 +12,17 @@ function request(headers: Record<string, string>) {
 }
 
 describe("the visitor's own address", () => {
-  it("takes the client from the left of the forwarded chain, not the nearest proxy", async () => {
-    // nginx appends each hop on the right, so the rightmost entries are our own infrastructure.
+  it("answers with the single address our nginx forwards", async () => {
+    // deploy/nginx.example.conf resolves the client with the real_ip module and passes that one
+    // address on, so nothing a client invented reaches us in our own deployment.
+    const response = await GET(request({ "x-forwarded-for": "195.158.3.254" }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ address: "195.158.3.254" });
+  });
+
+  it("takes the client from the left of the chain when a proxy appends hops", async () => {
+    // Behind a proxy that appends rather than replaces, the rightmost entries are its own
+    // machines and the leftmost is the client as the first proxy saw it.
     const response = await GET(
       request({ "x-forwarded-for": "195.158.3.254, 10.222.71.4, 10.222.77.254" }),
     );
