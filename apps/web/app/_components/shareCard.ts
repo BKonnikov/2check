@@ -1,6 +1,7 @@
 import type { Language } from "@2check/messages";
 import { resolveMessage } from "@2check/messages";
 import type { Ui } from "./chrome";
+import { withTextChunks } from "./pngMetadata";
 
 /**
  * PRD 23.9 — the share card.
@@ -58,6 +59,21 @@ export interface ShareCardModel {
   readonly checksLabel: string;
   /** PRD 23.7 — a result is only true of a moment, so the card carries the moment. */
   readonly checkedAt?: string;
+  /**
+   * What the picture is called once it leaves the page, and what it says about itself inside.
+   *
+   * The name is the only part of a shared image most people ever read: it is what the share
+   * sheet shows, what lands in Downloads and what somebody searches for a month later. So it
+   * names the domain first — that is what the reader was looking at — then this service, then
+   * the day, which is what tells two checks of the same domain apart.
+   */
+  readonly file: {
+    readonly name: string;
+    /** For the picture's own Title, where a reader's viewer shows one. */
+    readonly title: string;
+    /** RFC 1123, which is the format the PNG specification asks of "Creation Time". */
+    readonly createdAt?: string;
+  };
 }
 
 interface ScanLike {
@@ -145,7 +161,7 @@ const DATE_LOCALE: Readonly<Record<Language, string>> = {
  * a week should not keep claiming to be about today, and the moment a reader forwards is the
  * moment the checks actually ran.
  */
-function observedAt(scan: ScanLike, language: Language): string | undefined {
+function observedMoment(scan: ScanLike): Date | undefined {
   const moments = scan.categories
     .flatMap((category) => category.checks ?? [])
     .map((check) => check.freshness?.checkedAt)
@@ -155,13 +171,52 @@ function observedAt(scan: ScanLike, language: Language): string | undefined {
     return undefined;
   }
   const parsed = new Date(latest);
-  if (Number.isNaN(parsed.getTime())) {
-    return undefined;
-  }
-  return parsed.toLocaleString(DATE_LOCALE[language], {
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function observedAt(scan: ScanLike, language: Language): string | undefined {
+  return observedMoment(scan)?.toLocaleString(DATE_LOCALE[language], {
     dateStyle: "short",
     timeStyle: "short",
   });
+}
+
+/** This service, as the file name and the metadata name it. */
+const SERVICE = "2check.uz";
+
+/** Characters a file name may not carry on one system or another. */
+const UNSAFE_IN_A_NAME = new Set(["\\", "/", ":", "*", "?", '"', "<", ">", "|"]);
+
+/**
+ * A hostname holds nothing from that set and no control codes either; this is here so that a
+ * name built from one can never become a path, whatever a future caller passes.
+ */
+function safeInAName(value: string): string {
+  let out = "";
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code >= 0x20 && code !== 0x7f && !UNSAFE_IN_A_NAME.has(character)) {
+      out += character;
+    }
+  }
+  return out.trim();
+}
+
+/** The day the checks ran, as the reader's own calendar has it, ordered so names sort by it. */
+function day(moment: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${moment.getFullYear()}-${pad(moment.getMonth() + 1)}-${pad(moment.getDate())}`;
+}
+
+function fileFor(domain: string, moment: Date | undefined, ui: Ui): ShareCardModel["file"] {
+  const named = safeInAName(domain);
+  const subject = named === "" ? SERVICE : named;
+  const parts = moment === undefined ? [subject, SERVICE] : [subject, SERVICE, day(moment)];
+  return {
+    name: `${parts.join(" — ")}.png`,
+    title: `${subject} — ${ui.shareFileTitle}`,
+    ...(moment === undefined ? {} : { createdAt: moment.toUTCString() }),
+  };
 }
 
 export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui): ShareCardModel {
@@ -236,6 +291,7 @@ export function buildShareCardModel(scan: ScanLike, language: Language, ui: Ui):
       const moment = observedAt(scan, language);
       return moment === undefined ? {} : { checkedAt: `${ui.shareCheckedAt}: ${moment}` };
     })(),
+    file: fileFor(scan.canonicalDomain.unicodeHostname, observedMoment(scan), ui),
   };
 }
 
@@ -525,7 +581,7 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
     context.textAlign = "left";
   }
 
-  return await new Promise<Blob>((resolve, reject) => {
+  const encoded = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob === null) {
         reject(new Error("the card could not be encoded"));
@@ -534,4 +590,14 @@ export async function renderShareCard(model: ShareCardModel): Promise<Blob> {
       resolve(blob);
     }, "image/png");
   });
+
+  const described = withTextChunks(new Uint8Array(await encoded.arrayBuffer()), [
+    { keyword: "Title", value: model.file.title },
+    { keyword: "Software", value: SERVICE },
+    { keyword: "Source", value: `https://${SERVICE}` },
+    ...(model.file.createdAt === undefined
+      ? []
+      : [{ keyword: "Creation Time", value: model.file.createdAt }]),
+  ]);
+  return new Blob([described], { type: "image/png" });
 }

@@ -66,6 +66,8 @@ export interface Ui {
   readonly shareMoreChecks: string;
   readonly sharePartial: string;
   readonly shareNote: string;
+  /** What the picture calls itself: the domain, then this, in the file's own Title. */
+  readonly shareFileTitle: string;
   readonly recheck: string;
   readonly recheckNote: string;
   readonly cachedResults: string;
@@ -275,6 +277,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareMoreChecks: "и ещё {count}",
       sharePartial: "Частичная проверка",
       shareNote: "Уходит только картинка: ни ссылки, ни технических подробностей в ней нет.",
+      shareFileTitle: "проверка домена",
       recheck: "Проверить заново",
       recheckNote: "Запрос уйдёт к резолверам, реестру и серверу заново, мимо кэша.",
       deadlineNote:
@@ -471,6 +474,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareMoreChecks: "and {count} more",
       sharePartial: "Partial check",
       shareNote: "Only the image travels: it carries no link and no technical detail.",
+      shareFileTitle: "domain check",
       recheck: "Check again",
       recheckNote:
         "The resolvers, the registry and the host are queried again, bypassing the cache.",
@@ -675,6 +679,7 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       shareMoreChecks: "va yana {count}",
       sharePartial: "Qisman tekshiruv",
       shareNote: "Faqat rasm yuboriladi: unda havola ham, texnik tafsilot ham yo'q.",
+      shareFileTitle: "domen tekshiruvi",
       recheck: "Qayta tekshirish",
       recheckNote: "So'rov rezolverlar, reestr va serverga keshdan o'tmasdan qaytadan yuboriladi.",
       deadlineNote:

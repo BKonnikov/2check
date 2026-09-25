@@ -31,7 +31,7 @@ export default function ShareActions({
   async function card(): Promise<{ blob: Blob; name: string }> {
     const model = buildShareCardModel(scan, language, ui);
     const blob = await renderShareCard(model);
-    return { blob, name: `2check-${model.domain}.png` };
+    return { blob, name: model.file.name };
   }
 
   async function run(action: (made: { blob: Blob; name: string }) => Promise<void>): Promise<void> {

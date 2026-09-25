@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHROME } from "../app/_components/chrome";
+import { withTextChunks } from "../app/_components/pngMetadata";
 import { buildShareCardModel } from "../app/_components/shareCard";
 
 const UI = CHROME.ru.ui;
@@ -293,3 +294,129 @@ describe("a check's particulars travel with it", () => {
     expect(model.checks?.[0]?.fact).toBeUndefined();
   });
 });
+
+/**
+ * PRD 23.9 — the name is the only part of a shared picture most people ever read: it is what the
+ * share sheet shows and what somebody searches for a month later. It used to be built as a
+ * prefix, which read "2check-2check.uz.png" for this service's own domain.
+ */
+describe("what the picture is called", () => {
+  it("names the domain, then the service, then the day the checks ran", () => {
+    const model = buildShareCardModel(scan(), "ru", UI);
+    expect(model.file.name).toBe("почта.uz — 2check.uz — 2026-09-15.png");
+  });
+
+  it("leaves the day out rather than inventing one when the scan carries no moment", () => {
+    const model = buildShareCardModel(
+      scan({ completedAt: undefined, categories: [{ category: "dns", status: "PASS" }] }),
+      "ru",
+      UI,
+    );
+    expect(model.file.name).toBe("почта.uz — 2check.uz.png");
+  });
+
+  it("cannot be talked into building a path", () => {
+    const model = buildShareCardModel(
+      scan({ canonicalDomain: { unicodeHostname: "../../etc/passwd" } }),
+      "ru",
+      UI,
+    );
+    expect(model.file.name).not.toContain("/");
+    expect(model.file.name.startsWith("....etcpasswd")).toBe(true);
+  });
+
+  it("titles the picture in the language it was drawn in", () => {
+    expect(buildShareCardModel(scan(), "ru", CHROME.ru.ui).file.title).toBe(
+      "почта.uz — проверка домена",
+    );
+    expect(buildShareCardModel(scan(), "en", CHROME.en.ui).file.title).toBe(
+      "почта.uz — domain check",
+    );
+  });
+
+  it("dates the picture the way the PNG specification asks", () => {
+    // RFC 1123, which is what "Creation Time" is defined to hold.
+    expect(buildShareCardModel(scan(), "ru", UI).file.createdAt).toBe(
+      "Tue, 15 Sep 2026 12:30:00 GMT",
+    );
+  });
+});
+
+/**
+ * The chunks are written by hand, so the invariants a reader depends on — the signature, the
+ * header first, a correct checksum — are asserted rather than assumed.
+ */
+describe("what the picture says about itself inside", () => {
+  const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+  function chunkOf(type: string, data: number[]): number[] {
+    const body = [...type].map((character) => character.charCodeAt(0)).concat(data);
+    const length = [
+      (data.length >>> 24) & 0xff,
+      (data.length >>> 16) & 0xff,
+      (data.length >>> 8) & 0xff,
+      data.length & 0xff,
+    ];
+    return [...length, ...body, 0, 0, 0, 0];
+  }
+
+  /** A PNG with nothing in it but the two chunks the format requires. */
+  function bare(): Uint8Array<ArrayBuffer> {
+    return new Uint8Array([
+      ...SIGNATURE,
+      ...chunkOf("IHDR", [0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]),
+      ...chunkOf("IEND", []),
+    ]);
+  }
+
+  function chunkTypes(png: Uint8Array): string[] {
+    const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+    const types: string[] = [];
+    let at = 8;
+    while (at + 12 <= png.length) {
+      types.push(String.fromCharCode(...png.subarray(at + 4, at + 8)));
+      at += 12 + view.getUint32(at);
+    }
+    return types;
+  }
+
+  it("puts the text after the header and before everything else", () => {
+    const out = withTextChunks(bare(), [{ keyword: "Software", value: "2check.uz" }]);
+    expect(chunkTypes(out)).toEqual(["IHDR", "tEXt", "IEND"]);
+  });
+
+  it("uses iTXt for text Latin-1 cannot spell", () => {
+    const out = withTextChunks(bare(), [{ keyword: "Title", value: "почта.uz — проверка домена" }]);
+    expect(chunkTypes(out)).toEqual(["IHDR", "iTXt", "IEND"]);
+    expect(new TextDecoder().decode(out)).toContain("почта.uz — проверка домена");
+  });
+
+  it("checksums every chunk it writes", () => {
+    const out = withTextChunks(bare(), [{ keyword: "Software", value: "2check.uz" }]);
+    const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
+    const length = view.getUint32(33);
+    const stated = view.getUint32(33 + 8 + length);
+    expect(stated).toBe(crc32Of(out.subarray(33 + 4, 33 + 8 + length)));
+  });
+
+  it("returns what it was given rather than damaging something it cannot read", () => {
+    const notAPng: Uint8Array<ArrayBuffer> = new Uint8Array([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    ]);
+    expect(withTextChunks(notAPng, [{ keyword: "Title", value: "x" }])).toBe(notAPng);
+    const png = bare();
+    expect(withTextChunks(png, [{ keyword: "Title", value: "" }])).toBe(png);
+  });
+});
+
+/** An independent implementation, so the test is not the code under test written twice. */
+function crc32Of(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 1) !== 0 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
