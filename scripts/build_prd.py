@@ -23,7 +23,12 @@ def main():
             path.write_bytes(data)
     if stale:
         raise SystemExit('Missing or outdated generated files: ' + ', '.join(stale) + '; run python3 scripts/build_prd.py')
-    print('Generated documents are up to date: RU + EN.' if args.check else 'Built RU + EN PRDs from 31 canonical files each; legacy Russian copy updated.')
+    if args.check:
+        print('Generated documents are up to date: RU + EN.')
+    else:
+        from docs_common import EDITIONS, canonical_files
+        built = ', '.join(f'{e["key"]} ({len(canonical_files("ru", e))} files)' for e in EDITIONS)
+        print(f'Built RU + EN PRDs: {built}; legacy Russian copy updated.')
 
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ from urllib.parse import unquote, urlsplit
 
 sys.dont_write_bytecode = True
 from docs_common import (
-    ROOT, LANGUAGES, STATE_FILE, FROZEN_CONCEPT_SHA256, CRITERIA, FENCED,
+    ROOT, LANGUAGES, EDITIONS, BASE_EDITION, STATE_FILE, FROZEN_CONCEPT_SHA256, CRITERIA, FENCED,
     body, canonical_files, concept_contracts, contract_blocks, digest, generated_outputs,
     prose_literals, sections, translation_hashes, translation_pairs,
 )
@@ -42,33 +42,35 @@ def main():
         errors.append('Unreviewed RU/EN changes: ' + ', '.join(changed) + '. Compare both editions and record with update_translation_state.py --reviewed.')
 
     counts = {}
-    for language in LANGUAGES:
-        files = sections(language)
-        counts[language] = 0
-        for number, path in enumerate(files, 1):
-            text = body(path)
-            if not text.startswith(f'# {number}. '):
-                errors.append(f'{language}: section heading does not match {path.name}')
-            criteria = [(int(section), int(item)) for section, item in CRITERIA.findall(text)]
-            if not criteria or criteria != [(number, i) for i in range(1, len(criteria)+1)]:
-                errors.append(f'{language}: missing or non-sequential AC in section {number}')
-            counts[language] += len(criteria)
-            if language == 'en':
-                # Cyrillic is permitted only in the language switch, removed by body().
-                if re.search('[А-Яа-яЁё]', text):
-                    errors.append(f'en: untranslated Cyrillic text in {path.name}')
-        all_text = '\n'.join(body(p) for p in canonical_files(language))
-        for term in ('CheckMessage', 'providerConfigVersion', 'dependency_unavailable'):
-            if term in all_text:
-                errors.append(f'{language}: obsolete term {term}')
-        if re.search(r'AC-\d+\.NEW', all_text) or 'Следующий раздел' in all_text:
-            errors.append(f'{language}: temporary consolidation marker remains')
-        tls = body(files[9])
-        if 'dependencyMode = ANY' not in tls and 'dependencyMode: ANY' not in tls:
-            errors.append(f'{language}: TLS certificate dependencyMode=ANY is missing')
-        api = body(files[16])
-        if 'PENDING | RUNNING' not in api or '422' not in api or 'PARTIAL' not in api:
-            errors.append(f'{language}: required API acceptance/scope invariant is missing')
+    for edition in EDITIONS:
+        for language in LANGUAGES:
+            files = sections(language, edition)
+            counts.setdefault(language, 0)
+            for number, path in enumerate(files, 1):
+                text = body(path)
+                if not text.startswith(f'# {number}. '):
+                    errors.append(f'{language} {edition["key"]}: section heading does not match {path.name}')
+                criteria = [(int(section), int(item)) for section, item in CRITERIA.findall(text)]
+                if not criteria or criteria != [(number, i) for i in range(1, len(criteria)+1)]:
+                    errors.append(f'{language} {edition["key"]}: missing or non-sequential AC in section {number}')
+                counts[language] += len(criteria)
+                if language == 'en':
+                    # Cyrillic is permitted only in the language switch, removed by body().
+                    if re.search('[А-Яа-яЁё]', text):
+                        errors.append(f'en {edition["key"]}: untranslated Cyrillic text in {path.name}')
+            all_text = '\n'.join(body(p) for p in canonical_files(language, edition))
+            for term in ('CheckMessage', 'providerConfigVersion', 'dependency_unavailable'):
+                if term in all_text:
+                    errors.append(f'{language} {edition["key"]}: obsolete term {term}')
+            if re.search(r'AC-\d+\.NEW', all_text) or 'Следующий раздел' in all_text:
+                errors.append(f'{language} {edition["key"]}: temporary consolidation marker remains')
+            if edition is BASE_EDITION:
+                tls = body(files[9])
+                if 'dependencyMode = ANY' not in tls and 'dependencyMode: ANY' not in tls:
+                    errors.append(f'{language}: TLS certificate dependencyMode=ANY is missing')
+                api = body(files[16])
+                if 'PENDING | RUNNING' not in api or '422' not in api or 'PARTIAL' not in api:
+                    errors.append(f'{language}: required API acceptance/scope invariant is missing')
 
     concept_pair = (ROOT / 'docs/ru/01-concept.md', ROOT / 'docs/en/01-concept.md')
     original_contracts = concept_contracts((ROOT / 'docs/concept.md').read_text(encoding='utf-8'))
@@ -76,7 +78,10 @@ def main():
         if concept_contracts(body(concept)) != original_contracts:
             errors.append(f'Concept data contracts differ from the frozen source: {concept.relative_to(ROOT)}')
 
-    for ru, en in [concept_pair, *zip(sections('ru'), sections('en'))]:
+    paired = [concept_pair]
+    for edition in EDITIONS:
+        paired.extend(zip(sections('ru', edition), sections('en', edition)))
+    for ru, en in paired:
         left, right = body(ru), body(en)
         if ru.name != en.name:
             errors.append(f'RU/EN section filenames differ: {ru.name} / {en.name}')

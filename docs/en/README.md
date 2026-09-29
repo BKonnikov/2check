@@ -15,3 +15,11 @@ The product purpose, audiences, principles, and frozen MVP scope.
 28 sections covering data contracts, domain checks, the interface, security, and acceptance criteria.
 
 [Read the single-file PRD](../../dist/en/2check_MVP_1.0_PRD.md) · [Documentation contribution rules](../../CONTRIBUTING.en.md)
+
+## 03. Product Requirements — MVP 1.1
+
+**[Open the PRD 1.1 contents →](03-prd-1.1.md)**
+
+Domain mail health: SPF, DMARC, DKIM, MX, STARTTLS, PTR, and a blocklist check of the receiving server. The document is in development; the MVP 1.0 specification is frozen and is not amended by it.
+
+[Read PRD 1.1 as one file](../../dist/en/2check_MVP_1.1_PRD.md)

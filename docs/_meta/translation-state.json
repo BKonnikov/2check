@@ -9,9 +9,13 @@
       "ru": "afa362c1e8961e8c7f521704d82b6b382df375493dd3f06eae59352df2c7c86f",
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
+    "docs/03-prd-1.1.md": {
+      "ru": "1db768bcf715ba7b76d44c235893a06704a69bbcca416c897a1d313b3bc5ec0b",
+      "en": "142b6febd5f2973099a997e3f9b84591d987063488666521ce9ef0f2ea44d174"
+    },
     "docs/README.md": {
-      "ru": "789c3e41969724aa480af00671b55ec02a35cb17b1169a78981279f8bc56e66a",
-      "en": "258e437c0fd69d54bf5db13f9547b409521bf5ceb0b4015b67b3f9ee1fc9ea17"
+      "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
+      "en": "b3ff55dd3e74e4e1051addadb59c077be3715b997098fc9eabe1b8e938995e42"
     },
     "docs/prd/01-product-goal-positioning.md": {
       "ru": "8a2b95b1fecd6ae532d7355656aee6ad0cffa86d0800813459572dae874ea34c",
@@ -136,6 +140,22 @@
     "docs/prd/preamble.md": {
       "ru": "7f68159aa2c59d291632d14d6039e237b1b8af42c1394cfd12afd85dd99b224b",
       "en": "d84d54b3c8a1f524c33e651dc503d7989e914b3a920a825d75555014b0f1ed25"
+    },
+    "docs/prd-1.1/01-scope-goals.md": {
+      "ru": "32acfb851436f056a5e43520a1ff9f2209fbf9ec6349737441d2b316d8b513b2",
+      "en": "085b5241b0b54a2850d0b841d20eadc2fe257d446174c37fb3b63afad04e27a4"
+    },
+    "docs/prd-1.1/02-check-groups-dependencies.md": {
+      "ru": "cb3ed39bd94095b138d7a6417d25eceeb9853c79b6ac0569924bc6864f10a26c",
+      "en": "9c8ba53a7bcd0909841bebf82ae1d426e34d4740d8aeb41ac91f71c09fc32263"
+    },
+    "docs/prd-1.1/appendix-a.md": {
+      "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",
+      "en": "446a30056af5f74bc5d25fd24457d615ae75330a8befb77d281f596a02dc0834"
+    },
+    "docs/prd-1.1/preamble.md": {
+      "ru": "6d6838e81035ff7765954feb6f0c1a044e5bdd28e2d3adc0e930ec608d1f58b6",
+      "en": "ea59fbb8ca6e0d3cf9cc8e4ce60c971fb82dc3dd9ce0be9f88c2e280fca547d4"
     },
     "README": {
       "ru": "7280449ec18a02ee304e32c4be10eec4ac4c2437eb127727a5ae0415646aef33",
