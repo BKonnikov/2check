@@ -10,12 +10,12 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "c381d5488f884fe1e89bf1fd403505af4225e44a7e2db2779f159c11dbd2f535",
-      "en": "460dac378b1e4455b6918c5fea440b6b400d7093580c1e7cc3159cbb97a916d7"
+      "ru": "6f1a93c27f055ac0cca1e03bde214fd0caaf248872479ec86707ef0b0dfe6c62",
+      "en": "cdb2130357bbc9592f9d5e258755eae3d6450abb3564e46a9e4c41f95ce74889"
     },
     "docs/README.md": {
-      "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
-      "en": "b3ff55dd3e74e4e1051addadb59c077be3715b997098fc9eabe1b8e938995e42"
+      "ru": "e690ec0cc5f0205cd11c18289c668f27b87a39ea87a14bca9872455521fe2cd1",
+      "en": "bcb956d7eae3d5595a47fe4222674469a29389ca0193c1908153f19a0b809ce0"
     },
     "docs/prd/01-product-goal-positioning.md": {
       "ru": "8a2b95b1fecd6ae532d7355656aee6ad0cffa86d0800813459572dae874ea34c",
@@ -142,12 +142,12 @@
       "en": "d84d54b3c8a1f524c33e651dc503d7989e914b3a920a825d75555014b0f1ed25"
     },
     "docs/prd-1.1/01-scope-goals.md": {
-      "ru": "32acfb851436f056a5e43520a1ff9f2209fbf9ec6349737441d2b316d8b513b2",
-      "en": "085b5241b0b54a2850d0b841d20eadc2fe257d446174c37fb3b63afad04e27a4"
+      "ru": "cd12f4c8da7880bc4d07f9f935290c5369301867cb9634b93c7fca059b165d43",
+      "en": "4b82050ac8d9a72953330728a3b764b744e0f07662f50fa7517406588f674f6e"
     },
     "docs/prd-1.1/02-check-groups-dependencies.md": {
-      "ru": "5e043df63786691d2d0c7c23082f689af3fe54161461dda721286ca29a699be5",
-      "en": "6875544e8b4f16a86fc5e084f762e9762ae09ee946b06a923bd063c7e77f12e3"
+      "ru": "21aeef3fc3e84d3315ac2760a38f82b54fb4871301906d1df33aa400a67fb9ab",
+      "en": "1bc51a19f4f15dc3b80744d40eca0eef933b383e5e7742c20f1f0b351a725bcf"
     },
     "docs/prd-1.1/03-spf.md": {
       "ru": "7dbc7b032cad70903382063f0f63e4c6a8c5685b4eadfd928f40317dfce8dadb",
@@ -162,60 +162,56 @@
       "en": "bc983002a8f106dcaec5a74a357832fcfd50e9b80c91efcecceb1b49e34ab422"
     },
     "docs/prd-1.1/06-mx.md": {
-      "ru": "6118a14f9b845101f8cdb1d212fc927d07a4d78df76220b225f59ecaaebac9a6",
-      "en": "41281ac79701a22574d0826d095fda3570b71e5ebfc9fe7ddcc1668c26085f4a"
+      "ru": "d557d3889af667d08acd5089e240b754553e6b6e4a23ed1a904abce9bf489ad9",
+      "en": "b25f609a928b67a2a992bbb22298b0d8100c990c8fad043fd6c2fc1197876dbb"
     },
     "docs/prd-1.1/07-starttls.md": {
-      "ru": "90c14b11708ffa372012468b4f65e0d9a3b9f32209c9a44790eed6e19d1240f9",
-      "en": "2d2c66d5a860b95823d5bf87680e8d3e4eb514e5661cfe90bef83f0ecab30f68"
+      "ru": "8ef3cc02e87fc3bb1487ddfc256fc0a02559b2741852e291c9ae0f462e67c487",
+      "en": "f6d7008824c6ffe10d51d148ae68e15acacca0b9b779a9718a90d528dc7390a9"
     },
     "docs/prd-1.1/08-ptr.md": {
       "ru": "c1e9e49e09aa49f7f1a362b52242cf66d4ec7f840993bafe6a798c90fd8bf6c7",
       "en": "c1a44ff7cd1e23e7d87d530040ba11507802405b1d060544e69da3bea0db8d04"
     },
-    "docs/prd-1.1/09-dnsbl.md": {
-      "ru": "1ac3928124f2489a12b22ed8000377ac452227f3575d7641ee28b765c9948743",
-      "en": "8b3ca6c7907d100087ea7cb45e5dea91256cb2769384405dd67e0bcdd769003e"
+    "docs/prd-1.1/09-data-contracts.md": {
+      "ru": "f0072fbbd78560bf5112b00befed4409eb5e9fd11399a708d1e61509e2788124",
+      "en": "4654bfb7ecab0b12d2a4aa5f10b4144a8d8dbad37a1c44efb2b97edd6d0c8322"
     },
-    "docs/prd-1.1/10-data-contracts.md": {
-      "ru": "5a5f380ec2b86f4ee06aa80ce42ea181ca502074c9f46f21f5e96891be97cba8",
-      "en": "427f99cde09ed16d40af541167e736ca5ed893bd72df1ce0f81338493c52483e"
+    "docs/prd-1.1/10-summary-score.md": {
+      "ru": "d4808f143340d1113b5a3a32d480f7524b56e49dcf17813cf76b053586b73c63",
+      "en": "4fe51b37ea5512cef32c426e53c29095db7ce9d96d8119715cc89e260285be4b"
     },
-    "docs/prd-1.1/11-summary-score.md": {
-      "ru": "6ceff931fb54b899d5291574f0314f94218f21fa7a0042d6c8e9f7bb36bebd33",
-      "en": "f12c81ff1ea5d68c393ce96392e65f2d9f753120d253363c038587cd15169e89"
+    "docs/prd-1.1/11-messages.md": {
+      "ru": "db0f3df0f9aa2bfd1ea124da38b2bcb954e28b022322c6cb5c1836aa5986d135",
+      "en": "8d22e2a36199ac0a719048bc2f62119ac444e307a64f5d4ad702c5bf933a3709"
     },
-    "docs/prd-1.1/12-messages.md": {
-      "ru": "c0b00ef2bd9ac922b9cf4ef3c6913b0993127e1713bcdd67a93b1d045f115943",
-      "en": "43d0fccf541e15fd107aef4f81f0c01deb28c0816a5cdfc87c18e1fb039030f1"
+    "docs/prd-1.1/12-cache.md": {
+      "ru": "220267776f75a1cfb8405716fd0d2424922490cf8b53534e36f3dc12bb0434ee",
+      "en": "5ec2d4a77f369c74a2e4beed424bf04ba2547d9d68c39689a7a2e5edd4925482"
     },
-    "docs/prd-1.1/13-cache.md": {
-      "ru": "154d16c7ae19a0627a141dc38ae3ce7ee1a126e144943780ec5328930dee00fd",
-      "en": "5bce597f03c188e29050c22732ca4dc0f1f41a833387265b3dec274a7d153c8b"
+    "docs/prd-1.1/13-outbound-security.md": {
+      "ru": "d368da83c4a204f043c594dc7d3f16335f82651397f5c0f857bda80f6bed7ee3",
+      "en": "96dcddc91b6e6a8e48b738be7f5724e4d619f90f5712c1fc770b88eefcf82421"
     },
-    "docs/prd-1.1/14-outbound-security.md": {
-      "ru": "49409f4496290590f11793dd0ba0bb2cca5ff31394b535d4c0e23a8ac0e2f7c4",
-      "en": "4b837e5aad7a3abb5c9e9c0a8d573dc24a15918915e99c32736fdeb04eb19c34"
+    "docs/prd-1.1/14-web-api.md": {
+      "ru": "005e4172bddc5b7e4e42d08dbfb704c53d954de5d6bd7c0e064d3ead79bd7c4c",
+      "en": "44e955fd51f06dc104ffcbba1503b61edb5125efebaa16be6b96f734b2890ae7"
     },
-    "docs/prd-1.1/15-web-api.md": {
-      "ru": "7bf90c339cb6e9d51e7c36b635d2cf2fe143fe78a8e97c8592757e51d0eb4a7f",
-      "en": "2c0e68e9ebae08253dc65a3d5bb25defd5fcfb77abb87f0cd56fa9d09486af6a"
+    "docs/prd-1.1/15-interface.md": {
+      "ru": "4a751a71cd3546c1b58d3ce5191fca90d8b813c35e43f74d696d57b49a6404ef",
+      "en": "c0ccbe5ad814bd40262347de81cc51ffb5b5b5bf7f091631a65faced4e2969fb"
     },
-    "docs/prd-1.1/16-interface.md": {
-      "ru": "94fabb98d716283f6529ca2f69d2f19d72b9a3ba8e1ab90504e357125ca389d5",
-      "en": "94a4530603627042d52d0811e6f2792c9cfbf7788f790670eca617bf4e5eb210"
+    "docs/prd-1.1/16-observability.md": {
+      "ru": "b39f4edfb0047da6cf3451c7156485166ebe2b4b5961560edf8b8b89a74fc918",
+      "en": "4d10b3b1f321ffbba987e8bfb8e72fb398d8927243edfc643ae24b459864507c"
     },
-    "docs/prd-1.1/17-observability.md": {
-      "ru": "c4722b11fa5c5e3a3b25d3411842c837f102ec836bde8e5f012ba617804a2101",
-      "en": "c20b05db7ae35dd9614b0f464d2ad5b17b27f5b93ce0be2b397b1c77bd7cec0d"
-    },
-    "docs/prd-1.1/18-testing-readiness.md": {
-      "ru": "60d68f9f387674976f90c3baf3bcb1b04315ce78abba776526812fbbfa0957be",
-      "en": "1f4a0d08c92b7d2e9d7f5d21d26e0f1b3e33002c07c7415dcf617c67f959b61d"
+    "docs/prd-1.1/17-testing-readiness.md": {
+      "ru": "f3ac013ef4a5f31de6f30a9d4abced495d8a3c1630c80416b1c3026a37bec790",
+      "en": "3bec3086c877533264879e4222eb5819b72b709408e847da0a9dd7f07e3f62ce"
     },
     "docs/prd-1.1/appendix-a.md": {
-      "ru": "9c8b1e4acc25b8ced761b5ffd96f2b2bf16a08dc584fc7f3d37caba243593ce2",
-      "en": "e72f75845aa5f5219d378412299092d765e6956a922c69444cac164dd6b4267a"
+      "ru": "7c0092b928e151dd8ee4b79d8a06506dc22c3f240bfdeea56e7f51d5d99e3a5a",
+      "en": "97906e543c090ef47c27456cbfce7df7ea6505117d65862b1de3b08d20ac91af"
     },
     "docs/prd-1.1/preamble.md": {
       "ru": "6d6838e81035ff7765954feb6f0c1a044e5bdd28e2d3adc0e930ec608d1f58b6",

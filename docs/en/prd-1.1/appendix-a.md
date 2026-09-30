@@ -16,15 +16,14 @@ Each requirement has one responsible section. Where sections conflict, the provi
 | The receiving server | §6 |
 | The encryption probe | §7 |
 | Reverse names | §8 |
-| Blocklists and their terms | §9 |
-| Data contracts and exposure levels | §10 |
-| Merging issues and the effect on the score | §11 |
-| Wording and the forbidden causal claims | §12 |
-| Cache keys and lifetimes | §13 |
-| Rules for outbound connections | §14 |
-| The web API contract and the scope of a scan | §15 |
-| The interface and the tool page | §16 |
-| Metrics and the boundaries of analytics | §17 |
-| Release conditions | §18 |
+| Data contracts and exposure levels | §9 |
+| Merging issues and the effect on the score | §10 |
+| Wording and the forbidden causal claims | §11 |
+| Cache keys and lifetimes | §12 |
+| Rules for outbound connections | §13 |
+| The web API contract and the scope of a scan | §14 |
+| The interface and the tool page | §15 |
+| Metrics and the boundaries of analytics | §16 |
+| Release conditions | §17 |
 
 Requirements whose responsible section is in MVP 1.0 are not overridden by this document.

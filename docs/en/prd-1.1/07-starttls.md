@@ -10,7 +10,7 @@
 
 What is checked is whether the receiving server offers to move to encryption, and whether the move succeeds.
 
-This is the first outbound connection in the product that is neither a DNS query nor an HTTPS request. The rules under which it is permitted are §14; the responsible section for validating destination addresses is 1.0 §15.
+This is the first outbound connection in the product that is neither a DNS query nor an HTTPS request. The rules under which it is permitted are §13; the responsible section for validating destination addresses is 1.0 §15.
 
 ## 7.2. What the Probe Does
 

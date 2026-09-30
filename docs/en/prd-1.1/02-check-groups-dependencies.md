@@ -19,8 +19,7 @@ Inbound Mail
 └─ STARTTLS
 
 Mail Server
-├─ PTR
-└─ DNSBL
+└─ PTR
 ```
 
 The groups are not categories of their own and carry no verdict: they are units of dependency inside one category.
@@ -29,7 +28,7 @@ The groups are not categories of their own and carry no verdict: they are units 
 
 `SPF`, `DMARC` and `DKIM` are policies of the sending domain, published as `TXT` records. They exist whether or not the domain receives mail: `v=spf1 -all` on a domain that neither sends nor receives is not a mistake but a correct declaration.
 
-`STARTTLS`, `PTR` and `DNSBL` describe one specific server. That server is determined by the domain's records, and where there is none these checks have no subject — the answer is not unknown, there is nothing to ask about.
+`STARTTLS` and `PTR` describe one specific server. That server is determined by the domain's records, and where there is none these checks have no subject — the answer is not unknown, there is nothing to ask about.
 
 ## 2.3. What Counts as a Receiving Server
 
@@ -53,7 +52,6 @@ The second is a deliberate declaration by the owner under RFC 7505, not an omiss
 | `DKIM` | runs as usual |
 | `STARTTLS` | `NOT_APPLICABLE` with `blockedBy` |
 | `PTR` | `NOT_APPLICABLE` with `blockedBy` |
-| `DNSBL` | `NOT_APPLICABLE` with `blockedBy` |
 
 `NOT_APPLICABLE` rather than `UNKNOWN`: `UNKNOWN` means the check applies but no result could be obtained, whereas here the subject of the check is absent.
 
@@ -63,15 +61,15 @@ The state of the domain is scored once, by the `MX` check. The checks it blocks 
 
 `MX` names the server that **receives** mail for the domain. The server the domain **sends** from may be a different one, and it does not follow from the domain's public records.
 
-The results of `PTR` and `DNSBL` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is 1.0 §13.
+The results of `PTR` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is 1.0 §13.
 
 ## 2.6. Acceptance Criteria
 
 - **AC-2.1** The `SPF`, `DMARC` and `DKIM` checks run whether or not `MX` is present.
 - **AC-2.2** With no `MX` but with address records for the domain, the checks of the receiving server run against the implicit server.
-- **AC-2.3** Where there is no subject, the `STARTTLS`, `PTR` and `DNSBL` checks return `NOT_APPLICABLE` with a `blockedBy` drawn from the values `mx_missing` and `null_mx`.
+- **AC-2.3** Where there is no subject, the `STARTTLS` and `PTR` checks return `NOT_APPLICABLE` with a `blockedBy` drawn from the values `mx_missing` and `null_mx`.
 - **AC-2.4** An absent receiving server gives no check in the category the status `UNKNOWN`.
 - **AC-2.5** The state of the receiving server reduces the numerical score once, through the result of the `MX` check.
-- **AC-2.6** The messages of the `PTR` and `DNSBL` checks describe the receiving server and assert nothing about the domain's outbound mail.
+- **AC-2.6** The messages of the `PTR` check describe the receiving server and assert nothing about the domain's outbound mail.
 
 ---

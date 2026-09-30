@@ -23,7 +23,6 @@ DKIM
 MX
 STARTTLS
 PTR
-DNSBL
 ```
 
 The category takes part in a full scan alongside `dns`, `registry` and `tls`, and is available as a separate tool.
@@ -35,7 +34,10 @@ Outside the boundary:
 - assessing the reputation of the mail a domain sends;
 - receiving, parsing and delivering messages;
 - verifying the signature on an individual message;
-- advice on configuring a particular mail provider beyond what the published records state.
+- advice on configuring a particular mail provider beyond what the published records state;
+- checking the receiving server's addresses against blocklists.
+
+The last item is excluded on the providers' terms. The largest lists do not permit free queries from services answering other people's requests, and a list that does permit it had not been found at the time of writing. A check with no permitted source would honestly answer "could not be checked" on every run; better not to promise it.
 
 The reason for the first item is substantive rather than organisational: outbound reputation belongs to the address a domain sends from, and that address does not follow from the domain's public records — see §2.
 
@@ -46,9 +48,9 @@ This document does not change the checks in the `dns`, `registry` and `tls` cate
 | Responsible 1.0 section | What is extended | Where |
 |---|---|---|
 | 1.0 §7 | category semantics | §2 |
-| 1.0 §11 | summary and verdict | §11 |
-| 1.0 §12 | numerical score | §11 |
-| 1.0 §15 | outbound connection safety | §14 |
+| 1.0 §11 | summary and verdict | §10 |
+| 1.0 §12 | numerical score | §10 |
+| 1.0 §15 | outbound connection safety | §13 |
 
 Each extension names the responsible 1.0 section and does not rewrite it.
 
