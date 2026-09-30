@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "6beabb72c8436ae4cdf1d657b9b7e68bdf5597110f4be9e6dec3082d71243a9d",
-      "en": "b3e395a498333dc50182a219139650b7b0eb6bbd80e7afb1e60451dbd51527fb"
+      "ru": "82a6b9e393df5b4f165e4abd82f9605e552721674339d6b8dc660e7f06092565",
+      "en": "d145a19d04f509dd641166a9af80f5164b2dfc24d56d5c38a973ede34d9fc2ec"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -176,6 +176,14 @@
     "docs/prd-1.1/09-dnsbl.md": {
       "ru": "1ac3928124f2489a12b22ed8000377ac452227f3575d7641ee28b765c9948743",
       "en": "8b3ca6c7907d100087ea7cb45e5dea91256cb2769384405dd67e0bcdd769003e"
+    },
+    "docs/prd-1.1/10-data-contracts.md": {
+      "ru": "5a5f380ec2b86f4ee06aa80ce42ea181ca502074c9f46f21f5e96891be97cba8",
+      "en": "427f99cde09ed16d40af541167e736ca5ed893bd72df1ce0f81338493c52483e"
+    },
+    "docs/prd-1.1/11-summary-score.md": {
+      "ru": "6ceff931fb54b899d5291574f0314f94218f21fa7a0042d6c8e9f7bb36bebd33",
+      "en": "f12c81ff1ea5d68c393ce96392e65f2d9f753120d253363c038587cd15169e89"
     },
     "docs/prd-1.1/appendix-a.md": {
       "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",

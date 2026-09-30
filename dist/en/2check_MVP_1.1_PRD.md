@@ -27,6 +27,8 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 - [7. STARTTLS](#section-07)
 - [8. PTR](#section-08)
 - [9. Blocklists of the Receiving Server](#section-09)
+- [10. Data Contracts and Exposure Levels](#section-10)
+- [11. Effect on the Summary, the Verdict and the Score](#section-11)
 - [Appendix A. Responsible Sections](#appendix-a)
 
 <a id="section-01"></a>
@@ -766,6 +768,188 @@ If no permitted list is configured, the check gives `UNKNOWN` with `reasonCode =
 - **AC-9.6** No configured permitted list gives `UNKNOWN` with a `reasonCode` and does not reduce the domain's numerical score.
 - **AC-9.7** The reader is told the name of the list and the address of its page; the reason for the listing is not retold.
 - **AC-9.8** The check's messages assert nothing about the domain's outbound mail and do not assess its reputation.
+
+---
+
+<a id="section-10"></a>
+
+# 10. Data Contracts and Exposure Levels
+
+§10 defines the structures the `email` category uses inside the common contracts of 1.0, and which of its data reach which representation. The responsible section for the contracts themselves is 1.0 §6; only this category's variants are defined here.
+
+## 10.1. The Category
+
+The enumeration of categories gains one value:
+
+```text
+category: dns | registry | tls | email
+```
+
+The order they appear in the interface is set by 1.0 §23 and is not fixed in this section.
+
+## 10.2. The Subject of a Check
+
+```text
+EmailCheckTarget =
+  EmailPolicyTarget |
+  MailHostTarget
+
+EmailPolicyTarget {
+  kind: EMAIL_POLICY
+  policy: SPF | DMARC | DKIM
+  queriedName
+}
+
+MailHostTarget {
+  kind: MAIL_HOST
+  hostname
+  preference?
+  ipFamily?: IPV4 | IPV6
+  implicit?
+}
+```
+
+`queriedName` is the name the policy was asked for. For DMARC that name may belong to a parent domain, and for DKIM it carries a selector, so it is part of the subject of the check rather than a detail: without it the result cannot be read.
+
+`implicit` marks a host obtained from the domain's address records where there is no `MX` — §6.
+
+## 10.3. Where a Result Came From
+
+```text
+EmailCheckSource =
+  DnsRecordSource |
+  SmtpProbeSource |
+  BlocklistSource
+
+DnsRecordSource {
+  kind: DNS_RECORD
+  traversedNames?
+  voidLookups?
+}
+
+SmtpProbeSource {
+  kind: SMTP_PROBE
+  hostsProbed
+  hostsSkipped
+}
+
+BlocklistSource {
+  kind: BLOCKLIST
+  listsQueried
+  listsAnswered
+}
+```
+
+`listsQueried` and `listsAnswered` differ deliberately: a mismatch between them is exactly the state in which no hits does not mean "clean", and it has to be visible in the data rather than only in the text of a message — §9.
+
+## 10.4. Exposure Levels
+
+| Data | Representation |
+|---|---|
+| status, severity, message | Public |
+| the policy and its key values | Public |
+| the name the policy was found at | Public |
+| `MX` hosts and their order of preference | Public |
+| the name of a list holding a hit and the address of its page | Public |
+| host addresses | Technical |
+| the original text of records | Technical |
+| the selector names queried | Technical |
+| the domains of DMARC report recipients | Public |
+| the full addresses of DMARC report recipients | Technical |
+
+The split of the report addresses is deliberate. The recipient's domain answers a question worth asking — whether reports go to a third-party service — and the full address adds nothing to that, while turning a result page into a convenient source of addresses to harvest. The data are published in DNS and are not secret; the point is not to make collecting them easier than it needs to be.
+
+The category defines no Gated data.
+
+## 10.5. Machine Values
+
+The list in 1.0 §6 gains, as values that are not localised:
+
+- the names and values of policy tags;
+- selector names;
+- host names and their order of preference;
+- the names of blocklists;
+- the response codes of blocklists.
+
+## 10.6. Acceptance Criteria
+
+- **AC-10.1** The enumeration of categories gains the single value `email`.
+- **AC-10.2** `EmailCheckTarget` and `EmailCheckSource` have the structure defined in this section and are not arbitrary fields.
+- **AC-10.3** The name a policy was asked for is part of the subject of the check.
+- **AC-10.4** A host obtained from the domain's address records is marked `implicit`.
+- **AC-10.5** The number of lists queried and the number that answered are distinguished in the result data.
+- **AC-10.6** Host addresses and the original text of records are not part of the Public representation.
+- **AC-10.7** The full addresses of DMARC report recipients are not part of the Public representation; their domains are.
+- **AC-10.8** The category defines no Gated data.
+
+---
+
+<a id="section-11"></a>
+
+# 11. Effect on the Summary, the Verdict and the Score
+
+§11 defines how the results of the `email` category enter the summary and the numerical score. The responsible sections are 1.0 §11 and 1.0 §12; the rules for the verdict, for confidence and the scoring formula are not changed here.
+
+## 11.1. What Changes and What Does Not
+
+The score in 1.0 is not divided between categories: it is a hundred minus the sum of the penalties for issues. A fourth category therefore takes no share from the others — it adds issues that penalties are charged for.
+
+The real question of this section follows from that: how many issues the category may create for one root defect. Without an answer, a domain that simply has no mail is penalised several times for the same thing.
+
+## 11.2. A Domain That Sends No Mail
+
+A domain is entitled to send no mail, and RFC 7208 calls `v=spf1 -all` normal practice for such a domain in as many words.
+
+A declared refusal of mail is recognised from a combination:
+
+| Sign | Value |
+|---|---|
+| `MX` | the "I accept no mail" record |
+| SPF | `-all` with no permitting mechanisms |
+| DMARC | `p=reject` |
+
+On a full match every check in the category gives `PASS`: the domain is correctly configured for what it does. No issues, no penalties.
+
+On a partial match the ordinary rules of §3–§9 apply. A domain that declared a refusal halfway declared nothing.
+
+## 11.3. Merging Issues Inside the Category
+
+The merging rules are 1.0 §11: one root defect gives one Issue and one penalty, and merging is permitted only inside a category.
+
+The following merges are defined for this category:
+
+| Root defect | What is merged |
+|---|---|
+| the domain declared no sending policy | an absent SPF and an absent DMARC |
+| no receiving server was found | the `MX` result and everything it blocked |
+| a policy is published but does not work | several records, an unrecognised record, a parse error |
+
+The first merge is the important one. An absent SPF and an absent DMARC are not two mistakes but one: the owner never described who may send in the domain's name. Two penalties for it would punish the domain twice for one decision.
+
+Merging with the `dns`, `registry` and `tls` categories is not permitted — 1.0 §11.
+
+## 11.4. Effect on Confidence
+
+This category produces `UNKNOWN` more often than the others, and the reasons are listed in §3–§9. The substantial one is an unknown DKIM selector: it arises for any domain whose mail provider is unknown to us.
+
+The rule in 1.0 §11 is not softened for it: `UNKNOWN` makes the category's completeness `PARTIAL`, confidence `REDUCED`, and the verdict in the absence of issues `NO_CONFIRMED_ISSUES_INCOMPLETE` rather than `HEALTHY`.
+
+That is a price paid deliberately. To say "all is well" without having managed to check a signature is to assert more than we know.
+
+## 11.5. Penalty Values
+
+The category introduces no penalty values of its own: the values in 1.0 §12 apply, by severity. The severities are assigned in §3–§9.
+
+## 11.6. Acceptance Criteria
+
+- **AC-11.1** Adding the category changes neither the scoring formula nor the division of shares between categories.
+- **AC-11.2** The combination of the "I accept no mail" record, `-all` with no permitting mechanisms and `p=reject` gives `PASS` for every check in the category.
+- **AC-11.3** A partial match of that combination grants no exemption from the checks.
+- **AC-11.4** An absent SPF and an absent DMARC merge into one Issue with one penalty.
+- **AC-11.5** Results blocked by an absent receiving server create no Issue of their own.
+- **AC-11.6** Merging an `email` Issue with another category is rejected by the configuration check.
+- **AC-11.7** `UNKNOWN` in this category reduces confidence under the rules of 1.0 §11 and is not softened.
+- **AC-11.8** The category introduces no penalty values of its own.
 
 ---
 
