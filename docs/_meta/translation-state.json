@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "69f8d2f85313d991db96c7ea9188b175b848f4551c8b07ca420bd7d297016d66",
-      "en": "5e9a68d8a4819b6722757fbead5dd4b4197ede5063b5e7022ab9646cccc2576c"
+      "ru": "947524aaae7f87ee359f6528528704e36c0b002db92f0529b57da7545c44c4cb",
+      "en": "d01968a5ffcbf48b42741598570454a5b1b520e7b40e53f0358ed5a80f39bcc5"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -164,6 +164,10 @@
     "docs/prd-1.1/06-mx.md": {
       "ru": "6118a14f9b845101f8cdb1d212fc927d07a4d78df76220b225f59ecaaebac9a6",
       "en": "41281ac79701a22574d0826d095fda3570b71e5ebfc9fe7ddcc1668c26085f4a"
+    },
+    "docs/prd-1.1/07-starttls.md": {
+      "ru": "90c14b11708ffa372012468b4f65e0d9a3b9f32209c9a44790eed6e19d1240f9",
+      "en": "2d2c66d5a860b95823d5bf87680e8d3e4eb514e5661cfe90bef83f0ecab30f68"
     },
     "docs/prd-1.1/appendix-a.md": {
       "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",
