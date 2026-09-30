@@ -29,6 +29,9 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 - [9. Blocklists of the Receiving Server](#section-09)
 - [10. Data Contracts and Exposure Levels](#section-10)
 - [11. Effect on the Summary, the Verdict and the Score](#section-11)
+- [12. Messages and Localization](#section-12)
+- [13. Cache and Freshness](#section-13)
+- [14. Outbound Connection Safety](#section-14)
 - [Appendix A. Responsible Sections](#appendix-a)
 
 <a id="section-01"></a>
@@ -950,6 +953,233 @@ The category introduces no penalty values of its own: the values in 1.0 §12 app
 - **AC-11.6** Merging an `email` Issue with another category is rejected by the configuration check.
 - **AC-11.7** `UNKNOWN` in this category reduces confidence under the rules of 1.0 §11 and is not softened.
 - **AC-11.8** The category introduces no penalty values of its own.
+
+---
+
+<a id="section-12"></a>
+
+# 12. Messages and Localization
+
+§12 defines what the messages of the `email` category tell the reader, and what they do not. The responsible section is 1.0 §13; the rules for the message model, the order of explanation and localization are not changed here.
+
+## 12.1. What a Check Reports
+
+The order in 1.0 §13 holds: what was measured, then the consequence, then the recommendation. Consequence and recommendation appear only for confirmed issues.
+
+What is measured, in this category, is what was read in a record, not a restatement of what the record is for. "The sending policy permits everyone" is measured. "SPF protects against forged mail" is a definition, and the message of a particular check is not the place for it.
+
+## 12.2. Forbidden Causal Claims
+
+The list in 1.0 §13 gains the claims that may not be made in this category:
+
+- an absent policy means the domain's mail lands in spam;
+- a present policy means nobody can write in the domain's name;
+- `p=reject` means forging mail is impossible;
+- a key that was not found means the domain's mail is unsigned;
+- a receiving server's address on a list means the domain's mail does not arrive;
+- a receiving host without a reverse name means trouble sending;
+- `~all` means weak or incomplete protection.
+
+Each of them sounds reasonable, and each connects what we observed to something we did not. They share one shape of error: a conclusion about the fate of messages is drawn from the state of a domain's records, while the fate of a message depends on the receiver, on the content and on the sending server, none of which we saw.
+
+## 12.3. Wording for UNKNOWN
+
+The rule in 1.0 §13 applies unchanged: `UNKNOWN` is described as "could not be checked", with no claim that the domain is faulty.
+
+Two cases are explained plainly as a limitation of 2check rather than a property of the domain:
+
+| Case | What is said |
+|---|---|
+| the DKIM selector is unknown | we do not know where to look for the key, and we list what was tried |
+| outbound connections are unavailable | encryption cannot be checked in this deployment |
+
+The message about an unknown selector offers to take one — the single place in the category where a reader can add to the check something that public data does not hold.
+
+## 12.4. Wording for PASS
+
+`PASS` does not become "everything is configured correctly" — 1.0 §13.
+
+Two cases matter for this category. The "I accept no mail" record is described as a declared refusal of mail, not as a missing setting. A `p=quarantine` policy is described as in force, with no comparison to `p=reject`: the choice between them belongs to the owner and depends on how sure they are that their list of senders is complete.
+
+## 12.5. Localization
+
+The required languages are those of 1.0 §13: Russian, Uzbek and English. A missing translation remains a build error.
+
+The Uzbek wording of this category must be read by a native speaker before release. The category introduces more terms than any other, and a mechanically correct translation of a term the industry uses differently reads as a mistake and undermines trust in everything else.
+
+## 12.6. Acceptance Criteria
+
+- **AC-12.1** A check's message describes what was read in the records, not the purpose of the mechanism.
+- **AC-12.2** The list of forbidden causal claims in §12.2 is enforced by the message configuration check.
+- **AC-12.3** No message in the category asserts anything about the fate of a message.
+- **AC-12.4** An unknown selector and unavailable outbound connections are explained as a limitation of 2check.
+- **AC-12.5** The message about an unknown selector lists the names tried and offers to take a selector.
+- **AC-12.6** The "I accept no mail" record is described as a declared refusal, not as a missing setting.
+- **AC-12.7** `p=quarantine` is described as a policy in force, with no comparison to `p=reject`.
+- **AC-12.8** The Uzbek wording of the category is read by a native speaker before release.
+
+---
+
+<a id="section-13"></a>
+
+# 13. Cache and Freshness
+
+§13 defines the cache keys of the `email` category, how long entries live, and what may not be cached. The responsible section is 1.0 §14; the cache modes, the coalescing of concurrent requests and the staleness rules are not changed here.
+
+## 13.1. Keys
+
+A key is built separately for policies, for hosts and for blocklists.
+
+```text
+asciiHostname
+policy
+selector?
+resolverSetVersion
+emailModuleConfigVersion
+cacheContractVersion
+```
+
+```text
+mailHost
+ipFamily?
+emailModuleConfigVersion
+cacheContractVersion
+```
+
+```text
+address
+blocklistSetVersion
+emailModuleConfigVersion
+cacheContractVersion
+```
+
+`selector` is part of the policy key and is required for DKIM. Without it an answer for one selector would be reused for another, and a reader would be handed somebody else's key as their own.
+
+`blocklistSetVersion` changes when the set of lists changes — §9. Changing the set devalues earlier answers: "not listed" refers to the lists that were asked, not to lists in general.
+
+Language is not part of a key — 1.0 §14.
+
+## 13.2. Lifetimes
+
+| What is cached | Order of the lifetime |
+|---|---|
+| the SPF, DMARC and DKIM policies | hours |
+| `MX` records and host addresses | hours |
+| the result of the encryption probe | hours |
+| a blocklist's answer | minutes |
+
+Exact values are set by versioned configuration under the rules of 1.0 §20.
+
+The lifetime for blocklists is short deliberately. A listing is a state an owner clears within minutes, and showing yesterday's listing as today's means accusing them of something they have already fixed.
+
+The lifetime for the encryption probe is long for the opposite reason: it is the only check in the category that needs a connection, and the encryption settings of a mail host rarely change.
+
+## 13.3. What May Not Be Cached
+
+| What | Why |
+|---|---|
+| a list's refusal to serve a query | it is not an answer, and storing it as one turns it into a result — §9 |
+| an incomplete DMARC tree walk | a result was not obtained; a negative result was not obtained either |
+| an incomplete encryption probe | the same |
+| a selector entered by the reader | it belongs to the request, not to the domain |
+
+The last row matters: an entered selector does not make the result the domain's property. Another reader who names no selector must get `UNKNOWN`, not a ready answer found on somebody else's hint.
+
+The rules for caching technical failures are otherwise those of 1.0 §14.
+
+## 13.4. Freshness
+
+`checkedAt` holds the time of the observation, not of the cache lookup — 1.0 §6.
+
+For checks that query several sources — hosts in §7, lists in §9 — the time of observation is the earliest of the times that went into the result. A result is no fresher than its oldest part.
+
+## 13.5. Acceptance Criteria
+
+- **AC-13.1** A policy key includes the selector; for DKIM the selector is required.
+- **AC-13.2** Changing the set of blocklists changes the key and devalues earlier answers.
+- **AC-13.3** A list's refusal to serve a query is not written to the cache.
+- **AC-13.4** An incomplete walk and an incomplete probe are not written to the cache as results.
+- **AC-13.5** A result found through a selector entered by the reader is not reused for a request that names no selector.
+- **AC-13.6** A blocklist answer's lifetime is shorter than that of the category's other entries.
+- **AC-13.7** The observation time of a composite result is the earliest of the times of its parts.
+
+---
+
+<a id="section-14"></a>
+
+# 14. Outbound Connection Safety
+
+§14 defines the rules under which a connection to a mail host is permitted. The responsible section for address validation is 1.0 §15; its sequence, address classification and blocking rule are not changed here but extended to a new kind of connection.
+
+## 14.1. Why This Needs a Section
+
+Before this release the product made outbound connections of two kinds: queries to resolvers and HTTPS requests to the registry. Both go to fixed addresses set by configuration.
+
+The encryption probe is built differently: it connects to a host whose name the domain under test supplied. This is the first time somebody else's record influences where we connect — and it is exactly the shape of thing 1.0 §15 exists to defend against.
+
+## 14.2. The Sequence
+
+The order in 1.0 §15 applies without exception:
+
+```text
+MailHostTarget
+→ DNS A/AAAA
+→ full candidate set
+→ Security Validation
+→ ALLOW | BLOCK | INDETERMINATE
+→ selected validated endpoint
+→ pinned connection
+```
+
+The host's full set of addresses is validated without prior truncation. If even one address is forbidden the whole host is blocked; dropping the forbidden address and connecting to the rest is not permitted — 1.0 §15.
+
+The connection goes to the pinned address. The host name is not resolved again by the connection library.
+
+## 14.3. What Is Held Fixed
+
+| Constraint | Value |
+|---|---|
+| port | `25` only |
+| source of host names | §6 only |
+| session commands | the greeting, the request for extensions, the move to encryption, the close |
+| hosts per check | no more than four — §7 |
+
+The port is taken neither from the reader's input nor from the domain's records. An `MX` record holds a name and no port, and there is nowhere for one to come from — this row exists so that a future implementation does not "improve" the check with an arbitrary port.
+
+The sender, recipient and data commands are never issued. The probe sends no mail and therefore cannot be used either to deliver messages or to test whether an address exists.
+
+## 14.4. What This Rules Out
+
+| Attempt | Why it fails |
+|---|---|
+| making the service connect to an internal address | a host's address is validated under 1.0 §15 like any other |
+| swapping the address between validation and connection | the connection goes to the pinned address |
+| using the service to scan ports | the port is fixed |
+| using the service to amplify load | hosts come only from the records of the domain under test, and their number is bounded |
+| sending mail through somebody else's hands | the data commands are never issued |
+
+## 14.5. Our Own Infrastructure
+
+The ban on reaching our own infrastructure — 1.0 §15 — extends to mail hosts unchanged.
+
+Blocking for that reason gives `UNKNOWN` with an explanation that it is a limitation of the service, and does not reduce the domain's score. A check that calls our own network policy a defect of somebody's domain is wrong in both directions at once: it accuses the innocent and hides our own problem.
+
+## 14.6. Time Budget
+
+The probe is subject to the scan's shared budget in 1.0 §22. The category introduces no budget of its own.
+
+The rule in §7 follows from that: hosts beyond the limit are listed as not probed rather than waiting for time to free up. A result obtained in part is reported as partial.
+
+## 14.7. Acceptance Criteria
+
+- **AC-14.1** A mail host's addresses pass the safety validation of 1.0 §15 as a full set, without truncation.
+- **AC-14.2** A forbidden address blocks the whole host.
+- **AC-14.3** The connection is made to the pinned address; re-resolving the name is not permitted.
+- **AC-14.4** The connection port is `25` and cannot be set by input or by the domain's records.
+- **AC-14.5** Host names come only from the result of §6.
+- **AC-14.6** The session issues no sender, recipient or data commands.
+- **AC-14.7** Blocking under the ban on our own infrastructure gives `UNKNOWN` and does not reduce the domain's score.
+- **AC-14.8** The category introduces no time budget of its own.
 
 ---
 

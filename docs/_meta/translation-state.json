@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "82a6b9e393df5b4f165e4abd82f9605e552721674339d6b8dc660e7f06092565",
-      "en": "d145a19d04f509dd641166a9af80f5164b2dfc24d56d5c38a973ede34d9fc2ec"
+      "ru": "6a44514909c1c0ba2a7fc33b83acd832f503238dbdf06d66bc162b103e323aa0",
+      "en": "20391720c2762bc46da4c131b23b313457e82b25dd2712e4618a9072150235f0"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -184,6 +184,18 @@
     "docs/prd-1.1/11-summary-score.md": {
       "ru": "6ceff931fb54b899d5291574f0314f94218f21fa7a0042d6c8e9f7bb36bebd33",
       "en": "f12c81ff1ea5d68c393ce96392e65f2d9f753120d253363c038587cd15169e89"
+    },
+    "docs/prd-1.1/12-messages.md": {
+      "ru": "c0b00ef2bd9ac922b9cf4ef3c6913b0993127e1713bcdd67a93b1d045f115943",
+      "en": "43d0fccf541e15fd107aef4f81f0c01deb28c0816a5cdfc87c18e1fb039030f1"
+    },
+    "docs/prd-1.1/13-cache.md": {
+      "ru": "154d16c7ae19a0627a141dc38ae3ce7ee1a126e144943780ec5328930dee00fd",
+      "en": "5bce597f03c188e29050c22732ca4dc0f1f41a833387265b3dec274a7d153c8b"
+    },
+    "docs/prd-1.1/14-outbound-security.md": {
+      "ru": "49409f4496290590f11793dd0ba0bb2cca5ff31394b535d4c0e23a8ac0e2f7c4",
+      "en": "4b837e5aad7a3abb5c9e9c0a8d573dc24a15918915e99c32736fdeb04eb19c34"
     },
     "docs/prd-1.1/appendix-a.md": {
       "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",
