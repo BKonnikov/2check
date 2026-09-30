@@ -40,9 +40,9 @@ Mail Server
 | `SPF` | выполняется как обычно |
 | `DMARC` | выполняется как обычно |
 | `DKIM` | выполняется как обычно |
-| `STARTTLS` | `NOT_APPLICABLE`, `blocked_by = mx_missing` |
-| `PTR` | `NOT_APPLICABLE`, `blocked_by = mx_missing` |
-| `DNSBL` | `NOT_APPLICABLE`, `blocked_by = mx_missing` |
+| `STARTTLS` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
+| `PTR` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
+| `DNSBL` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
 
 `NOT_APPLICABLE`, а не `UNKNOWN`: `UNKNOWN` означает, что проверка применима, но результат получить не удалось, — здесь же отсутствует сам объект проверки.
 
@@ -57,7 +57,7 @@ Mail Server
 ## 2.5. Критерии приёмки
 
 - **AC-2.1** Проверки `SPF`, `DMARC` и `DKIM` выполняются независимо от наличия `MX`.
-- **AC-2.2** При отсутствии `MX` проверки `STARTTLS`, `PTR` и `DNSBL` получают `NOT_APPLICABLE` с `blocked_by = mx_missing`.
+- **AC-2.2** При отсутствии `MX` проверки `STARTTLS`, `PTR` и `DNSBL` получают `NOT_APPLICABLE` с `blockedBy = mx_missing`.
 - **AC-2.3** Отсутствие `MX` не даёт `UNKNOWN` ни одной проверке категории.
 - **AC-2.4** Отсутствие `MX` уменьшает числовую оценку один раз — результатом проверки `MX`.
 - **AC-2.5** Сообщения проверок `PTR` и `DNSBL` описывают принимающий сервер и не утверждают ничего об исходящей почте домена.

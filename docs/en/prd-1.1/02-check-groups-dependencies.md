@@ -40,9 +40,9 @@ With no `MX`:
 | `SPF` | runs as usual |
 | `DMARC` | runs as usual |
 | `DKIM` | runs as usual |
-| `STARTTLS` | `NOT_APPLICABLE`, `blocked_by = mx_missing` |
-| `PTR` | `NOT_APPLICABLE`, `blocked_by = mx_missing` |
-| `DNSBL` | `NOT_APPLICABLE`, `blocked_by = mx_missing` |
+| `STARTTLS` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
+| `PTR` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
+| `DNSBL` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
 
 `NOT_APPLICABLE` rather than `UNKNOWN`: `UNKNOWN` means the check applies but no result could be obtained, whereas here the subject of the check is absent.
 
@@ -57,7 +57,7 @@ The results of `PTR` and `DNSBL` are therefore stated as the condition of the re
 ## 2.5. Acceptance Criteria
 
 - **AC-2.1** The `SPF`, `DMARC` and `DKIM` checks run whether or not `MX` is present.
-- **AC-2.2** With no `MX`, the `STARTTLS`, `PTR` and `DNSBL` checks return `NOT_APPLICABLE` with `blocked_by = mx_missing`.
+- **AC-2.2** With no `MX`, the `STARTTLS`, `PTR` and `DNSBL` checks return `NOT_APPLICABLE` with `blockedBy = mx_missing`.
 - **AC-2.3** A missing `MX` gives no check in the category the status `UNKNOWN`.
 - **AC-2.4** A missing `MX` reduces the numerical score once, through the result of the `MX` check.
 - **AC-2.5** The messages of the `PTR` and `DNSBL` checks describe the receiving server and assert nothing about the domain's outbound mail.

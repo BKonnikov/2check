@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "1db768bcf715ba7b76d44c235893a06704a69bbcca416c897a1d313b3bc5ec0b",
-      "en": "142b6febd5f2973099a997e3f9b84591d987063488666521ce9ef0f2ea44d174"
+      "ru": "cddec80be9acceb40dce789d061adcac5854efa6a4d8da1ef4b5accc50a3c252",
+      "en": "c7995756cfaa3e595d86bf86a6f46312279da7fa90c151d6b655ebc27ea92d6d"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -146,8 +146,12 @@
       "en": "085b5241b0b54a2850d0b841d20eadc2fe257d446174c37fb3b63afad04e27a4"
     },
     "docs/prd-1.1/02-check-groups-dependencies.md": {
-      "ru": "cb3ed39bd94095b138d7a6417d25eceeb9853c79b6ac0569924bc6864f10a26c",
-      "en": "9c8ba53a7bcd0909841bebf82ae1d426e34d4740d8aeb41ac91f71c09fc32263"
+      "ru": "dea847fb5730a1afe16a17bb94f0110f3bae170967827aead99dcf2f7ccfb57c",
+      "en": "5af272e4c9a0becad657dcd983ef4ce6909fb8d76bb7d7a8087f105c70a0c1ba"
+    },
+    "docs/prd-1.1/03-spf.md": {
+      "ru": "7dbc7b032cad70903382063f0f63e4c6a8c5685b4eadfd928f40317dfce8dadb",
+      "en": "99e44322b155a620598da41e6a5d5b32fc623ce7997ad93949b50ebc4b4a32ea"
     },
     "docs/prd-1.1/appendix-a.md": {
       "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",
