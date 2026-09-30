@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "d9f104fac32a4c49228fcecfd808d91c4865e8f4ebd03ceff3b2abdae39c97fc",
-      "en": "d4ad5f19a48f0ada87b95344295716505d7160b3f353f840dd87f870f096980a"
+      "ru": "69f8d2f85313d991db96c7ea9188b175b848f4551c8b07ca420bd7d297016d66",
+      "en": "5e9a68d8a4819b6722757fbead5dd4b4197ede5063b5e7022ab9646cccc2576c"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -146,8 +146,8 @@
       "en": "085b5241b0b54a2850d0b841d20eadc2fe257d446174c37fb3b63afad04e27a4"
     },
     "docs/prd-1.1/02-check-groups-dependencies.md": {
-      "ru": "dea847fb5730a1afe16a17bb94f0110f3bae170967827aead99dcf2f7ccfb57c",
-      "en": "5af272e4c9a0becad657dcd983ef4ce6909fb8d76bb7d7a8087f105c70a0c1ba"
+      "ru": "5e043df63786691d2d0c7c23082f689af3fe54161461dda721286ca29a699be5",
+      "en": "6875544e8b4f16a86fc5e084f762e9762ae09ee946b06a923bd063c7e77f12e3"
     },
     "docs/prd-1.1/03-spf.md": {
       "ru": "7dbc7b032cad70903382063f0f63e4c6a8c5685b4eadfd928f40317dfce8dadb",
@@ -160,6 +160,10 @@
     "docs/prd-1.1/05-dkim.md": {
       "ru": "32ff8593f66b472f76ea778fe8088d591610b19fbb266de1c116034c51c04b76",
       "en": "bc983002a8f106dcaec5a74a357832fcfd50e9b80c91efcecceb1b49e34ab422"
+    },
+    "docs/prd-1.1/06-mx.md": {
+      "ru": "6118a14f9b845101f8cdb1d212fc927d07a4d78df76220b225f59ecaaebac9a6",
+      "en": "41281ac79701a22574d0826d095fda3570b71e5ebfc9fe7ddcc1668c26085f4a"
     },
     "docs/prd-1.1/appendix-a.md": {
       "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",

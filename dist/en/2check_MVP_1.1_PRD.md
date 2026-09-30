@@ -23,6 +23,7 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 - [3. SPF](#section-03)
 - [4. DMARC](#section-04)
 - [5. DKIM](#section-05)
+- [6. MX](#section-06)
 - [Appendix A. Responsible Sections](#appendix-a)
 
 <a id="section-01"></a>
@@ -116,38 +117,50 @@ The groups are not categories of their own and carry no verdict: they are units 
 
 `SPF`, `DMARC` and `DKIM` are policies of the sending domain, published as `TXT` records. They exist whether or not the domain receives mail: `v=spf1 -all` on a domain that neither sends nor receives is not a mistake but a correct declaration.
 
-`STARTTLS`, `PTR` and `DNSBL` describe one specific server. That server comes from `MX`. With no `MX` record these checks have no subject — the answer is not unknown, there is nothing to ask about.
+`STARTTLS`, `PTR` and `DNSBL` describe one specific server. That server is determined by the domain's records, and where there is none these checks have no subject — the answer is not unknown, there is nothing to ask about.
 
-## 2.3. No MX Record
+## 2.3. What Counts as a Receiving Server
 
-With no `MX`:
+No `MX` does not mean mail has nowhere to go. RFC 7505 describes the order laid down by RFC 5321: finding no `MX`, a sender turns to the domain's own address records. Such a server is called implicit, and the checks of the receiving server do have a subject.
+
+There is no subject in two cases:
+
+| State of the domain | Value of `blockedBy` |
+|---|---|
+| neither `MX` nor address records | `mx_missing` |
+| an `MX` published to say "I accept no mail" | `null_mx` |
+
+The second is a deliberate declaration by the owner under RFC 7505, not an omission. Both are detailed in §6.
+
+## 2.4. When There Is No Subject
 
 | Check | Status |
 |---|---|
 | `SPF` | runs as usual |
 | `DMARC` | runs as usual |
 | `DKIM` | runs as usual |
-| `STARTTLS` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
-| `PTR` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
-| `DNSBL` | `NOT_APPLICABLE`, `blockedBy = mx_missing` |
+| `STARTTLS` | `NOT_APPLICABLE` with `blockedBy` |
+| `PTR` | `NOT_APPLICABLE` with `blockedBy` |
+| `DNSBL` | `NOT_APPLICABLE` with `blockedBy` |
 
 `NOT_APPLICABLE` rather than `UNKNOWN`: `UNKNOWN` means the check applies but no result could be obtained, whereas here the subject of the check is absent.
 
-A missing `MX` is scored once, by the `MX` check. The checks it blocks add no further penalty; otherwise one cause would penalise the domain four times over. How `NOT_APPLICABLE` affects confidence is defined in 1.0 §11 and is unchanged here.
+The state of the domain is scored once, by the `MX` check. The checks it blocks add no further penalty; otherwise one cause would penalise the domain four times over. How `NOT_APPLICABLE` affects confidence is defined in 1.0 §11 and is unchanged here.
 
-## 2.4. The Receiving Server, Not Outbound Mail
+## 2.5. The Receiving Server, Not Outbound Mail
 
 `MX` names the server that **receives** mail for the domain. The server the domain **sends** from may be a different one, and it does not follow from the domain's public records.
 
 The results of `PTR` and `DNSBL` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is 1.0 §13.
 
-## 2.5. Acceptance Criteria
+## 2.6. Acceptance Criteria
 
 - **AC-2.1** The `SPF`, `DMARC` and `DKIM` checks run whether or not `MX` is present.
-- **AC-2.2** With no `MX`, the `STARTTLS`, `PTR` and `DNSBL` checks return `NOT_APPLICABLE` with `blockedBy = mx_missing`.
-- **AC-2.3** A missing `MX` gives no check in the category the status `UNKNOWN`.
-- **AC-2.4** A missing `MX` reduces the numerical score once, through the result of the `MX` check.
-- **AC-2.5** The messages of the `PTR` and `DNSBL` checks describe the receiving server and assert nothing about the domain's outbound mail.
+- **AC-2.2** With no `MX` but with address records for the domain, the checks of the receiving server run against the implicit server.
+- **AC-2.3** Where there is no subject, the `STARTTLS`, `PTR` and `DNSBL` checks return `NOT_APPLICABLE` with a `blockedBy` drawn from the values `mx_missing` and `null_mx`.
+- **AC-2.4** An absent receiving server gives no check in the category the status `UNKNOWN`.
+- **AC-2.5** The state of the receiving server reduces the numerical score once, through the result of the `MX` check.
+- **AC-2.6** The messages of the `PTR` and `DNSBL` checks describe the receiving server and assert nothing about the domain's outbound mail.
 
 ---
 
@@ -448,6 +461,86 @@ The difference between the first row and the second is the difference between "w
 - **AC-5.8** No record at the names tried gives `UNKNOWN` with a `reasonCode`, not `FAIL`.
 - **AC-5.9** No record at a selector entered by the reader gives `FAIL`.
 - **AC-5.10** The check's message names the selectors tried and does not assert that the domain has no DKIM.
+
+---
+
+<a id="section-06"></a>
+
+# 6. MX
+
+§6 defines the check of the `MX` records: how the receiving server is located, what counts as a sound configuration, and what this check hands to the rest of the group.
+
+## 6.1. What Is Being Checked
+
+What is checked is where mail addressed at this domain will go, and whether what was found can take delivery.
+
+The check sends no mail and does not contact the server it finds: connecting to it is the subject of §7.
+
+## 6.2. How the Server Is Located
+
+The order is laid down by RFC 5321 and restated in RFC 7505: a sender queries the domain's `MX`, and failing to find one, turns to the domain's own address records.
+
+| What is published | The receiving server |
+|---|---|
+| one or more `MX` records | the hosts in those records, in order of preference |
+| no `MX`, address records present | the domain itself, implicitly |
+| an `MX` saying "I accept no mail" | there is deliberately no server |
+| neither `MX` nor address records | there is no server |
+
+The record saying "I accept no mail" is an `MX` with preference `0` and an empty host, defined in RFC 7505. A domain publishing it must publish no other `MX` record.
+
+## 6.3. Results
+
+| State | Status | Severity | What is handed on |
+|---|---|---|---|
+| `MX` records present and usable | `PASS` | — | the hosts, for §7, §8 and §9 |
+| the "I accept no mail" record | `PASS` | — | `blockedBy = null_mx` |
+| no `MX`, delivery will follow the address records | `FAIL` | `warning` | the domain itself as a host |
+| neither `MX` nor address records | `FAIL` | `warning` | `blockedBy = mx_missing` |
+| `MX` records present but no host is usable | `FAIL` | `critical` | `blockedBy = mx_missing` |
+
+The "I accept no mail" record is a `PASS`: a domain that takes no mail and says so plainly is correctly configured. RFC 7505 exists for the sake of that declaration.
+
+Delivery by address records works, but it was arrived at by accident: an address record answers the question "where is the site", not "where should mail go". The owner should either publish an `MX` or declare that they accept no mail. Hence `warning` and not `critical`: the mail does arrive.
+
+## 6.4. Whether a Host Is Usable
+
+| What was found at the host | Status | Severity |
+|---|---|---|
+| address records present | the host is usable | — |
+| the host is a `CNAME` alias | `FAIL` | `warning` |
+| no address records | the host is unusable | — |
+| an address written in place of a name | `FAIL` | `critical` |
+
+An `MX` host must not be an alias and must have address records — RFC 2181. An alias does still work with most senders, hence `warning`; an address written in place of a name works with nobody.
+
+If every host is unusable there is no delivery, and that is `critical`. If some are, delivery proceeds through the rest: `FAIL` with severity `warning`, naming the hosts that dropped out.
+
+## 6.5. Technical Failure
+
+| Cause | `reasonCode` |
+|---|---|
+| the `MX` query did not complete | `mx_lookup_failed` |
+| host addresses did not resolve for technical reasons | `mx_host_resolution_failed` |
+
+An incomplete query gives `UNKNOWN`, not a conclusion that no records exist. The rules for `reasonCode` and `blockedBy` are 1.0 §7.
+
+## 6.6. What the Check Does Not Assert
+
+- That the server accepts mail: that is established by connecting, not by records, and belongs to §7.
+- That mail will reach a mailbox: the route beyond the receiving server is not visible in public data.
+- That the order of preference is the right one: preference expresses the owner's intent.
+
+## 6.7. Acceptance Criteria
+
+- **AC-6.1** The receiving server is located in the order laid down by RFC 5321: `MX` records, then the domain's address records.
+- **AC-6.2** A record with preference `0` and an empty host is recognised as a declaration that no mail is accepted and gives `PASS`.
+- **AC-6.3** No `MX` with address records present gives `FAIL` with severity `warning` and hands on the domain itself as a host.
+- **AC-6.4** Neither `MX` nor address records gives `FAIL` with severity `warning` and `blockedBy = mx_missing` for the dependent checks.
+- **AC-6.5** No usable host gives `FAIL` with severity `critical`.
+- **AC-6.6** An alias host gives `FAIL` with severity `warning`; an address in place of a name gives `FAIL` with severity `critical`.
+- **AC-6.7** An incomplete query gives `UNKNOWN` with a `reasonCode`, not a conclusion that no records exist.
+- **AC-6.8** The check opens no connection to the hosts it finds.
 
 ---
 
