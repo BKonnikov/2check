@@ -16,9 +16,7 @@ PRD_NAME = '2check_MVP_1.0_PRD.md'
 EDITIONS = (
     {'key': '1.0', 'folder': 'prd', 'count': 28, 'output': PRD_NAME,
      'contents': '02-prd.md', 'appendices': ('appendix-a.md', 'appendix-b.md'), 'legacy': True},
-    # count is None while an edition is still being written: the sections must run from 01
-    # without a gap, but the total is not yet a fact to freeze.
-    {'key': '1.1', 'folder': 'prd-1.1', 'count': None, 'output': '2check_MVP_1.1_PRD.md',
+    {'key': '1.1', 'folder': 'prd-1.1', 'count': 18, 'output': '2check_MVP_1.1_PRD.md',
      'contents': '03-prd-1.1.md', 'appendices': ('appendix-a.md',), 'legacy': False},
 )
 BASE_EDITION = EDITIONS[0]

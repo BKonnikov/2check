@@ -32,6 +32,10 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 - [12. Messages and Localization](#section-12)
 - [13. Cache and Freshness](#section-13)
 - [14. Outbound Connection Safety](#section-14)
+- [15. The Web API and Scan Modes](#section-15)
+- [16. The Interface and the Tool Page](#section-16)
+- [17. Observability and Analytics](#section-17)
+- [18. Testing and Release Readiness](#section-18)
 - [Appendix A. Responsible Sections](#appendix-a)
 
 <a id="section-01"></a>
@@ -1183,6 +1187,236 @@ The rule in §7 follows from that: hosts beyond the limit are listed as not prob
 
 ---
 
+<a id="section-15"></a>
+
+# 15. The Web API and Scan Modes
+
+§15 defines how the `email` category enters the contract of the internal web API and the scan modes. The responsible sections are 1.0 §17 and 1.0 §3; the endpoints, the acceptance model and the polling rules are not changed here.
+
+## 15.1. Selecting Categories
+
+The enumeration in the request gains one value:
+
+```text
+selectedCategories?: (dns | registry | tls | email)[]
+```
+
+The rule in 1.0 §17 is kept word for word: `PARTIAL` takes a non-empty proper subset of the categories, and selecting them all creates a `FULL` scan. A proper subset is now a subset of four categories rather than of three.
+
+One consequence is easy to miss: a `PARTIAL` request for `dns`, `registry` and `tls` was rejected as a full scan before this release and is permitted now. The rule was not rewritten — the set it applies to changed.
+
+## 15.2. The Selector
+
+The request to create a scan gains an optional field:
+
+```text
+CreateScanRequest {
+  input
+  mode: FULL | PARTIAL
+  selectedCategories?
+  cacheMode?
+  dkimSelector?
+}
+```
+
+The field is accepted only when the `email` category is within the scope of the scan. A request carrying a selector without that category is rejected as invalid: HTTP `422`. Silently ignoring the value is not permitted — a client that sent a selector is entitled to know it was not used.
+
+The value is validated as a DNS name label. A selector that fails that validation is rejected before any query is made, rather than becoming a search that finds nothing.
+
+The selector belongs to the request and not to the domain: the cache rules are §13.
+
+## 15.3. Score and Verdict
+
+An overall score and an overall verdict exist only for `FULL + FINAL` — 1.0 §3. Adding a category does not change that: a `PARTIAL` scan of the `email` category alone shows its results without an overall score for the domain.
+
+## 15.4. Errors
+
+The category introduces no error codes of its own. A rejection over the selector uses the common `WebApiError` contract of 1.0 §17, naming the field.
+
+## 15.5. Acceptance Criteria
+
+- **AC-15.1** The enumeration of selectable categories gains the value `email`.
+- **AC-15.2** Selecting all four categories creates a `FULL` scan; `PARTIAL` with all four is rejected with HTTP `422`.
+- **AC-15.3** `PARTIAL` with the `dns`, `registry` and `tls` categories is permitted.
+- **AC-15.4** The `dkimSelector` field is accepted only when the `email` category is within the scope of the scan.
+- **AC-15.5** A request carrying `dkimSelector` without the `email` category is rejected with HTTP `422` and is not executed.
+- **AC-15.6** The value of `dkimSelector` is validated as a DNS name label before any query is made.
+- **AC-15.7** A `PARTIAL` scan with the `email` category receives no overall score and no overall verdict.
+- **AC-15.8** The category introduces no web API error codes of its own.
+
+---
+
+<a id="section-16"></a>
+
+# 16. The Interface and the Tool Page
+
+§16 defines how the `email` category is shown to the reader and which tool page corresponds to it. The responsible sections are 1.0 §23 and 1.0 §24; the order of result elements, the verdict rules and the scan route are not changed here.
+
+## 16.1. The Name of the Category
+
+The main name of the category in the interface is "Mail". The Russian and Uzbek editions use their own names, set by the localization.
+
+The names of the checks use the terms the industry uses — `SPF`, `DMARC`, `DKIM`, `MX`, `STARTTLS`, `PTR` — because those are what the reader will see in their hosting panel. They are not translated.
+
+The name of a check group is shown in the category card, while the group itself is not a result of its own — §2.
+
+## 16.2. The Tool Page
+
+The list of indexable pages in 1.0 §24 gains one:
+
+```text
+/{locale}/email-check
+```
+
+The page creates a `PARTIAL` scan of the single category `email` — the same arrangement the other tool pages have in 1.0 §3.
+
+The rules for the canonical address, hreflang and language prefixes are those of 1.0 §24, unchanged.
+
+## 16.3. The Selector Field
+
+An optional DKIM selector field sits beside the domain field.
+
+It is shown on the tool page and hidden by default in a full scan: a reader who came to check a whole domain usually does not know the word "selector", and demanding one would trade comprehensibility for completeness.
+
+The field carries an explanation that without it the key is looked for at the known selectors of the mail provider, and that a key not found does not mean there is none — §5.
+
+## 16.4. Showing Partial Results
+
+Two checks in the category may cover part of what was available: not every host was probed — §7, not every list answered — §9.
+
+In both cases the result is shown together with a statement of what it covers. Showing a partial result as a complete one is not permitted: it is true of what was asked and says nothing about the rest.
+
+## 16.5. The Result Card
+
+Inapplicable checks are shown neutrally and may be collapsed — 1.0 §23. For this category it matters that the reason for inapplicability stays visible: a domain that deliberately accepts no mail and a domain with no records look the same when collapsed and mean different things — §6.
+
+## 16.6. Acceptance Criteria
+
+- **AC-16.1** The main name of the category in the interface is "Mail"; the names of the checks are not translated.
+- **AC-16.2** The list of indexable pages gains the page `/{locale}/email-check`.
+- **AC-16.3** The tool page creates a `PARTIAL` scan of the single category `email`.
+- **AC-16.4** The selector field is optional and hidden by default in a full scan.
+- **AC-16.5** The selector field carries an explanation that a key not found does not mean there is none.
+- **AC-16.6** A partial result is shown together with a statement of what it covers.
+- **AC-16.7** The reason a check is inapplicable stays visible when collapsed.
+
+---
+
+<a id="section-17"></a>
+
+# 17. Observability and Analytics
+
+§17 defines what the `email` category adds to logs, metrics and analytics. The responsible sections are 1.0 §21 and 1.0 §28; the boundaries of analytics are not widened here.
+
+## 17.1. What Analytics Gains
+
+The enumeration of tools gains one value:
+
+```text
+tool: home | dns | registry | tls | email
+```
+
+Nothing else. None of the new quantities — a domain's policy, whether a key exists, a listing, support for encryption — is sent to analytics.
+
+The reason is not caution but that those quantities belong to a particular domain. The analytics of 1.0 §28 answers how much the service is used, not what the checked domains hold, and the ban on domains in events would stop working if a sufficiently detailed portrait of the domain travelled alongside the event.
+
+## 17.2. What Is Additionally Forbidden
+
+The list in 1.0 §28 gains, as values that are not sent:
+
+- the names and addresses of mail hosts;
+- a selector entered by the reader;
+- the names of lists holding an address;
+- the values of policy tags.
+
+The selector matters: it is typed by a reader, and together with the time of an event it would narrow the set of checked domains to a handful.
+
+## 17.3. Metrics
+
+The metrics of 1.0 §21 gain:
+
+| Metric | What it counts |
+|---|---|
+| `email_smtp_probe_total` | encryption probes, by outcome |
+| `email_smtp_probe_blocked_total` | probes rejected by the safety validation |
+| `email_dnsbl_query_total` | queries to lists, by outcome |
+| `email_dnsbl_refused_total` | refusals by lists to serve a query |
+| `email_dkim_selector_unknown_total` | checks that finished without finding a key |
+
+The last two are working instruments rather than decoration. Rising refusals mean we have left the bounds of permitted use and our answers are losing their meaning — §9. Rising unknown selectors show what share of readers the provider-to-selector mapping fails, which is when it is time to extend the configuration — §5.
+
+## 17.4. Logs
+
+The rules of 1.0 §21 apply unchanged. The names and addresses of mail hosts are permitted in logs: a log is an internal diagnostic instrument with restricted access, not analytics. A selector entered by the reader is not written to logs.
+
+## 17.5. Acceptance Criteria
+
+- **AC-17.1** The enumeration of tools in analytics gains the value `email`.
+- **AC-17.2** The results of the category's checks are not sent to analytics.
+- **AC-17.3** The names and addresses of mail hosts, the names of lists and the values of policy tags are not sent to analytics.
+- **AC-17.4** A selector entered by the reader is neither sent to analytics nor written to logs.
+- **AC-17.5** The metrics in §17.3 are defined and are incremented on the corresponding events.
+- **AC-17.6** Refusals by lists to serve a query are counted by a metric of their own.
+
+---
+
+<a id="section-18"></a>
+
+# 18. Testing and Release Readiness
+
+§18 defines what establishes that the requirements of this document are met, and the conditions under which the category is released. The responsible section for the testing strategy is 1.0 §26.
+
+## 18.1. What Is Checked Without a Network
+
+Parsing records, counting limits and choosing a status are pure functions over answers recorded in advance. They are covered by tests that touch no network, and that coverage is mandatory.
+
+The required data sets:
+
+| Set | What is in it |
+|---|---|
+| SPF records | the term limit exceeded, a loop, every form of `all`, void queries |
+| DMARC records | the tree walk, an unrecognised record, several records, `pct` |
+| DKIM keys | an empty key, a short key, testing mode, `ed25519` |
+| `MX` records | a declared refusal of mail, an implicit host, an alias, an address in place of a name |
+| list answers | a hit, an absence, a refusal to serve the query |
+
+The set of list answers is the most important of the five. A refusal is indistinguishable in form from a hit, and a test that contains one is the only thing keeping the mistake in §9 from coming back unnoticed.
+
+## 18.2. What Is Checked With a Network
+
+The encryption probe needs a connection and is therefore checked separately, outside the mandatory build set. What does not depend on a network stays mandatory: the fixed port, the absence of data commands, the source of host names, and the behaviour when access is denied.
+
+## 18.3. Release Conditions
+
+The category is released when all of these hold:
+
+- the tests of §18.1 are covered;
+- the list of forbidden causal claims in §12.2 is enforced automatically;
+- the Uzbek wording has been read by a native speaker — §12;
+- the set of blocklists holds only those that permit this use, with a link to the terms for each — §9;
+- outbound connections to the mail port are available in the target deployment, or the category is released with an honest `UNKNOWN` for the encryption check — §7.
+
+The last condition is written with a fork deliberately. An unavailable port is no reason to hold back six other checks, as long as the seventh says honestly that it cannot be performed.
+
+## 18.4. What Is Checked by Hand
+
+| What | Why it cannot be automatic |
+|---|---|
+| whether the messages are clear to an inexperienced reader | it needs a reader |
+| the Uzbek wording | it needs a native speaker |
+| the behaviour of the tool page on a phone | it needs a device — 1.0 §26 |
+
+## 18.5. Acceptance Criteria
+
+- **AC-18.1** Parsing records and choosing a status are covered by tests that touch no network.
+- **AC-18.2** The data set of list answers contains a refusal, and a test confirms it is not read as an absence of a hit.
+- **AC-18.3** The constraints of the encryption probe that do not depend on a network are covered by mandatory tests.
+- **AC-18.4** The list of forbidden causal claims is enforced automatically.
+- **AC-18.5** Release without Uzbek wording read by a native speaker is not permitted.
+- **AC-18.6** Release with an unavailable mail port is permitted given an honest `UNKNOWN` for the encryption check.
+
+---
+
 <a id="appendix-a"></a>
 
 # Appendix A. Responsible Sections
@@ -1193,5 +1427,21 @@ Each requirement has one responsible section. Where sections conflict, the provi
 |---|---|
 | Release boundary | §1 |
 | Check groups and the dependency on `MX` | §2 |
+| Parsing SPF and its limits | §3 |
+| The DMARC policy and the tree walk | §4 |
+| Finding a DKIM key and its selectors | §5 |
+| The receiving server | §6 |
+| The encryption probe | §7 |
+| Reverse names | §8 |
+| Blocklists and their terms | §9 |
+| Data contracts and exposure levels | §10 |
+| Merging issues and the effect on the score | §11 |
+| Wording and the forbidden causal claims | §12 |
+| Cache keys and lifetimes | §13 |
+| Rules for outbound connections | §14 |
+| The web API contract and the scope of a scan | §15 |
+| The interface and the tool page | §16 |
+| Metrics and the boundaries of analytics | §17 |
+| Release conditions | §18 |
 
 Requirements whose responsible section is in MVP 1.0 are not overridden by this document.

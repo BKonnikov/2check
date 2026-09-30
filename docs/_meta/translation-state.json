@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "6a44514909c1c0ba2a7fc33b83acd832f503238dbdf06d66bc162b103e323aa0",
-      "en": "20391720c2762bc46da4c131b23b313457e82b25dd2712e4618a9072150235f0"
+      "ru": "c381d5488f884fe1e89bf1fd403505af4225e44a7e2db2779f159c11dbd2f535",
+      "en": "460dac378b1e4455b6918c5fea440b6b400d7093580c1e7cc3159cbb97a916d7"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -197,9 +197,25 @@
       "ru": "49409f4496290590f11793dd0ba0bb2cca5ff31394b535d4c0e23a8ac0e2f7c4",
       "en": "4b837e5aad7a3abb5c9e9c0a8d573dc24a15918915e99c32736fdeb04eb19c34"
     },
+    "docs/prd-1.1/15-web-api.md": {
+      "ru": "7bf90c339cb6e9d51e7c36b635d2cf2fe143fe78a8e97c8592757e51d0eb4a7f",
+      "en": "2c0e68e9ebae08253dc65a3d5bb25defd5fcfb77abb87f0cd56fa9d09486af6a"
+    },
+    "docs/prd-1.1/16-interface.md": {
+      "ru": "94fabb98d716283f6529ca2f69d2f19d72b9a3ba8e1ab90504e357125ca389d5",
+      "en": "94a4530603627042d52d0811e6f2792c9cfbf7788f790670eca617bf4e5eb210"
+    },
+    "docs/prd-1.1/17-observability.md": {
+      "ru": "c4722b11fa5c5e3a3b25d3411842c837f102ec836bde8e5f012ba617804a2101",
+      "en": "c20b05db7ae35dd9614b0f464d2ad5b17b27f5b93ce0be2b397b1c77bd7cec0d"
+    },
+    "docs/prd-1.1/18-testing-readiness.md": {
+      "ru": "60d68f9f387674976f90c3baf3bcb1b04315ce78abba776526812fbbfa0957be",
+      "en": "1f4a0d08c92b7d2e9d7f5d21d26e0f1b3e33002c07c7415dcf617c67f959b61d"
+    },
     "docs/prd-1.1/appendix-a.md": {
-      "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",
-      "en": "446a30056af5f74bc5d25fd24457d615ae75330a8befb77d281f596a02dc0834"
+      "ru": "9c8b1e4acc25b8ced761b5ffd96f2b2bf16a08dc584fc7f3d37caba243593ce2",
+      "en": "e72f75845aa5f5219d378412299092d765e6956a922c69444cac164dd6b4267a"
     },
     "docs/prd-1.1/preamble.md": {
       "ru": "6d6838e81035ff7765954feb6f0c1a044e5bdd28e2d3adc0e930ec608d1f58b6",
