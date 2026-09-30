@@ -12,7 +12,7 @@
 
 ## Applying the Requirements
 
-This document covers mail health only. The MVP 1.0 specification is frozen and is not amended here: where a 1.1 requirement touches behaviour that is already defined, it is stated as an addition to it and names the responsible 1.0 section.
+This document covers mail health only. The MVP 1.0 specification is frozen and is not amended here: where a 1.1 requirement touches behavior that is already defined, it is stated as an addition to it and names the responsible 1.0 section.
 
 A reference written `§7` points to a section of this document. A reference to the frozen specification is written `1.0 §7`.
 

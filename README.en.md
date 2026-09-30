@@ -2,65 +2,82 @@
 
 [Русский](README.md) · **English**
 
-Domain technical health explained in plain language. This repository contains the concept, the MVP 1.0 requirements, and the implementation code.
+A service for checking a domain's technical health. This repository contains the concept, product requirements, and MVP 1.0 implementation.
 
 ## 01. Product Concept
 
 ### [Start with the concept →](docs/en/01-concept.md)
 
-The product purpose, audiences, principles, and MVP boundaries. This is the project's starting document and the first step in the reading order.
+The product purpose, audiences, principles, and MVP boundaries. This is the first document for understanding the project.
 
-## 02. Product Requirements — PRD
+## 02. MVP 1.0 — Domain Checks
 
-| Reading Mode | Document |
-|---|---|
-| By section | [PRD contents: 28 sections](docs/en/02-prd.md) |
-| In sequence | [Complete single-file PRD](dist/en/2check_MVP_1.0_PRD.md) |
-| In Russian | [Концепция и PRD на русском](docs/ru/README.md) |
+DNS, domain registration, and SSL/TLS. 28 sections and 221 acceptance criteria.
 
-The PRD develops the concept into data contracts, DNS/registration/TLS checks, interface requirements, security rules, and 221 acceptance criteria.
+[PRD 1.0 contents](docs/en/02-prd.md) · [Complete document](dist/en/2check_MVP_1.0_PRD.md)
 
-## Document Locations
+The implementation is in `apps/` and `packages/`. Available code does not replace release validation; current limitations are listed in the [deployment guide](DEPLOY.en.md).
+
+## 03. MVP 1.1 — Mail Health
+
+SPF, DMARC, DKIM, MX, STARTTLS, and PTR. 17 sections and 130 acceptance criteria.
+
+[PRD 1.1 contents](docs/en/03-prd-1.1.md) · [Complete document](dist/en/2check_MVP_1.1_PRD.md)
+
+The specification is in development and extends the frozen PRD 1.0. The `email` category is not yet implemented. Blocklist checking is outside the release scope.
+
+## Documents and Languages
+
+| Document | Русский | English |
+|---|---|---|
+| Navigation | [Документация](docs/ru/README.md) | [Documentation](docs/en/README.md) |
+| Documentation workflow | [Правила редактирования](CONTRIBUTING.md) | [Contribution rules](CONTRIBUTING.en.md) |
+| Deployment | [Установка и эксплуатация](DEPLOY.md) | [Deployment and operations](DEPLOY.en.md) |
 
 ```text
 docs/
-├── ru/                  Russian edition
-│   ├── 01-concept.md    1. Concept
-│   ├── 02-prd.md        2. Requirements contents
-│   └── prd/             PRD sections and appendices
-└── en/                  English edition with the same structure
+├── ru/
+│   ├── 01-concept.md    Concept
+│   ├── 02-prd.md        MVP 1.0 contents
+│   ├── 03-prd-1.1.md    MVP 1.1 contents
+│   ├── prd/             MVP 1.0 sections
+│   └── prd-1.1/         MVP 1.1 sections
+└── en/                  The same structure in English
 
 dist/
-├── ru/                  Complete Russian PRD
-└── en/                  Complete English PRD
+├── ru/                  Complete PRDs for both releases
+└── en/                  Complete PRDs for both releases
 ```
 
 ## Development
 
-The MVP code lives in a pnpm monorepo:
+The stack is Next.js, Node.js/Fastify, PostgreSQL, and Redis. Code is organized as a pnpm monorepo:
 
 ```text
 apps/
-├── api/                 Internal web API on Fastify
-└── web/                 Web interface on Next.js
+├── api/                 Web API and check execution
+└── web/                 User interface
 
 packages/
-├── contracts/           Shared API enumerations and constants
-└── domain/              Status, severity, and aggregation rules
+├── contracts/           Shared data contracts
+├── domain/              Check and assessment logic
+└── messages/            RU/UZ/EN messages
 ```
 
-Local startup:
+Local development requires the Node.js version in `.nvmrc`, the pnpm version in `package.json`, and Docker Compose. Create a local configuration during initial setup:
 
 ```bash
-docker compose up -d
 cp .env.example .env
+docker compose up -d
 pnpm install
 pnpm build
 pnpm migrate
 pnpm dev
 ```
 
-Compose starts Redis and PostgreSQL: Redis serves the reusable result cache, PostgreSQL is the authoritative scan store. Code changes are checked with the same commands CI runs:
+The web interface is available at `http://localhost:3000`, and the internal API runs on port 3001. Redis serves the cache; PostgreSQL stores scan results. The interface and messages support RU/UZ/EN.
+
+Application checks before pushing changes:
 
 ```bash
 pnpm lint
@@ -68,24 +85,20 @@ pnpm build
 pnpm test
 ```
 
-`pnpm dev` starts the internal web API on port 3001 and the web interface on 3000. Open http://localhost:3000 and enter a domain: all three MVP categories work, with a Russian interface showing the verdict and score: DNS — four-resolver comparison, name existence and answer consistency; registration over RDAP for the `.uz` zone with a WHOIS fallback; and SSL/TLS — a pinned-address connection with certificate checks.
-
-A developer inspector prints what the finished modules produce for one input:
+A developer tool displays module results:
 
 ```bash
 pnpm inspect example.uz
 pnpm inspect example.uz --address 169.254.169.254
 ```
 
-## Languages and Updates
+## Updating Documentation
 
-The Russian and English editions are updated together. Field names, status codes, formulas, and acceptance criterion identifiers match. Two documentation languages do not change the product's RU/UZ/EN requirement.
-
-All changes are made in **`main`**. Both editions and their compiled outputs are checked before pushing:
+Work takes place in **`main`**. Russian and English editions are updated and reviewed together. After editing, build and validate the documents as described in the [contribution rules](CONTRIBUTING.en.md):
 
 ```bash
 python3 scripts/build_prd.py
 python3 scripts/check_docs.py
 ```
 
-[Documentation contribution rules](CONTRIBUTING.en.md) describe editorial review and translation confirmation. The original frozen [concept file](docs/concept.md) remains at its previous location. The Russian and English reading editions clarify the wording while preserving the original product decisions.
+The frozen [original concept](docs/concept.md) remains unchanged. Both reading editions preserve its product decisions. Two documentation languages do not change the product's RU/UZ/EN requirement.

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import shutil
+import re
 import subprocess
 import sys
 import tempfile
@@ -117,3 +118,33 @@ with tempfile.TemporaryDirectory(prefix='2check-bilingual-tests-') as tmp:
     after={p.relative_to(root):p.read_bytes() for p in root.rglob('*') if p.is_file()}
     assert before==after,'a clean rebuild changed content'
     print('PASS: rebuilding both editions is deterministic')
+
+    file=root/'dist/en/2check_MVP_1.1_PRD.md'
+    file.write_text(file.read_text()+'\nStale mail specification.\n')
+    assert_check('stale PRD 1.1 build fails','Outdated generated file')
+    reset()
+
+    for lang in ('ru','en'):
+        file=root/f'docs/{lang}/prd-1.1/09-data-contracts.md'
+        file.write_text(re.sub(r'^# 9\.', '# 99.', file.read_text(), flags=re.M))
+    accept_changes()
+    assert_check('section references detect renamed targets in both languages','Broken anchor')
+    reset()
+
+    (root/'DEPLOY.en.md').unlink()
+    assert_check('deployment guide requires both languages','Missing translation')
+    reset()
+
+    # Generated documents must keep code examples literal while rebasing prose links.
+    sys.dont_write_bytecode=True
+    sys.path.insert(0,str(root/'scripts'))
+    from docs_common import render_links
+    source=root/'docs/en/prd-1.1/01-scope-goals.md'
+    same=root/'docs/en/prd-1.1/09-data-contracts.md'
+    output=root/'dist/en/2check_MVP_1.1_PRD.md'
+    sample='[Data](09-data-contracts.md#9-data-contracts-and-exposure-levels)\n\n[Base](../prd/06-common-data-contracts-exposure.md)\n\n```text\n[Literal](09-data-contracts.md#example)\n```'
+    rendered=render_links(sample,source,output,{source,same})
+    assert '[Data](#9-data-contracts-and-exposure-levels)' in rendered
+    assert '[Base](../../docs/en/prd/06-common-data-contracts-exposure.md)' in rendered
+    assert '[Literal](09-data-contracts.md#example)' in rendered
+    print('PASS: compiled links are rebased and code examples are preserved')

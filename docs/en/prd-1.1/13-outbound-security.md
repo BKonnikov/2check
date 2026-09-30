@@ -4,17 +4,17 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/13-outbound-security.md)
 <!-- nav:end -->
 
-§13 defines the rules under which a connection to a mail host is permitted. The responsible section for address validation is 1.0 §15; its sequence, address classification and blocking rule are not changed here but extended to a new kind of connection.
+[§13](13-outbound-security.md#13-outbound-connection-safety) defines the rules under which a connection to a mail host is permitted. The responsible section for address validation is [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection); its sequence, address classification and blocking rule are not changed here but extended to a new kind of connection.
 
-## 13.1. Why This Needs a Section
+## 13.1. Applying Existing Security Controls
 
-Before this release the product made outbound connections of two kinds: queries to resolvers and HTTPS requests to the registry. Both go to fixed addresses set by configuration.
+MVP 1.0 already establishes a TLS connection to an address of the domain under test after security validation. Release 1.1 applies the same sequence to mail servers obtained under [§6](06-mx.md#6-mx).
 
-The encryption probe is built differently: it connects to a host whose name the domain under test supplied. This is the first time somebody else's record influences where we connect — and it is exactly the shape of thing 1.0 §15 exists to defend against.
+Additional constraints define the SMTP port, permitted commands, and number of servers probed. The common address-validation and selected-IP pinning rules remain in effect.
 
 ## 13.2. The Sequence
 
-The order in 1.0 §15 applies without exception:
+The order in [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection) applies without exception:
 
 ```text
 MailHostTarget
@@ -26,7 +26,7 @@ MailHostTarget
 → pinned connection
 ```
 
-The host's full set of addresses is validated without prior truncation. If even one address is forbidden the whole host is blocked; dropping the forbidden address and connecting to the rest is not permitted — 1.0 §15.
+The host's full set of addresses is validated without prior truncation. If even one address is forbidden the whole host is blocked; dropping the forbidden address and connecting to the rest is not permitted — [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection).
 
 The connection goes to the pinned address. The host name is not resolved again by the connection library.
 
@@ -35,43 +35,43 @@ The connection goes to the pinned address. The host name is not resolved again b
 | Constraint | Value |
 |---|---|
 | port | `25` only |
-| source of host names | §6 only |
+| source of host names | [§6](06-mx.md#6-mx) only |
 | session commands | the greeting, the request for extensions, the move to encryption, the close |
-| hosts per check | no more than four — §7 |
+| hosts per check | no more than four — [§7](07-starttls.md#7-starttls) |
 
-The port is taken neither from the reader's input nor from the domain's records. An `MX` record holds a name and no port, and there is nowhere for one to come from — this row exists so that a future implementation does not "improve" the check with an arbitrary port.
+The port is not accepted from user input or DNS records. The implementation provides no override.
 
 The sender, recipient and data commands are never issued. The probe sends no mail and therefore cannot be used either to deliver messages or to test whether an address exists.
 
 ## 13.4. What This Rules Out
 
-| Attempt | Why it fails |
+| Scenario | Limiting Control |
 |---|---|
-| making the service connect to an internal address | a host's address is validated under 1.0 §15 like any other |
+| making the service connect to an internal address | a host's address is validated under [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection) like any other |
 | swapping the address between validation and connection | the connection goes to the pinned address |
 | using the service to scan ports | the port is fixed |
-| using the service to amplify load | hosts come only from the records of the domain under test, and their number is bounded |
+| creating excessive outbound load | the host count is bounded; request-rate and concurrency limits in [1.0 §22](../prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits) and [1.0 §25](../prd/25-privacy-data-protection-abuse-boundaries.md#25-privacy-access-and-abuse-prevention) also apply |
 | sending mail through somebody else's hands | the data commands are never issued |
 
 ## 13.5. Our Own Infrastructure
 
-The ban on reaching our own infrastructure — 1.0 §15 — extends to mail hosts unchanged.
+The ban on reaching our own infrastructure — [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection) — extends to mail hosts unchanged.
 
-Blocking for that reason gives `UNKNOWN` with an explanation that it is a limitation of the service, and does not reduce the domain's score. A check that calls our own network policy a defect of somebody's domain is wrong in both directions at once: it accuses the innocent and hides our own problem.
+Blocking for this reason gives `UNKNOWN`, explains the service limitation, and does not reduce the domain's score.
 
 ## 13.6. Time Budget
 
-The probe is subject to the scan's shared budget in 1.0 §22. The category introduces no budget of its own.
+The probe is subject to the scan's shared budget in [1.0 §22](../prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits). The category introduces no budget of its own.
 
-The rule in §7 follows from that: hosts beyond the limit are listed as not probed rather than waiting for time to free up. A result obtained in part is reported as partial.
+The rule in [§7](07-starttls.md#7-starttls) follows from that: hosts beyond the limit are listed as not probed rather than waiting for time to free up. A result obtained in part is reported as partial.
 
 ## 13.7. Acceptance Criteria
 
-- **AC-13.1** A mail host's addresses pass the safety validation of 1.0 §15 as a full set, without truncation.
+- **AC-13.1** A mail host's addresses pass the safety validation of [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection) as a full set, without truncation.
 - **AC-13.2** A forbidden address blocks the whole host.
 - **AC-13.3** The connection is made to the pinned address; re-resolving the name is not permitted.
 - **AC-13.4** The connection port is `25` and cannot be set by input or by the domain's records.
-- **AC-13.5** Host names come only from the result of §6.
+- **AC-13.5** Host names come only from the result of [§6](06-mx.md#6-mx).
 - **AC-13.6** The session issues no sender, recipient or data commands.
 - **AC-13.7** Blocking under the ban on our own infrastructure gives `UNKNOWN` and does not reduce the domain's score.
 - **AC-13.8** The category introduces no time budget of its own.

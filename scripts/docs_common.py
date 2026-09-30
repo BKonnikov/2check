@@ -5,6 +5,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 LANGUAGES = ('ru', 'en')
@@ -65,6 +66,7 @@ def translation_pairs():
     for name, ru, en in [
         ('README', 'README.md', 'README.en.md'),
         ('CONTRIBUTING', 'CONTRIBUTING.md', 'CONTRIBUTING.en.md'),
+        ('DEPLOY', 'DEPLOY.md', 'DEPLOY.en.md'),
         ('PR-template', '.github/PULL_REQUEST_TEMPLATE/documentation.md', '.github/PULL_REQUEST_TEMPLATE/documentation.en.md'),
     ]:
         pairs[name] = (ROOT / ru, ROOT / en)
@@ -82,7 +84,30 @@ def translation_hashes():
 
 
 def relative_link(target, output):
-    return Path(os.path.relpath(target, output.parent)).as_posix()
+    return Path(os.path.relpath(target.resolve(), output.parent.resolve())).as_posix()
+
+
+def render_links(text, source, output, included):
+    """Keep section links local to a build and rebase links to other documents."""
+    included = {path.resolve() for path in included}
+    def replace(match):
+        label, raw = match.groups()
+        target = urlsplit(raw)
+        if target.scheme or target.netloc:
+            return match[0]
+        path = (source.parent / unquote(target.path)).resolve() if target.path else source.resolve()
+        if path in included and target.fragment:
+            link = '#' + target.fragment
+        else:
+            link = relative_link(path, output)
+            if target.fragment:
+                link += '#' + target.fragment
+        return f'[{label}]({link})'
+    parts = re.split(r'(```.*?```)', text, flags=re.DOTALL)
+    return ''.join(
+        re.sub(r'\[([^]\n]+)\]\(([^)]+)\)', replace, part) if index % 2 == 0 else part
+        for index, part in enumerate(parts)
+    )
 
 
 def render_prd(language, output, edition=BASE_EDITION):
@@ -97,13 +122,14 @@ def render_prd(language, output, edition=BASE_EDITION):
     toc = [f'## {labels[3]}', '']
     parts = []
     for index, path in enumerate(files[1:]):
-        text = body(path)
+        text = render_links(body(path), path, output, set(files))
         title = text.splitlines()[0].removeprefix('# ')
         letter = chr(ord('a') + index - count)
         anchor = f'section-{index+1:02d}' if index < count else f'appendix-{letter}'
         toc.append(f'- [{title}](#{anchor})')
         parts.append(f'<a id="{anchor}"></a>\n\n{text}')
-    return '\n\n'.join([body(files[0]), nav, '\n'.join(toc), *parts]) + '\n'
+    preamble = render_links(body(files[0]), files[0], output, set(files))
+    return '\n\n'.join([preamble, nav, '\n'.join(toc), *parts]) + '\n'
 
 
 def generated_outputs():

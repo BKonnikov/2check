@@ -4,7 +4,7 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/16-observability.md)
 <!-- nav:end -->
 
-§16 defines what the `email` category adds to logs, metrics and analytics. The responsible sections are 1.0 §21 and 1.0 §28; the boundaries of analytics are not widened here.
+[§16](16-observability.md#16-observability-and-analytics) defines what the `email` category adds to logs, metrics and analytics. The responsible sections are [1.0 §21](../prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring) and [1.0 §28](../prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics); the boundaries of analytics are not widened here.
 
 ## 16.1. What Analytics Gains
 
@@ -14,23 +14,21 @@ The enumeration of tools gains one value:
 tool: home | dns | registry | tls | email
 ```
 
-Nothing else. None of the new quantities — a domain's policy, whether a key exists, support for encryption — is sent to analytics.
-
-The reason is not caution but that those quantities belong to a particular domain. The analytics of 1.0 §28 answers how much the service is used, not what the checked domains hold, and the ban on domains in events would stop working if a sufficiently detailed portrait of the domain travelled alongside the event.
+Domain policy, key availability, and encryption support are not sent to analytics. The analytics defined in [1.0 §28](../prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics) measures service use without collecting characteristics of the domains being checked.
 
 ## 16.2. What Is Additionally Forbidden
 
-The list in 1.0 §28 gains, as values that are not sent:
+The list in [1.0 §28](../prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics) gains, as values that are not sent:
 
 - the names and addresses of mail hosts;
-- a selector entered by the reader;
+- a selector entered by the user;
 - the values of policy tags.
 
-The selector matters: it is typed by a reader, and together with the time of an event it would narrow the set of checked domains to a handful.
+The entered selector belongs to the user's request. Excluding it avoids an additional link between an analytics event and the domain being checked.
 
 ## 16.3. Metrics
 
-The metrics of 1.0 §21 gain:
+The metrics of [1.0 §21](../prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring) gain:
 
 | Metric | What it counts |
 |---|---|
@@ -38,18 +36,18 @@ The metrics of 1.0 §21 gain:
 | `email_smtp_probe_blocked_total` | probes rejected by the safety validation |
 | `email_dkim_selector_unknown_total` | checks that finished without finding a key |
 
-The last is a working instrument rather than decoration: its rise shows what share of readers the provider-to-selector mapping fails, which is when it is time to extend the configuration — §5.
+The unknown-selector metric counts DKIM searches that found no key. It is considered alongside the total check count when assessing selector-configuration coverage — [§5](05-dkim.md#5-dkim).
 
 ## 16.4. Logs
 
-The rules of 1.0 §21 apply unchanged. The names and addresses of mail hosts are permitted in logs: a log is an internal diagnostic instrument with restricted access, not analytics. A selector entered by the reader is not written to logs.
+The rules of [1.0 §21](../prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring) apply unchanged. The names and addresses of mail hosts are permitted in logs: a log is an internal diagnostic instrument with restricted access, not analytics. A selector entered by the user is not written to logs.
 
 ## 16.5. Acceptance Criteria
 
 - **AC-16.1** The enumeration of tools in analytics gains the value `email`.
 - **AC-16.2** The results of the category's checks are not sent to analytics.
 - **AC-16.3** The names and addresses of mail hosts and the values of policy tags are not sent to analytics.
-- **AC-16.4** A selector entered by the reader is neither sent to analytics nor written to logs.
-- **AC-16.5** The metrics in §15.3 are defined and are incremented on the corresponding events.
+- **AC-16.4** A selector entered by the user is neither sent to analytics nor written to logs.
+- **AC-16.5** The metrics in [§16.3](16-observability.md#163-metrics) are defined and are incremented on the corresponding events.
 
 ---

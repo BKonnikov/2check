@@ -4,7 +4,7 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/01-scope-goals.md)
 <!-- nav:end -->
 
-§1 defines what release 1.1 adds, what stays outside it, and how it relates to the frozen MVP 1.0 specification.
+[§1](01-scope-goals.md#1-scope-and-goals-of-mvp-11) defines what release 1.1 adds, what stays outside it, and how it relates to the frozen MVP 1.0 specification.
 
 ## 1.1. What the Release Adds
 
@@ -29,30 +29,36 @@ The category takes part in a full scan alongside `dns`, `registry` and `tls`, an
 
 ## 1.2. What the Release Does Not Do
 
-Outside the boundary:
+The release excludes:
 
-- assessing the reputation of the mail a domain sends;
-- receiving, parsing and delivering messages;
-- verifying the signature on an individual message;
-- advice on configuring a particular mail provider beyond what the published records state;
-- checking the receiving server's addresses against blocklists.
+- assessment of the domain's outbound mail reputation;
+- receiving, parsing, and delivering messages;
+- verification of an individual message's signature;
+- provider-specific configuration advice unsupported by published records;
+- checking receiving-server addresses against blocklists.
 
-The last item is excluded on the providers' terms. The largest lists do not permit free queries from services answering other people's requests, and a list that does permit it had not been found at the time of writing. A check with no permitted source would honestly answer "could not be checked" on every run; better not to promise it.
+The project has not selected a blocklist source with confirmed permission for use by a public service. This feature is therefore excluded from the release.
 
-The reason for the first item is substantive rather than organisational: outbound reputation belongs to the address a domain sends from, and that address does not follow from the domain's public records — see §2.
+Outbound mail reputation depends on the actual sending address. Receiving-server records do not establish that address — [§2](02-check-groups-dependencies.md#2-check-groups-and-the-dependency-on-mx).
 
 ## 1.3. Relation to MVP 1.0
 
-This document does not change the checks in the `dns`, `registry` and `tls` categories. Behaviour defined in 1.0 is extended in four places:
+The `dns`, `registry`, and `tls` checks retain their MVP 1.0 behavior. Additions for the `email` category are assigned to the following sections:
 
-| Responsible 1.0 section | What is extended | Where |
+| MVP 1.0 Sections | Addition | MVP 1.1 Sections |
 |---|---|---|
-| 1.0 §7 | category semantics | §2 |
-| 1.0 §11 | summary and verdict | §10 |
-| 1.0 §12 | numerical score | §10 |
-| 1.0 §15 | outbound connection safety | §13 |
+| [1.0 §3](../prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes), [1.0 §17](../prd/17-internal-web-api-contract.md#17-internal-web-api-contract) | scan modes and web API | [§14](14-web-api.md#14-the-web-api-and-scan-modes) |
+| [1.0 §6](../prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels) | data contracts and representations | [§9](09-data-contracts.md#9-data-contracts-and-exposure-levels) |
+| [1.0 §7](../prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results) | statuses and dependencies | [§2](02-check-groups-dependencies.md#2-check-groups-and-the-dependency-on-mx) |
+| [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues), [1.0 §12](../prd/12-domain-health-score.md#12-domain-health-score) | summary, verdict, and score | [§10](10-summary-score.md#10-effect-on-the-summary-the-verdict-and-the-score) |
+| [1.0 §13](../prd/13-human-readable-messages-localization.md#13-user-messages-and-localization) | messages and localization | [§11](11-messages.md#11-messages-and-localization) |
+| [1.0 §14](../prd/14-cache-freshness.md#14-caching-and-data-freshness) | caching | [§12](12-cache.md#12-caching-and-data-freshness) |
+| [1.0 §15](../prd/15-security-ssrf.md#15-security-and-ssrf-protection), [1.0 §22](../prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits) | security and resource limits | [§13](13-outbound-security.md#13-outbound-connection-safety) |
+| [1.0 §23](../prd/23-frontend-ux-result-presentation.md#23-user-interface-and-result-presentation), [1.0 §24](../prd/24-seo-routing-public-tool-pages.md#24-seo-routing-and-tool-pages) | interface and routing | [§15](15-interface.md#15-the-interface-and-the-tool-page) |
+| [1.0 §21](../prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring), [1.0 §28](../prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics) | observability and analytics | [§16](16-observability.md#16-observability-and-analytics) |
+| [1.0 §26](../prd/26-testing-quality-gates-acceptance-strategy.md#26-testing-and-release-criteria) | testing and release conditions | [§17](17-testing-readiness.md#17-testing-and-release-readiness) |
 
-Each extension names the responsible 1.0 section and does not rewrite it.
+The MVP 1.0 text remains unchanged. Appendix A lists the responsible sections of this addition.
 
 ## 1.4. Acceptance Criteria
 

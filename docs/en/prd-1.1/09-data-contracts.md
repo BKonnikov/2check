@@ -4,7 +4,7 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/09-data-contracts.md)
 <!-- nav:end -->
 
-§9 defines the structures the `email` category uses inside the common contracts of 1.0, and which of its data reach which representation. The responsible section for the contracts themselves is 1.0 §6; only this category's variants are defined here.
+[§9](09-data-contracts.md#9-data-contracts-and-exposure-levels) defines the structures the `email` category uses inside the common contracts of 1.0, and which of its data reach which representation. The responsible section for the contracts themselves is [1.0 §6](../prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels); only this category's variants are defined here.
 
 ## 9.1. The Category
 
@@ -14,7 +14,7 @@ The enumeration of categories gains one value:
 category: dns | registry | tls | email
 ```
 
-The order they appear in the interface is set by 1.0 §23 and is not fixed in this section.
+The order they appear in the interface is set by [1.0 §23](../prd/23-frontend-ux-result-presentation.md#23-user-interface-and-result-presentation) and is not fixed in this section.
 
 ## 9.2. The Subject of a Check
 
@@ -40,7 +40,7 @@ MailHostTarget {
 
 `queriedName` is the name the policy was asked for. For DMARC that name may belong to a parent domain, and for DKIM it carries a selector, so it is part of the subject of the check rather than a detail: without it the result cannot be read.
 
-`implicit` marks a host obtained from the domain's address records where there is no `MX` — §6.
+`implicit` marks a host obtained from the domain's address records where there is no `MX` — [§6](06-mx.md#6-mx).
 
 ## 9.3. Where a Result Came From
 
@@ -62,7 +62,7 @@ SmtpProbeSource {
 }
 ```
 
-`hostsProbed` and `hostsSkipped` differ deliberately: a mismatch between them is exactly the state in which a result covers only some of the hosts, and it has to be visible in the data rather than only in the text of a message — §7.
+`hostsProbed` and `hostsSkipped` separately represent probed and skipped hosts. Any skipped hosts indicate incomplete coverage. Equality or inequality of these counts does not itself determine completeness — [§7](07-starttls.md#7-starttls).
 
 ## 9.4. Exposure Levels
 
@@ -78,13 +78,13 @@ SmtpProbeSource {
 | the domains of DMARC report recipients | Public |
 | the full addresses of DMARC report recipients | Technical |
 
-The split of the report addresses is deliberate. The recipient's domain answers a question worth asking — whether reports go to a third-party service — and the full address adds nothing to that, while turning a result page into a convenient source of addresses to harvest. The data are published in DNS and are not secret; the point is not to make collecting them easier than it needs to be.
+The recipient domain identifies whether reports are sent to a third-party service. The full address is available in the technical representation on explicit request. Omitting it from the public summary limits further distribution of addresses already published in DNS.
 
 The category defines no Gated data.
 
 ## 9.5. Machine Values
 
-The list in 1.0 §6 gains, as values that are not localised:
+The list in [1.0 §6](../prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels) gains, as values that are not localized:
 
 - the names and values of policy tags;
 - selector names;

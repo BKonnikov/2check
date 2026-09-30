@@ -4,7 +4,7 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/14-web-api.md)
 <!-- nav:end -->
 
-§14 defines how the `email` category enters the contract of the internal web API and the scan modes. The responsible sections are 1.0 §17 and 1.0 §3; the endpoints, the acceptance model and the polling rules are not changed here.
+[§14](14-web-api.md#14-the-web-api-and-scan-modes) defines how the `email` category enters the contract of the internal web API and the scan modes. The responsible sections are [1.0 §17](../prd/17-internal-web-api-contract.md#17-internal-web-api-contract) and [1.0 §3](../prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes); the endpoints, the acceptance model and the polling rules are not changed here.
 
 ## 14.1. Selecting Categories
 
@@ -14,9 +14,9 @@ The enumeration in the request gains one value:
 selectedCategories?: (dns | registry | tls | email)[]
 ```
 
-The rule in 1.0 §17 is kept word for word: `PARTIAL` takes a non-empty proper subset of the categories, and selecting them all creates a `FULL` scan. A proper subset is now a subset of four categories rather than of three.
+The rule in [1.0 §17](../prd/17-internal-web-api-contract.md#17-internal-web-api-contract) is kept word for word: `PARTIAL` takes a non-empty proper subset of the categories, and selecting them all creates a `FULL` scan. A proper subset is now a subset of four categories rather than of three.
 
-One consequence is easy to miss: a `PARTIAL` request for `dns`, `registry` and `tls` was rejected as a full scan before this release and is permitted now. The rule was not rewritten — the set it applies to changed.
+After `email` is added, a `PARTIAL` request selecting `dns`, `registry`, and `tls` is valid because it selects a proper subset of the available categories.
 
 ## 14.2. The Selector
 
@@ -32,19 +32,19 @@ CreateScanRequest {
 }
 ```
 
-The field is accepted only when the `email` category is within the scope of the scan. A request carrying a selector without that category is rejected as invalid: HTTP `422`. Silently ignoring the value is not permitted — a client that sent a selector is entitled to know it was not used.
+The field is accepted only when `email` is within the scan scope. Otherwise, the request is rejected with HTTP `422`, identifying the invalid field. The supplied value is not ignored.
 
 The value is validated as a DNS name label. A selector that fails that validation is rejected before any query is made, rather than becoming a search that finds nothing.
 
-The selector belongs to the request and not to the domain: the cache rules are §12.
+The selector belongs to the request and not to the domain: the cache rules are [§12](12-cache.md#12-caching-and-data-freshness).
 
 ## 14.3. Score and Verdict
 
-An overall score and an overall verdict exist only for `FULL + FINAL` — 1.0 §3. Adding a category does not change that: a `PARTIAL` scan of the `email` category alone shows its results without an overall score for the domain.
+An overall score and an overall verdict exist only for `FULL + FINAL` — [1.0 §3](../prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes). Adding a category does not change that: a `PARTIAL` scan of the `email` category alone shows its results without an overall score for the domain.
 
 ## 14.4. Errors
 
-The category introduces no error codes of its own. A rejection over the selector uses the common `WebApiError` contract of 1.0 §17, naming the field.
+The category introduces no error codes of its own. A rejection over the selector uses the common `WebApiError` contract of [1.0 §17](../prd/17-internal-web-api-contract.md#17-internal-web-api-contract), naming the field.
 
 ## 14.5. Acceptance Criteria
 

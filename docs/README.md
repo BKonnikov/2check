@@ -1,11 +1,16 @@
-# 2check.uz — документация / documentation
+# 2check.uz — документация / Documentation
 
-| Читать по-русски | Read in English |
-|---|---|
-| **[01. Концепция продукта](ru/01-concept.md)** | **[01. Product Concept](en/01-concept.md)** |
-| [02. Требования к продукту — PRD](ru/02-prd.md) | [02. Product Requirements — PRD](en/02-prd.md) |
-| [Полный PRD](../dist/ru/2check_MVP_1.0_PRD.md) | [Complete PRD](../dist/en/2check_MVP_1.0_PRD.md) |
+Начните с концепции; затем выберите версию требований. / Start with the concept, then choose a requirements edition.
 
-Начните с концепции. Русская и английская версии имеют одинаковую структуру и обновляются совместно.
+| Документ / Document | Русский | English |
+|---|---|---|
+| **01. Концепция / Concept** | **[Читать](ru/01-concept.md)** | **[Read](en/01-concept.md)** |
+| 02. MVP 1.0 — домен / Domain | [Оглавление](ru/02-prd.md) | [Contents](en/02-prd.md) |
+| 03. MVP 1.1 — почта / Mail | [Оглавление](ru/03-prd-1.1.md) | [Contents](en/03-prd-1.1.md) |
+| Развёртывание / Deployment | [Руководство](../DEPLOY.md) | [Guide](../DEPLOY.en.md) |
 
-Start with the concept. The Russian and English editions share one structure and are updated together.
+MVP 1.0 реализован в коде. PRD 1.1 находится в разработке; категория почты ещё не реализована.
+
+MVP 1.0 has an implementation. PRD 1.1 is in development; the mail category is not yet implemented.
+
+[Полные документы / Complete documents](../dist/README.md)

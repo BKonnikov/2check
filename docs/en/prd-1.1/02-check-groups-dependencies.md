@@ -4,7 +4,7 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/02-check-groups-dependencies.md)
 <!-- nav:end -->
 
-§2 defines how the `email` category is put together: which groups the checks fall into, which of them depend on `MX`, and what happens to each group when the domain has no mail server. The responsible section for status and dependency semantics is 1.0 §7; only their application to this category is defined here.
+[§2](02-check-groups-dependencies.md#2-check-groups-and-the-dependency-on-mx) defines how the `email` category is put together: which groups the checks fall into, which of them depend on `MX`, and what happens to each group when the domain has no mail server. The responsible section for status and dependency semantics is [1.0 §7](../prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results); only their application to this category is defined here.
 
 ## 2.1. Three Groups
 
@@ -26,9 +26,9 @@ The groups are not categories of their own and carry no verdict: they are units 
 
 ## 2.2. Why the Groups Are Separate
 
-`SPF`, `DMARC` and `DKIM` are policies of the sending domain, published as `TXT` records. They exist whether or not the domain receives mail: `v=spf1 -all` on a domain that neither sends nor receives is not a mistake but a correct declaration.
+`SPF`, `DMARC`, and `DKIM` are sender-domain policies published in `TXT` records. Their checks do not depend on receiving mail. For example, `v=spf1 -all` can declare that a domain sends no mail.
 
-`STARTTLS` and `PTR` describe one specific server. That server is determined by the domain's records, and where there is none these checks have no subject — the answer is not unknown, there is nothing to ask about.
+`STARTTLS` and `PTR` examine the receiving server identified by the domain's records. If no such server exists, these checks are inapplicable.
 
 ## 2.3. What Counts as a Receiving Server
 
@@ -41,7 +41,7 @@ There is no subject in two cases:
 | neither `MX` nor address records | `mx_missing` |
 | an `MX` published to say "I accept no mail" | `null_mx` |
 
-The second is a deliberate declaration by the owner under RFC 7505, not an omission. Both are detailed in §6.
+The second is a deliberate declaration by the owner under RFC 7505, not an omission. Both are detailed in [§6](06-mx.md#6-mx).
 
 ## 2.4. When There Is No Subject
 
@@ -55,20 +55,20 @@ The second is a deliberate declaration by the owner under RFC 7505, not an omiss
 
 `NOT_APPLICABLE` rather than `UNKNOWN`: `UNKNOWN` means the check applies but no result could be obtained, whereas here the subject of the check is absent.
 
-The state of the domain is scored once, by the `MX` check. The checks it blocks add no further penalty; otherwise one cause would penalise the domain four times over. How `NOT_APPLICABLE` affects confidence is defined in 1.0 §11 and is unchanged here.
+The `MX` check assesses the absence of a receiving server. Blocked checks add no penalties. `NOT_APPLICABLE` does not reduce confidence; the completeness and confidence rules in [1.0 §7](../prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results) and [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) remain unchanged.
 
 ## 2.5. The Receiving Server, Not Outbound Mail
 
 `MX` names the server that **receives** mail for the domain. The server the domain **sends** from may be a different one, and it does not follow from the domain's public records.
 
-The results of `PTR` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is 1.0 §13.
+The results of `PTR` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is [1.0 §13](../prd/13-human-readable-messages-localization.md#13-user-messages-and-localization).
 
 ## 2.6. Acceptance Criteria
 
 - **AC-2.1** The `SPF`, `DMARC` and `DKIM` checks run whether or not `MX` is present.
 - **AC-2.2** With no `MX` but with address records for the domain, the checks of the receiving server run against the implicit server.
 - **AC-2.3** Where there is no subject, the `STARTTLS` and `PTR` checks return `NOT_APPLICABLE` with a `blockedBy` drawn from the values `mx_missing` and `null_mx`.
-- **AC-2.4** An absent receiving server gives no check in the category the status `UNKNOWN`.
+- **AC-2.4** An absent receiving server is not itself a reason for `UNKNOWN` in the category.
 - **AC-2.5** The state of the receiving server reduces the numerical score once, through the result of the `MX` check.
 - **AC-2.6** The messages of the `PTR` check describe the receiving server and assert nothing about the domain's outbound mail.
 

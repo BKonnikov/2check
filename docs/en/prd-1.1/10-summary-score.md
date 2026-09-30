@@ -4,33 +4,38 @@
 [Concept](../01-concept.md) · [PRD 1.1 Contents](../03-prd-1.1.md) · [Русский](../../ru/prd-1.1/10-summary-score.md)
 <!-- nav:end -->
 
-§10 defines how the results of the `email` category enter the summary and the numerical score. The responsible sections are 1.0 §11 and 1.0 §12; the rules for the verdict, for confidence and the scoring formula are not changed here.
+[§10](10-summary-score.md#10-effect-on-the-summary-the-verdict-and-the-score) defines how the results of the `email` category enter the summary and the numerical score. The responsible sections are [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) and [1.0 §12](../prd/12-domain-health-score.md#12-domain-health-score); the rules for the verdict, for confidence and the scoring formula are not changed here.
 
 ## 10.1. What Changes and What Does Not
 
-The score in 1.0 is not divided between categories: it is a hundred minus the sum of the penalties for issues. A fourth category therefore takes no share from the others — it adds issues that penalties are charged for.
+The MVP 1.0 score is the base score minus Issue penalties. Adding a category changes neither the formula nor a division of weight between categories.
 
-The real question of this section follows from that: how many issues the category may create for one root defect. Without an answer, a domain that simply has no mail is penalised several times for the same thing.
+The `email` category creates Issues under the common rules. Multiple findings with one established cause are merged as specified in [§10.3](10-summary-score.md#103-merging-issues-inside-the-category).
 
 ## 10.2. A Domain That Sends No Mail
 
-A domain is entitled to send no mail, and RFC 7208 calls `v=spf1 -all` normal practice for such a domain in as many words.
-
-A declared refusal of mail is recognised from a combination:
+A domain may explicitly declare that it neither receives nor sends mail. This intent is identified from the combination:
 
 | Sign | Value |
 |---|---|
-| `MX` | the "I accept no mail" record |
+| `MX` | valid Null MX |
 | SPF | `-all` with no permitting mechanisms |
 | DMARC | `p=reject` |
 
-On a full match every check in the category gives `PASS`: the domain is correctly configured for what it does. No issues, no penalties.
+This combination does not automatically assign `PASS` to every check:
 
-On a partial match the ordinary rules of §3–§8 apply. A domain that declared a refusal halfway declared nothing.
+- valid SPF and MX declarations receive `PASS`;
+- DMARC is assessed under [§4](04-dmarc.md#4-dmarc), including additional conditions;
+- STARTTLS and PTR receive `NOT_APPLICABLE` under [§2](02-check-groups-dependencies.md#2-check-groups-and-the-dependency-on-mx);
+- DKIM is assessed under [§5](05-dkim.md#5-dkim); an unfound key without an explicit selector remains `UNKNOWN`.
+
+The refusal of mail itself and inapplicable server checks create no penalties. Confirmed defects in published records remain reportable. An uncertain result reduces confidence under [§10.4](10-summary-score.md#104-effect-on-confidence).
+
+An incomplete combination does not establish a refusal of mail; the ordinary rules of [§3](03-spf.md#3-spf)–[§8](08-ptr.md#8-ptr) apply.
 
 ## 10.3. Merging Issues Inside the Category
 
-The merging rules are 1.0 §11: one root defect gives one Issue and one penalty, and merging is permitted only inside a category.
+The merging rules are [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues): one root defect gives one Issue and one penalty, and merging is permitted only inside a category.
 
 The following merges are defined for this category:
 
@@ -38,33 +43,33 @@ The following merges are defined for this category:
 |---|---|
 | the domain declared no sending policy | an absent SPF and an absent DMARC |
 | no receiving server was found | the `MX` result and everything it blocked |
-| a policy is published but does not work | several records, an unrecognised record, a parse error |
+| a policy is published but does not work | several records, an unrecognized record, a parse error |
 
-The first merge is the important one. An absent SPF and an absent DMARC are not two mistakes but one: the owner never described who may send in the domain's name. Two penalties for it would punish the domain twice for one decision.
+Merging absent SPF and DMARC is an assessment rule of 2check: absence of both policies creates one Issue. It does not make the mechanisms functionally interchangeable. Errors in separate published policies are merged only when a shared cause is established.
 
-Merging with the `dns`, `registry` and `tls` categories is not permitted — 1.0 §11.
+Merging with the `dns`, `registry` and `tls` categories is not permitted — [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues).
 
 ## 10.4. Effect on Confidence
 
-This category produces `UNKNOWN` more often than the others, and the reasons are listed in §3–§8. The substantial one is an unknown DKIM selector: it arises for any domain whose mail provider is unknown to us.
+This category produces `UNKNOWN` more often than the others, and the reasons are listed in [§3](03-spf.md#3-spf)–[§8](08-ptr.md#8-ptr). The substantial one is an unknown DKIM selector: it arises for any domain whose mail provider is unknown to us.
 
-The rule in 1.0 §11 is not softened for it: `UNKNOWN` makes the category's completeness `PARTIAL`, confidence `REDUCED`, and the verdict in the absence of issues `NO_CONFIRMED_ISSUES_INCOMPLETE` rather than `HEALTHY`.
+The rule in [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) is not softened for it: `UNKNOWN` makes the category's completeness `PARTIAL`, confidence `REDUCED`, and the verdict in the absence of issues `NO_CONFIRMED_ISSUES_INCOMPLETE` rather than `HEALTHY`.
 
-That is a price paid deliberately. To say "all is well" without having managed to check a signature is to assert more than we know.
+An incomplete check of the published key cannot establish a fully verified category result. Verification of an individual message's signature is outside this release.
 
 ## 10.5. Penalty Values
 
-The category introduces no penalty values of its own: the values in 1.0 §12 apply, by severity. The severities are assigned in §3–§8.
+The category introduces no penalty values of its own: the values in [1.0 §12](../prd/12-domain-health-score.md#12-domain-health-score) apply, by severity. The severities are assigned in [§3](03-spf.md#3-spf)–[§8](08-ptr.md#8-ptr).
 
 ## 10.6. Acceptance Criteria
 
 - **AC-10.1** Adding the category changes neither the scoring formula nor the division of shares between categories.
-- **AC-10.2** The combination of the "I accept no mail" record, `-all` with no permitting mechanisms and `p=reject` gives `PASS` for every check in the category.
-- **AC-10.3** A partial match of that combination grants no exemption from the checks.
+- **AC-10.2** The combination of Null MX, `-all` with no permitting mechanisms, and `p=reject` does not assign `PASS` to all checks: STARTTLS and PTR retain `NOT_APPLICABLE`, DKIM is assessed under [§5](05-dkim.md#5-dkim), and DMARC under [§4](04-dmarc.md#4-dmarc).
+- **AC-10.3** A partial match of the combination does not establish a refusal of mail; the ordinary check rules remain in effect.
 - **AC-10.4** An absent SPF and an absent DMARC merge into one Issue with one penalty.
 - **AC-10.5** Results blocked by an absent receiving server create no Issue of their own.
 - **AC-10.6** Merging an `email` Issue with another category is rejected by the configuration check.
-- **AC-10.7** `UNKNOWN` in this category reduces confidence under the rules of 1.0 §11 and is not softened.
+- **AC-10.7** `UNKNOWN` in this category reduces confidence under the rules of [1.0 §11](../prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) and is not softened.
 - **AC-10.8** The category introduces no penalty values of its own.
 
 ---

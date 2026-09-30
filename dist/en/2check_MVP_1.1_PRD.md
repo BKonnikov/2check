@@ -8,7 +8,7 @@
 
 ## Applying the Requirements
 
-This document covers mail health only. The MVP 1.0 specification is frozen and is not amended here: where a 1.1 requirement touches behaviour that is already defined, it is stated as an addition to it and names the responsible 1.0 section.
+This document covers mail health only. The MVP 1.0 specification is frozen and is not amended here: where a 1.1 requirement touches behavior that is already defined, it is stated as an addition to it and names the responsible 1.0 section.
 
 A reference written `§7` points to a section of this document. A reference to the frozen specification is written `1.0 §7`.
 
@@ -29,7 +29,7 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 - [9. Data Contracts and Exposure Levels](#section-09)
 - [10. Effect on the Summary, the Verdict and the Score](#section-10)
 - [11. Messages and Localization](#section-11)
-- [12. Cache and Freshness](#section-12)
+- [12. Caching and Data Freshness](#section-12)
 - [13. Outbound Connection Safety](#section-13)
 - [14. The Web API and Scan Modes](#section-14)
 - [15. The Interface and the Tool Page](#section-15)
@@ -41,7 +41,7 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 
 # 1. Scope and Goals of MVP 1.1
 
-§1 defines what release 1.1 adds, what stays outside it, and how it relates to the frozen MVP 1.0 specification.
+[§1](#1-scope-and-goals-of-mvp-11) defines what release 1.1 adds, what stays outside it, and how it relates to the frozen MVP 1.0 specification.
 
 ## 1.1. What the Release Adds
 
@@ -66,30 +66,36 @@ The category takes part in a full scan alongside `dns`, `registry` and `tls`, an
 
 ## 1.2. What the Release Does Not Do
 
-Outside the boundary:
+The release excludes:
 
-- assessing the reputation of the mail a domain sends;
-- receiving, parsing and delivering messages;
-- verifying the signature on an individual message;
-- advice on configuring a particular mail provider beyond what the published records state;
-- checking the receiving server's addresses against blocklists.
+- assessment of the domain's outbound mail reputation;
+- receiving, parsing, and delivering messages;
+- verification of an individual message's signature;
+- provider-specific configuration advice unsupported by published records;
+- checking receiving-server addresses against blocklists.
 
-The last item is excluded on the providers' terms. The largest lists do not permit free queries from services answering other people's requests, and a list that does permit it had not been found at the time of writing. A check with no permitted source would honestly answer "could not be checked" on every run; better not to promise it.
+The project has not selected a blocklist source with confirmed permission for use by a public service. This feature is therefore excluded from the release.
 
-The reason for the first item is substantive rather than organisational: outbound reputation belongs to the address a domain sends from, and that address does not follow from the domain's public records — see §2.
+Outbound mail reputation depends on the actual sending address. Receiving-server records do not establish that address — [§2](#2-check-groups-and-the-dependency-on-mx).
 
 ## 1.3. Relation to MVP 1.0
 
-This document does not change the checks in the `dns`, `registry` and `tls` categories. Behaviour defined in 1.0 is extended in four places:
+The `dns`, `registry`, and `tls` checks retain their MVP 1.0 behavior. Additions for the `email` category are assigned to the following sections:
 
-| Responsible 1.0 section | What is extended | Where |
+| MVP 1.0 Sections | Addition | MVP 1.1 Sections |
 |---|---|---|
-| 1.0 §7 | category semantics | §2 |
-| 1.0 §11 | summary and verdict | §10 |
-| 1.0 §12 | numerical score | §10 |
-| 1.0 §15 | outbound connection safety | §13 |
+| [1.0 §3](../../docs/en/prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes), [1.0 §17](../../docs/en/prd/17-internal-web-api-contract.md#17-internal-web-api-contract) | scan modes and web API | [§14](#14-the-web-api-and-scan-modes) |
+| [1.0 §6](../../docs/en/prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels) | data contracts and representations | [§9](#9-data-contracts-and-exposure-levels) |
+| [1.0 §7](../../docs/en/prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results) | statuses and dependencies | [§2](#2-check-groups-and-the-dependency-on-mx) |
+| [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues), [1.0 §12](../../docs/en/prd/12-domain-health-score.md#12-domain-health-score) | summary, verdict, and score | [§10](#10-effect-on-the-summary-the-verdict-and-the-score) |
+| [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization) | messages and localization | [§11](#11-messages-and-localization) |
+| [1.0 §14](../../docs/en/prd/14-cache-freshness.md#14-caching-and-data-freshness) | caching | [§12](#12-caching-and-data-freshness) |
+| [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection), [1.0 §22](../../docs/en/prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits) | security and resource limits | [§13](#13-outbound-connection-safety) |
+| [1.0 §23](../../docs/en/prd/23-frontend-ux-result-presentation.md#23-user-interface-and-result-presentation), [1.0 §24](../../docs/en/prd/24-seo-routing-public-tool-pages.md#24-seo-routing-and-tool-pages) | interface and routing | [§15](#15-the-interface-and-the-tool-page) |
+| [1.0 §21](../../docs/en/prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring), [1.0 §28](../../docs/en/prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics) | observability and analytics | [§16](#16-observability-and-analytics) |
+| [1.0 §26](../../docs/en/prd/26-testing-quality-gates-acceptance-strategy.md#26-testing-and-release-criteria) | testing and release conditions | [§17](#17-testing-and-release-readiness) |
 
-Each extension names the responsible 1.0 section and does not rewrite it.
+The MVP 1.0 text remains unchanged. Appendix A lists the responsible sections of this addition.
 
 ## 1.4. Acceptance Criteria
 
@@ -105,7 +111,7 @@ Each extension names the responsible 1.0 section and does not rewrite it.
 
 # 2. Check Groups and the Dependency on MX
 
-§2 defines how the `email` category is put together: which groups the checks fall into, which of them depend on `MX`, and what happens to each group when the domain has no mail server. The responsible section for status and dependency semantics is 1.0 §7; only their application to this category is defined here.
+[§2](#2-check-groups-and-the-dependency-on-mx) defines how the `email` category is put together: which groups the checks fall into, which of them depend on `MX`, and what happens to each group when the domain has no mail server. The responsible section for status and dependency semantics is [1.0 §7](../../docs/en/prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results); only their application to this category is defined here.
 
 ## 2.1. Three Groups
 
@@ -127,9 +133,9 @@ The groups are not categories of their own and carry no verdict: they are units 
 
 ## 2.2. Why the Groups Are Separate
 
-`SPF`, `DMARC` and `DKIM` are policies of the sending domain, published as `TXT` records. They exist whether or not the domain receives mail: `v=spf1 -all` on a domain that neither sends nor receives is not a mistake but a correct declaration.
+`SPF`, `DMARC`, and `DKIM` are sender-domain policies published in `TXT` records. Their checks do not depend on receiving mail. For example, `v=spf1 -all` can declare that a domain sends no mail.
 
-`STARTTLS` and `PTR` describe one specific server. That server is determined by the domain's records, and where there is none these checks have no subject — the answer is not unknown, there is nothing to ask about.
+`STARTTLS` and `PTR` examine the receiving server identified by the domain's records. If no such server exists, these checks are inapplicable.
 
 ## 2.3. What Counts as a Receiving Server
 
@@ -142,7 +148,7 @@ There is no subject in two cases:
 | neither `MX` nor address records | `mx_missing` |
 | an `MX` published to say "I accept no mail" | `null_mx` |
 
-The second is a deliberate declaration by the owner under RFC 7505, not an omission. Both are detailed in §6.
+The second is a deliberate declaration by the owner under RFC 7505, not an omission. Both are detailed in [§6](#6-mx).
 
 ## 2.4. When There Is No Subject
 
@@ -156,20 +162,20 @@ The second is a deliberate declaration by the owner under RFC 7505, not an omiss
 
 `NOT_APPLICABLE` rather than `UNKNOWN`: `UNKNOWN` means the check applies but no result could be obtained, whereas here the subject of the check is absent.
 
-The state of the domain is scored once, by the `MX` check. The checks it blocks add no further penalty; otherwise one cause would penalise the domain four times over. How `NOT_APPLICABLE` affects confidence is defined in 1.0 §11 and is unchanged here.
+The `MX` check assesses the absence of a receiving server. Blocked checks add no penalties. `NOT_APPLICABLE` does not reduce confidence; the completeness and confidence rules in [1.0 §7](../../docs/en/prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results) and [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) remain unchanged.
 
 ## 2.5. The Receiving Server, Not Outbound Mail
 
 `MX` names the server that **receives** mail for the domain. The server the domain **sends** from may be a different one, and it does not follow from the domain's public records.
 
-The results of `PTR` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is 1.0 §13.
+The results of `PTR` are therefore stated as the condition of the receiving server. Claims such as "mail from this domain will land in spam" are not permitted on this evidence: they rest on a link the data does not contain. The general rule against unproven causal claims is [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization).
 
 ## 2.6. Acceptance Criteria
 
 - **AC-2.1** The `SPF`, `DMARC` and `DKIM` checks run whether or not `MX` is present.
 - **AC-2.2** With no `MX` but with address records for the domain, the checks of the receiving server run against the implicit server.
 - **AC-2.3** Where there is no subject, the `STARTTLS` and `PTR` checks return `NOT_APPLICABLE` with a `blockedBy` drawn from the values `mx_missing` and `null_mx`.
-- **AC-2.4** An absent receiving server gives no check in the category the status `UNKNOWN`.
+- **AC-2.4** An absent receiving server is not itself a reason for `UNKNOWN` in the category.
 - **AC-2.5** The state of the receiving server reduces the numerical score once, through the result of the `MX` check.
 - **AC-2.6** The messages of the `PTR` check describe the receiving server and assert nothing about the domain's outbound mail.
 
@@ -179,24 +185,24 @@ The results of `PTR` are therefore stated as the condition of the receiving serv
 
 # 3. SPF
 
-§3 defines the SPF policy check: what is read, how the RFC 7208 limits are counted, and which conclusions may be drawn from a record without a sending address.
+[§3](#3-spf) defines the SPF policy check: what is read, how the RFC 7208 limits are counted, and which conclusions may be drawn from a record without a sending address.
 
 ## 3.1. What Is Being Checked
 
-RFC 7208 defines `check_host()`, which answers "may this address send mail on behalf of this domain" and takes the sender's address as a required input.
+[RFC 7208](https://www.rfc-editor.org/rfc/rfc7208.html) defines `check_host()` as a check of whether a specific address may send mail for a domain. The sending address is a required input.
 
-2check has no such address: the reader is asking about their own domain, not about a particular message. The SPF check is therefore an analysis of the published record, not an evaluation of `check_host()`. Anything that cannot be determined without a sending address is not asserted.
+2check receives a domain and therefore performs static analysis of the published SPF policy. The check determines:
 
-The analysis answers four questions:
+- whether a record exists and how many records are present;
+- grammar compliance;
+- DNS traversal limits;
+- the policy for senders not listed in the record.
 
-- whether a record is published, and whether there is only one;
-- whether it parses against the RFC 7208 grammar;
-- whether it stays inside the limits on the number of DNS queries;
-- what the record says about senders it does not list.
+The result is not an evaluation of `check_host()` for an individual message.
 
 ## 3.2. Retrieving the Record
 
-The record is read from the domain's `TXT`. The responsible section for the DNS queries themselves is 1.0 §8.
+The record is read from the domain's `TXT`. The responsible section for the DNS queries themselves is [1.0 §8](../../docs/en/prd/08-dns.md#8-dns-checks).
 
 An SPF record is a `TXT` value beginning with `v=spf1` followed by a space or the end of the value. Case is not significant. Several strings of one `TXT` value are joined with no separator.
 
@@ -207,18 +213,18 @@ The `SPF` DNS type is not queried: RFC 7208 requires the policy to be published 
 | Found | Status | Severity |
 |---|---|---|
 | none | `FAIL` | `warning` |
-| one | analysed further | — |
+| one | analyzed further | — |
 | more than one | `FAIL` | `critical` |
 
-More than one record is a `permerror` under RFC 7208: a receiver does not choose between them, it rejects the policy outright. A domain with two SPF records is worse protected than a domain with none, because its owner believes protection is in place.
+Multiple records cause `permerror` under RFC 7208: a receiver does not choose one of them. The `critical` level in 2check denotes a published policy that cannot be applied.
 
 An absent record is a confirmed fact rather than an unknown one, hence `FAIL` and not `UNKNOWN`.
 
 ## 3.4. The Limit on DNS Queries
 
-RFC 7208 requires that one evaluation of a policy perform no more than ten queries caused by the terms `include`, `a`, `mx`, `ptr`, `exists` and `redirect`. The terms `all`, `ip4` and `ip6` do not count towards it. Exceeding the limit gives `permerror`.
+RFC 7208 limits the evaluated terms that cause DNS queries: `include`, `a`, `mx`, `ptr`, `exists`, and `redirect`. At most ten such terms may be evaluated, including nested policies. This is not a count of network packets. The terms `all`, `ip4`, and `ip6` do not count; exceeding the limit gives `permerror`.
 
-2check walks the whole record, including nested `include` and `redirect`, and counts the **worst case** — the number of terms reached by a receiver that has to walk the record to the end. A real evaluation may stop earlier, at the first mechanism that matches, so the worst case is an upper bound, and it is the bound that decides whether the policy breaks for some senders.
+2check assesses the **worst reachable path**, including nested `include` and an applicable `redirect`. Mechanisms after `all` are not evaluated; `redirect` is ignored when `all` is present. Mutually exclusive paths are not added as one. If path reachability or macro expansion depends on the unknown sender, an excess is not established: the affected condition returns `UNKNOWN` with `spf_traversal_incomplete`.
 
 | Query-causing terms | Status | Severity |
 |---|---|---|
@@ -231,27 +237,27 @@ The walk stops when a loop of `include` or `redirect` is found; a loop is a `per
 
 ## 3.5. What the Record Says About Unlisted Senders
 
-The final `all` mechanism decides the fate of everyone that matched no earlier mechanism.
+The first reached `all` mechanism sets the SPF result for an address that matched no earlier mechanism. An SPF result does not determine the final delivery decision.
 
 | Record | Meaning | Status | Severity |
 |---|---|---|---|
-| `-all` | reject | `PASS` | — |
-| `~all` | accept but mark | `PASS` | — |
+| `-all` | SPF fail result | `PASS` | — |
+| `~all` | SPF softfail result | `PASS` | — |
 | `?all` | state nothing | `FAIL` | `warning` |
 | `+all` | allow everyone | `FAIL` | `critical` |
 | neither `all` nor `redirect` | state nothing | `FAIL` | `warning` |
 
-`+all` lets anyone at all send in the domain's name. That is not a strict policy and not a lenient one: it is the absence of a policy, written so that it looks like the presence of one.
+`+all` produces an SPF pass for any address reaching that mechanism and does not restrict the set of senders.
 
 `~all` is not treated as a defect: it is the working setting for a domain that is not yet sure its list of senders is complete.
 
 ## 3.6. A Deprecated Mechanism
 
-The `ptr` mechanism present in a record gives `warning`. RFC 7208 states plainly that it should not be published: it is slow, unreliable and puts load on other people's servers. It does not affect the status of the remaining conditions.
+The presence of `ptr` gives `warning`. RFC 7208 discourages its use because of complexity, reliability, and additional DNS load. Other conditions are assessed independently.
 
 ## 3.7. Technical Failure
 
-If the `TXT` query gave no definite result, the check returns `UNKNOWN` with its own `reasonCode`. The rules for `reasonCode` and `blockedBy` are 1.0 §7.
+If the `TXT` query gave no definite result, the check returns `UNKNOWN` with its own `reasonCode`. The rules for `reasonCode` and `blockedBy` are [1.0 §7](../../docs/en/prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results).
 
 | Cause | `reasonCode` |
 |---|---|
@@ -266,7 +272,7 @@ An incomplete walk does not give `FAIL` on the number of terms: having failed to
 - That the listed addresses really belong to the domain's senders: the record states the owner's intent, and public data cannot confirm it.
 - That the policy applies to a particular message: without a sending address that conclusion is undefined.
 
-The general rule against unproven causal claims is 1.0 §13.
+The general rule against unproven causal claims is [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization).
 
 ## 3.9. Acceptance Criteria
 
@@ -274,7 +280,7 @@ The general rule against unproven causal claims is 1.0 §13.
 - **AC-3.2** The `SPF` DNS type is not queried.
 - **AC-3.3** An absent record gives `FAIL` with severity `warning`, not `UNKNOWN`.
 - **AC-3.4** More than one record gives `FAIL` with severity `critical`.
-- **AC-3.5** The number of query-causing terms is counted as the worst case of walking the record together with nested `include` and `redirect`; more than ten gives `FAIL` with severity `critical`.
+- **AC-3.5** DNS terms are assessed along the worst reachable path with nested `include` and an applicable `redirect`; a confirmed excess over ten gives `FAIL` with severity `critical`. Unestablished reachability does not give `FAIL`.
 - **AC-3.6** The terms `all`, `ip4` and `ip6` do not count towards that number.
 - **AC-3.7** Exceeding the recommended limit on void queries gives `warning`, not `critical`.
 - **AC-3.8** A loop of `include` or `redirect` is detected and gives `FAIL` with severity `critical`.
@@ -289,15 +295,15 @@ The general rule against unproven causal claims is 1.0 §13.
 
 # 4. DMARC
 
-§4 defines the DMARC policy check: where the record is looked for, how it is recognised, what counts as a working policy, and how the check treats records written to the previous standard.
+[§4](#4-dmarc) defines the DMARC policy check: where the record is looked for, how it is recognized, what counts as a working policy, and how the check treats records written to the previous standard.
 
 ## 4.1. The Standard in Force
 
-The check follows RFC 9989, which together with RFC 9990 and RFC 9991 replaced RFC 7489.
+The check follows [RFC 9989](https://www.rfc-editor.org/rfc/rfc9989.html). Together with RFC 9990 and RFC 9991, it replaces RFC 7489.
 
-This is not a formality: the new standard removes the `pct` tag, adds the `np` and `psd` tags, and finds a parent policy by walking the name tree instead of consulting a public suffix list. A record written to RFC 7489 remains valid — no new tag was made mandatory.
+The specification changes inherited-policy discovery, the set of tags, and reporting rules. In particular, discovery uses the DNS tree instead of a public suffix list, and the `pct` tag is no longer applied.
 
-Receivers do not adopt the new standard at the same moment. The check therefore reports both what a record means under the standard in force and where its behaviour may differ between receivers.
+Records published under the previous specification are evaluated under the current rules. Possible differences in receiver behavior are described separately.
 
 ## 4.2. What Is Being Checked
 
@@ -307,9 +313,9 @@ What is checked is the domain's published policy, not the handling of a particul
 
 The record is read from the `TXT` of the name `_dmarc` under the domain being checked.
 
-If there is no record there, the policy of a parent domain applies. RFC 9989 defines a walk of the name tree to find it: queries proceed upward from the domain being checked, and for a name of any length no more than eight of them are made. The responsible section for the DNS queries themselves is 1.0 §8.
+If no applicable record is found, a parent-domain policy is sought under RFC 9989. The walk follows the stopping and policy-domain selection rules, including `psd` handling, and the eight-query limit with the specified shortening of long names. A usable inherited policy is determined by the standard's algorithm, not merely by the nearest record found. The responsible section for DNS queries is [1.0 §8](../../docs/en/prd/08-dns.md#8-dns-checks).
 
-The reader is told which policy will apply to the domain and where it came from:
+The user is told which policy will apply to the domain and where it came from:
 
 | Where the record was found | What is reported |
 |---|---|
@@ -319,39 +325,39 @@ The reader is told which policy will apply to the domain and where it came from:
 
 An inherited policy is a working state rather than a defect: that is how subdomains are meant to work.
 
-## 4.4. Recognising the Record
+## 4.4. Recognizing the Record
 
-The `v` tag with the value `DMARC1` must come first in the record, case-sensitively. A record where it does not is ignored outright — which, from a receiver's point of view, means there is no policy.
+The `v` tag with the value `DMARC1` must come first in the record, case-sensitively. A record that does not meet this condition is not used for policy selection. Inheritance is considered under the discovery rules.
 
 If more than one record is found for one name, all of them are discarded.
 
 | Found | Status | Severity |
 |---|---|---|
 | no record anywhere along the walk | `FAIL` | `warning` |
-| one usable record | analysed further | — |
-| a record exists but is not recognised | `FAIL` | `critical` |
+| one usable record | analyzed further | — |
+| a record exists but is not recognized | `FAIL` | `critical` |
 | more than one for one name | `FAIL` | `critical` |
 
-The severities differ deliberately. An absent record is a door left open. A record that exists but does not work is worse: its owner believes protection is configured and never comes back to it.
+The levels distinguish different states: `warning` denotes an absent policy, while `critical` denotes a published record that a receiver cannot apply. These levels are assessment rules defined by 2check.
 
 ## 4.5. The Policy
 
-| Value of `p` | What a receiver does | Status | Severity |
+| Effective policy value (`p`, `sp`, or `np`) | Requested receiver action | Status | Severity |
 |---|---|---|---|
 | `reject` | rejects failing messages | `PASS` | — |
-| `quarantine` | files them as spam | `PASS` | — |
-| `none` | nothing, reports only | `FAIL` | `warning` |
+| `quarantine` | quarantine | `PASS` | — |
+| `none` | no handling preference | `FAIL` | `warning` |
 | the tag is absent | read as `none` | `FAIL` | `warning` |
 
-`p=none` is not a mistake but the first step of a rollout: it is there to collect reports and confirm that the domain's own mail passes. It affords no protection, though, and a domain that stays on it forever is protected exactly as much as a domain with no DMARC at all. The check's message says that, and does not call `none` a misconfiguration.
+`p=none` is a valid monitoring policy. It requests neither rejection nor quarantine of messages that fail DMARC. The `warning` level communicates this limitation and does not indicate a syntax error.
 
-The `sp` and `np` tags set the policy for subdomains and for non-existent subdomains. They do not change the status of the check: their values are reported as fact.
+For inheritance, the effective policy is selected using `sp` and `np` under RFC 9989. Their presence does not itself create a penalty; the applicable policy value determines the status. The message reports that value and its source.
 
 ## 4.6. Reports
 
-An absent `rua` tag gives `FAIL` with severity `informational`. With no address for reports, an owner never sees who sends mail in the domain's name and has no grounds on which to move from `none` to `quarantine`.
+An absent `rua` tag gives `FAIL` with severity `informational`: the record does not request aggregate DMARC reports. This limits the information about domain use available through this mechanism.
 
-The addresses in `rua` and `ruf` belong to the domain's owner and are shown under the exposure rules of 1.0 §6.
+The addresses in `rua` and `ruf` belong to the domain's owner and are shown under the exposure rules of [1.0 §6](../../docs/en/prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels).
 
 ## 4.7. Compatibility with the Previous Standard
 
@@ -359,7 +365,7 @@ The addresses in `rua` and `ruf` belong to the domain's owner and are shown unde
 |---|---|---|
 | the `pct` tag | `FAIL` | `warning` |
 
-RFC 9989 removes the `pct` tag. A receiver following the new standard ignores it; a receiver following RFC 7489 applies the policy to the stated share of messages. One record therefore behaves differently at different receivers, and the owner cannot say what share of their mail is protected.
+RFC 9989 removes the `pct` tag. A receiver following the new standard ignores it; a receiver following RFC 7489 applies the policy to the stated share of messages. This may lead to different policy application. The message reports the obsolete tag and the possible difference without estimating a share of protected messages.
 
 ## 4.8. Technical Failure
 
@@ -368,7 +374,7 @@ RFC 9989 removes the `pct` tag. A receiver following the new standard ignores it
 | the query did not complete | `dmarc_lookup_failed` |
 | the tree walk did not complete | `dmarc_tree_walk_incomplete` |
 
-An incomplete walk gives `UNKNOWN`: not having reached the end, we do not know whether a policy exists further up. The rules for `reasonCode` and `blockedBy` are 1.0 §7.
+An incomplete walk gives `UNKNOWN`: not having reached the end, we do not know whether a policy exists further up. The rules for `reasonCode` and `blockedBy` are [1.0 §7](../../docs/en/prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results).
 
 ## 4.9. What the Check Does Not Assert
 
@@ -378,14 +384,14 @@ An incomplete walk gives `UNKNOWN`: not having reached the end, we do not know w
 
 ## 4.10. Acceptance Criteria
 
-- **AC-4.1** The check follows RFC 9989; a record written to RFC 7489 is recognised as valid.
+- **AC-4.1** The check follows RFC 9989; a record written to RFC 7489 is recognized as valid.
 - **AC-4.2** The record is read from the `TXT` of the name `_dmarc` under the domain; if it is absent, the name tree is walked, in no more than eight queries.
-- **AC-4.3** The source of the policy that applies is reported to the reader; an inherited policy is not treated as a defect.
+- **AC-4.3** The source of the policy that applies is reported to the user; an inherited policy is not treated as a defect.
 - **AC-4.4** The `v` tag with the value `DMARC1` must come first, case-sensitively; otherwise the record is ignored outright.
 - **AC-4.5** More than one record for one name gives `FAIL` with severity `critical`.
-- **AC-4.6** An absent policy gives `FAIL` with severity `warning`; an unrecognised record gives `FAIL` with severity `critical`.
+- **AC-4.6** An absent policy gives `FAIL` with severity `warning`; an unrecognized record gives `FAIL` with severity `critical`.
 - **AC-4.7** `p=reject` and `p=quarantine` give `PASS`; `p=none` and an absent `p` tag give `FAIL` with severity `warning`.
-- **AC-4.8** The values of `sp` and `np` are reported as fact and do not change the status of the check.
+- **AC-4.8** Inherited policy uses `sp` and `np` as specified by the standard; their presence is not itself penalized. The effective policy is assessed.
 - **AC-4.9** An absent `rua` gives `FAIL` with severity `informational`.
 - **AC-4.10** The presence of the `pct` tag gives `FAIL` with severity `warning`, explaining the divergence between the standards.
 - **AC-4.11** An incomplete tree walk gives `UNKNOWN` with a `reasonCode`, not a conclusion that no policy exists.
@@ -397,30 +403,30 @@ An incomplete walk gives `UNKNOWN`: not having reached the end, we do not know w
 
 # 5. DKIM
 
-§5 defines the DKIM check: where selectors come from, what is examined in a key that was found, and why a key that was not found is not the same as a key that is absent.
+[§5](#5-dkim) defines the DKIM check: where selectors come from, what is examined in a key that was found, and why a key that was not found is not the same as a key that is absent.
 
 ## 5.1. Why a Selector Cannot Be Discovered
 
 A DKIM key is published at the name `<selector>._domainkey.<domain>`. The owner chooses the selector, and a domain's selectors cannot be enumerated through DNS: a name can only be queried by someone who already knows it.
 
-This is a property of the protocol, not a gap in the check. The section's main rule follows from it: having failed to find a key, we know that we did not find one at the names we tried — and nothing about whether a key exists at some other name.
+An absent response at the queried names does not establish that no keys exist under other selectors. The result is limited to the names actually queried.
 
 ## 5.2. Where Selectors Come From
 
 Two sources, in the order they are used:
 
-1. A selector entered by the reader. An optional field beside the domain.
-2. The selectors of the mail provider recognised from the domain's `MX`.
+1. A selector entered by the user. An optional field beside the domain.
+2. The selectors of the mail provider recognized from the domain's `MX`.
 
-The second source works because providers use fixed selectors: a domain whose `MX` points at a provider's mail almost certainly publishes a key at that provider's selector. The mapping from provider to selectors is versioned configuration under the rules of 1.0 §20 and is not part of the code.
+The provider-to-selector mapping contains known candidates and is versioned configuration under the rules of [1.0 §20](../../docs/en/prd/20-configuration-policy-management.md#20-configuration-and-policy-management). Recognizing a receiving provider from `MX` supplies search candidates; it does not establish that outbound mail uses the same provider.
 
-The number of names queried in one check does not exceed eight. This is a bound rather than a sweep: the check asks for names it has reason to believe are right, and does not guess them.
+At most eight names from these sources are queried per check. Arbitrary selectors are not enumerated.
 
-If no provider is recognised from `MX` and the reader entered no selector, there is nothing to query.
+If no provider is recognized from `MX` and the user entered no selector, there is nothing to query.
 
-## 5.3. Recognising the Record
+## 5.3. Recognizing the Record
 
-The record is read from the `TXT` of the selector's name. The responsible section for DNS queries is 1.0 §8.
+The record is read from the `TXT` of the selector's name. The responsible section for DNS queries is [1.0 §8](../../docs/en/prd/08-dns.md#8-dns-checks).
 
 The `v` tag, when present, must have the value `DKIM1`. The key is held in the `p` tag.
 
@@ -438,21 +444,21 @@ An empty `p` tag is a revoked key: the record is there, and signatures made unde
 
 The key length limit comes from RFC 8301, which updates RFC 6376: a verifier must not consider signatures valid when the key is shorter than `1024` bits. The ban on `sha1` comes from the same place: signatures using it have permanently failed evaluation.
 
-A `t` tag holding `y` declares testing mode: a receiver may disregard the outcome of verifying a signature. For a domain that considers DKIM configured, that is protection quietly lost.
+A `t` tag containing `y` declares testing mode as described in [RFC 6376](https://www.rfc-editor.org/rfc/rfc6376.html#section-3.6.1). The check reports this mode and assigns the product-defined `warning` level.
 
-`ed25519` keys are recognised alongside `rsa` under RFC 8463; the length limit does not apply to them.
+`ed25519` keys are recognized alongside `rsa` under RFC 8463; the length limit does not apply to them.
 
 ## 5.5. When No Key Is Found
 
 | What happened | Status | `reasonCode` |
 |---|---|---|
 | none of the names held a record | `UNKNOWN` | `dkim_selector_unknown` |
-| the reader entered a selector and it holds no record | `FAIL` | — |
+| the user entered a selector and it holds no record | `FAIL` | — |
 | the query did not complete | `UNKNOWN` | `dkim_lookup_failed` |
 
-The difference between the first row and the second is the difference between "we do not know where to look" and "we looked where the owner said". Only in the second case is the absence of a record a confirmed fact, and only there does it give `FAIL`.
+An unsuccessful search using configured candidates gives an uncertain result. For an explicitly supplied selector, absence is established only at that name and gives `FAIL`. This finding does not extend to other selectors of the domain.
 
-`UNKNOWN` reduces confidence in the result under the rules of 1.0 §11. The check's message says plainly which names were tried and offers to take a selector.
+`UNKNOWN` reduces confidence in the result under the rules of [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues). The check's message says plainly which names were tried and offers to take a selector.
 
 ## 5.6. What the Check Does Not Assert
 
@@ -462,15 +468,15 @@ The difference between the first row and the second is the difference between "w
 
 ## 5.7. Acceptance Criteria
 
-- **AC-5.1** Selectors come from the value entered by the reader and from the mapping for the provider recognised from `MX`; the mapping is versioned configuration.
+- **AC-5.1** Selectors come from the value entered by the user and from the mapping for the provider recognized from `MX`; the mapping is versioned configuration.
 - **AC-5.2** No more than eight selector names are queried in one check.
 - **AC-5.3** An empty `p` tag gives `FAIL` with severity `critical`.
 - **AC-5.4** An `rsa` key shorter than `1024` bits gives `FAIL` with severity `critical`.
 - **AC-5.5** An `h` tag permitting only `sha1` gives `FAIL` with severity `critical`.
 - **AC-5.6** A `t` tag holding `y` gives `FAIL` with severity `warning`.
-- **AC-5.7** `ed25519` keys are recognised as valid; the length limit does not apply to them.
+- **AC-5.7** `ed25519` keys are recognized as valid; the length limit does not apply to them.
 - **AC-5.8** No record at the names tried gives `UNKNOWN` with a `reasonCode`, not `FAIL`.
-- **AC-5.9** No record at a selector entered by the reader gives `FAIL`.
+- **AC-5.9** No record at a selector entered by the user gives `FAIL`.
 - **AC-5.10** The check's message names the selectors tried and does not assert that the domain has no DKIM.
 
 ---
@@ -479,13 +485,13 @@ The difference between the first row and the second is the difference between "w
 
 # 6. MX
 
-§6 defines the check of the `MX` records: how the receiving server is located, what counts as a sound configuration, and what this check hands to the rest of the group.
+[§6](#6-mx) defines the check of the `MX` records: how the receiving server is located, what counts as a sound configuration, and what this check hands to the rest of the group.
 
 ## 6.1. What Is Being Checked
 
 What is checked is where mail addressed at this domain will go, and whether what was found can take delivery.
 
-The check sends no mail and does not contact the server it finds: connecting to it is the subject of §7.
+The check sends no mail and does not contact the server it finds: connecting to it is the subject of [§7](#7-starttls).
 
 ## 6.2. How the Server Is Located
 
@@ -498,21 +504,21 @@ The order is laid down by RFC 5321 and restated in RFC 7505: a sender queries th
 | an `MX` saying "I accept no mail" | there is deliberately no server |
 | neither `MX` nor address records | there is no server |
 
-The record saying "I accept no mail" is an `MX` with preference `0` and an empty host, defined in RFC 7505. A domain publishing it must publish no other `MX` record.
+Null MX is a sole `MX` record with preference `0` and exchange `.` (the root name), defined in [RFC 7505](https://www.rfc-editor.org/rfc/rfc7505.html#section-3). It declares that the domain accepts no mail. An empty string is not its textual representation.
 
 ## 6.3. Results
 
 | State | Status | Severity | What is handed on |
 |---|---|---|---|
-| `MX` records present and usable | `PASS` | — | the hosts, for §7 and §8 |
+| `MX` records present and usable | `PASS` | — | the hosts, for [§7](#7-starttls) and [§8](#8-ptr) |
 | the "I accept no mail" record | `PASS` | — | `blockedBy = null_mx` |
 | no `MX`, delivery will follow the address records | `FAIL` | `warning` | the domain itself as a host |
 | neither `MX` nor address records | `FAIL` | `warning` | `blockedBy = mx_missing` |
 | `MX` records present but no host is usable | `FAIL` | `critical` | `blockedBy = mx_missing` |
 
-The "I accept no mail" record is a `PASS`: a domain that takes no mail and says so plainly is correctly configured. RFC 7505 exists for the sake of that declaration.
+A valid Null MX record receives `PASS` for explicitly declaring that the domain accepts no mail.
 
-Delivery by address records works, but it was arrived at by accident: an address record answers the question "where is the site", not "where should mail go". The owner should either publish an `MX` or declare that they accept no mail. Hence `warning` and not `critical`: the mail does arrive.
+Without `MX`, address records define an implicit delivery route. The `warning` level recommends naming the mail servers explicitly or declaring that no mail is accepted. It does not mean that delivery has been tested.
 
 ## 6.4. Whether a Host Is Usable
 
@@ -523,9 +529,9 @@ Delivery by address records works, but it was arrived at by accident: an address
 | no address records | the host is unusable | — |
 | an address written in place of a name | `FAIL` | `critical` |
 
-An `MX` host must not be an alias and must have address records — RFC 2181. An alias does still work with most senders, hence `warning`; an address written in place of a name works with nobody.
+An `MX` host must have address records and must not be an alias — RFC 2181. The `warning` level for an alias and `critical` for an address in place of a name are product assessment rules; individual senders' behavior is not tested.
 
-If every host is unusable there is no delivery, and that is `critical`. If some are, delivery proceeds through the rest: `FAIL` with severity `warning`, naming the hosts that dropped out.
+If every host is unusable, the result receives `critical`. If only some are unusable, the result is `FAIL` with severity `warning` and lists the affected hosts. A usable DNS route does not establish actual delivery.
 
 ## 6.5. Technical Failure
 
@@ -534,18 +540,18 @@ If every host is unusable there is no delivery, and that is `critical`. If some 
 | the `MX` query did not complete | `mx_lookup_failed` |
 | host addresses did not resolve for technical reasons | `mx_host_resolution_failed` |
 
-An incomplete query gives `UNKNOWN`, not a conclusion that no records exist. The rules for `reasonCode` and `blockedBy` are 1.0 §7.
+An incomplete query gives `UNKNOWN`, not a conclusion that no records exist. The rules for `reasonCode` and `blockedBy` are [1.0 §7](../../docs/en/prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results).
 
 ## 6.6. What the Check Does Not Assert
 
-- That the server accepts mail: that is established by connecting, not by records, and belongs to §7.
+- That the server accepts mail: DNS records do not establish this; the probe in [§7](#7-starttls) checks only whether an encrypted connection can be established.
 - That mail will reach a mailbox: the route beyond the receiving server is not visible in public data.
 - That the order of preference is the right one: preference expresses the owner's intent.
 
 ## 6.7. Acceptance Criteria
 
 - **AC-6.1** The receiving server is located in the order laid down by RFC 5321: `MX` records, then the domain's address records.
-- **AC-6.2** A record with preference `0` and an empty host is recognised as a declaration that no mail is accepted and gives `PASS`.
+- **AC-6.2** A sole `MX` record with preference `0` and exchange `.` is recognized as Null MX and gives `PASS`.
 - **AC-6.3** No `MX` with address records present gives `FAIL` with severity `warning` and hands on the domain itself as a host.
 - **AC-6.4** Neither `MX` nor address records gives `FAIL` with severity `warning` and `blockedBy = mx_missing` for the dependent checks.
 - **AC-6.5** No usable host gives `FAIL` with severity `critical`.
@@ -559,13 +565,13 @@ An incomplete query gives `UNKNOWN`, not a conclusion that no records exist. The
 
 # 7. STARTTLS
 
-§7 defines the check of encryption at the receiving server: what the probe does, which hosts it touches, and how its result differs from a result we simply could not obtain.
+[§7](#7-starttls) defines the check of encryption at the receiving server: what the probe does, which hosts it touches, and how its result differs from a result we simply could not obtain.
 
 ## 7.1. What Is Being Checked
 
-What is checked is whether the receiving server offers to move to encryption, and whether the move succeeds.
+The check determines whether the receiving server offers STARTTLS and whether an encrypted connection can be established.
 
-This is the first outbound connection in the product that is neither a DNS query nor an HTTPS request. The rules under which it is permitted are §13; the responsible section for validating destination addresses is 1.0 §15.
+The release adds an SMTP probe to the existing DNS, registration, and TLS checks. SMTP connection admission is defined in [§13](#13-outbound-connection-safety); destination-address validation is defined in [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection).
 
 ## 7.2. What the Probe Does
 
@@ -573,13 +579,13 @@ A connection to port `25` of the host, a greeting, a request for extensions, the
 
 The probe sends no mail: the sender, recipient and data commands are not issued under any circumstances. From the receiving server's point of view this is a visit that leaves behind neither a message nor a deferred delivery.
 
-The port is fixed. Arbitrary ports are accepted neither from input nor from the domain's records — 1.0 §25.
+The port is fixed. Arbitrary ports are accepted neither from input nor from the domain's records — [1.0 §25](../../docs/en/prd/25-privacy-data-protection-abuse-boundaries.md#25-privacy-access-and-abuse-prevention).
 
 ## 7.3. Which Hosts Are Probed
 
-The hosts come from §6, in order of preference. No more than four hosts are probed in one check.
+The hosts come from [§6](#6-mx), in order of preference. No more than four hosts are probed in one check.
 
-The limit exists because each host is a separate connection and a separate handshake, while the scan's time budget is shared across all categories and is set by 1.0 §22. Hosts beyond the limit are listed as not probed; the result then covers only the hosts that were, and the message says so plainly.
+The limit exists because each host is a separate connection and a separate handshake, while the scan's time budget is shared across all categories and is set by [1.0 §22](../../docs/en/prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits). Hosts beyond the limit are listed as not probed; the result then covers only the hosts that were, and the message says so plainly.
 
 ## 7.4. Results
 
@@ -590,15 +596,15 @@ The limit exists because each host is a separate connection and a separate hands
 | no host offers encryption | `FAIL` | `critical` |
 | encryption is offered but the move fails | `FAIL` | `critical` |
 
-Encryption offered but broken is worse than encryption not offered. A sender that requires encryption will not deliver to such a host at all, and a sender with ordinary settings loses time on the attempt.
+An unsuccessful transition after STARTTLS is offered is assessed as `critical` when a failure at the target server is confirmed. A technical inability to complete the observation is handled separately under [§7.6](#76-technical-failure).
 
 ## 7.5. The Host's Certificate
 
-The certificate is examined under the rules of 1.0 §10: validity period, name match, chain of trust.
+The certificate is examined under the rules of [1.0 §10](../../docs/en/prd/10-ssl-tls.md#10-ssltls-checks): validity period, name match, chain of trust.
 
-Faults in it give `FAIL` with severity `warning` rather than `critical`, and here is why: in mail delivery, encryption is opportunistic by default. Most senders accept any certificate at all, because the alternative is to send the message in the clear. An expired certificate on a mail host is therefore a real defect, but not a cause of non-delivery, and we will not call it one.
+A validity-period, name-match, or trust failure gives `FAIL` with severity `warning`. This level is an assessment rule of 2check. The certificate result cannot establish whether an individual sender will accept the connection or deliver a message.
 
-The protocol version is assessed in the same place, under 1.0 §10, and gets no separate rules here.
+The protocol version is assessed in the same place, under [1.0 §10](../../docs/en/prd/10-ssl-tls.md#10-ssltls-checks), and gets no separate rules here.
 
 ## 7.6. Technical Failure
 
@@ -608,7 +614,7 @@ The protocol version is assessed in the same place, under 1.0 §10, and gets no 
 | the session broke off before a result | `starttls_session_incomplete` |
 | outbound connections are unavailable in this deployment | `outbound_smtp_unavailable` |
 
-The last row is about us, not about the domain. If the environment lets no connection out to the mail port, no domain can be checked at all, and the result is obliged to look like our limitation. The same principle as for our own infrastructure in 1.0 §15: a failure on our side does not become a defect of somebody else's domain.
+An unavailable outbound mail port is a deployment limitation. It is shown separately from a confirmed fault at the receiving server and does not reduce the domain's score. This follows the rule in [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection).
 
 In all three cases the status is `UNKNOWN`.
 
@@ -620,7 +626,7 @@ In all three cases the status is `UNKNOWN`.
 
 ## 7.8. Acceptance Criteria
 
-- **AC-7.1** The probe connects only to port `25` and only to hosts obtained from §6.
+- **AC-7.1** The probe connects only to port `25` and only to hosts obtained from [§6](#6-mx).
 - **AC-7.2** The probe issues no sender, recipient or data commands.
 - **AC-7.3** No more than four hosts are probed in one check; those not probed are listed, and the result covers only the ones that were.
 - **AC-7.4** No encryption on some hosts gives `FAIL` with severity `warning`; on all of them, `FAIL` with severity `critical`.
@@ -635,23 +641,21 @@ In all three cases the status is `UNKNOWN`.
 
 # 8. PTR
 
-§8 defines the check of the receiving server's reverse names: what counts as a configured reverse name, how its confirmation is tested, and what does not follow from either.
+[§8](#8-ptr) defines the check of the receiving server's reverse names: what counts as a configured reverse name, how its confirmation is tested, and what does not follow from either.
 
 ## 8.1. What Is Being Checked
 
-What is checked are the addresses of the hosts obtained from §6. Each address is asked for its reverse name, and each name for the address it points to.
+What is checked are the addresses of the hosts obtained from [§6](#6-mx). Each address is asked for its reverse name, and each name for the address it points to.
 
 ## 8.2. A Confirmed Reverse Name
 
-A reverse name counts as confirmed when the name obtained from an address resolves back to that same address. Such agreement is a long-standing requirement of host configuration: RFC 1912 requires forward and reverse records to be kept consistent and forbids pointing a reverse record at an alias.
+A reverse name is confirmed when the name returned for an address resolves back to that address. Forward and reverse record consistency is described in RFC 1912.
 
-An unconfirmed name means the address calls itself by a name that does not belong to it. That is a configuration error, not a sign of ill intent.
+A missing match indicates inconsistent DNS records. It establishes neither ownership of the name or address nor malicious intent.
 
-## 8.3. Addresses of Both Versions
+## 8.3. Separate IPv4 and IPv6 Results
 
-Addresses of version four and version six are checked separately and give separate results.
-
-The split is needed because a reverse zone for version six addresses is set up less often: a host with a configured reverse name for its version four address frequently has none for version six, and its owner does not know.
+IPv4 and IPv6 are checked separately. A result for one address family is not applied to the other: reverse-name availability and confirmation may differ.
 
 ## 8.4. Results
 
@@ -667,9 +671,9 @@ Several reverse names for one address are permitted and are reported as fact.
 
 ## 8.5. What Is Not Judged
 
-The look of the name itself is not judged. A name that contains the address, or that resembles one handed out automatically, is not treated as a defect.
+The appearance of a name does not affect its status. A name containing an address or resembling an automatically generated value is not treated as a defect.
 
-Such a judgement would be a guess: a name cannot establish how a host is configured or how receivers regard it, and a message saying so would read as a claim about the fate of mail. The general rule is 1.0 §13.
+A name's form does not establish server configuration quality or the handling of outbound messages. Limits on causal claims are defined in [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization).
 
 ## 8.6. Technical Failure
 
@@ -682,13 +686,13 @@ An incomplete confirmation gives `UNKNOWN`: without the forward answer we do not
 
 ## 8.7. What the Check Does Not Assert
 
-- That the domain's mail will or will not land in spam: the reverse name of a receiving host does not describe the sending one and says nothing about the fate of outbound messages — §2.
+- That the domain's mail will or will not land in spam: the reverse name of a receiving host does not describe the sending one and says nothing about the fate of outbound messages — [§2](#2-check-groups-and-the-dependency-on-mx).
 - That the host is badly configured in general: a reverse name is one setting, not an assessment of a host.
 - That the name belongs to the domain's owner: the addresses of a receiving host often belong to a mail provider.
 
 ## 8.8. Acceptance Criteria
 
-- **AC-8.1** The addresses checked are those of the hosts obtained from §6; no other address is queried.
+- **AC-8.1** The addresses checked are those of the hosts obtained from [§6](#6-mx); no other address is queried.
 - **AC-8.2** A reverse name counts as confirmed only when it resolves back to the same address.
 - **AC-8.3** Addresses of version four and version six give separate results.
 - **AC-8.4** No reverse name for a version four address gives `FAIL` with severity `warning`, and for version six with severity `informational`.
@@ -703,7 +707,7 @@ An incomplete confirmation gives `UNKNOWN`: without the forward answer we do not
 
 # 9. Data Contracts and Exposure Levels
 
-§9 defines the structures the `email` category uses inside the common contracts of 1.0, and which of its data reach which representation. The responsible section for the contracts themselves is 1.0 §6; only this category's variants are defined here.
+[§9](#9-data-contracts-and-exposure-levels) defines the structures the `email` category uses inside the common contracts of 1.0, and which of its data reach which representation. The responsible section for the contracts themselves is [1.0 §6](../../docs/en/prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels); only this category's variants are defined here.
 
 ## 9.1. The Category
 
@@ -713,7 +717,7 @@ The enumeration of categories gains one value:
 category: dns | registry | tls | email
 ```
 
-The order they appear in the interface is set by 1.0 §23 and is not fixed in this section.
+The order they appear in the interface is set by [1.0 §23](../../docs/en/prd/23-frontend-ux-result-presentation.md#23-user-interface-and-result-presentation) and is not fixed in this section.
 
 ## 9.2. The Subject of a Check
 
@@ -739,7 +743,7 @@ MailHostTarget {
 
 `queriedName` is the name the policy was asked for. For DMARC that name may belong to a parent domain, and for DKIM it carries a selector, so it is part of the subject of the check rather than a detail: without it the result cannot be read.
 
-`implicit` marks a host obtained from the domain's address records where there is no `MX` — §6.
+`implicit` marks a host obtained from the domain's address records where there is no `MX` — [§6](#6-mx).
 
 ## 9.3. Where a Result Came From
 
@@ -761,7 +765,7 @@ SmtpProbeSource {
 }
 ```
 
-`hostsProbed` and `hostsSkipped` differ deliberately: a mismatch between them is exactly the state in which a result covers only some of the hosts, and it has to be visible in the data rather than only in the text of a message — §7.
+`hostsProbed` and `hostsSkipped` separately represent probed and skipped hosts. Any skipped hosts indicate incomplete coverage. Equality or inequality of these counts does not itself determine completeness — [§7](#7-starttls).
 
 ## 9.4. Exposure Levels
 
@@ -777,13 +781,13 @@ SmtpProbeSource {
 | the domains of DMARC report recipients | Public |
 | the full addresses of DMARC report recipients | Technical |
 
-The split of the report addresses is deliberate. The recipient's domain answers a question worth asking — whether reports go to a third-party service — and the full address adds nothing to that, while turning a result page into a convenient source of addresses to harvest. The data are published in DNS and are not secret; the point is not to make collecting them easier than it needs to be.
+The recipient domain identifies whether reports are sent to a third-party service. The full address is available in the technical representation on explicit request. Omitting it from the public summary limits further distribution of addresses already published in DNS.
 
 The category defines no Gated data.
 
 ## 9.5. Machine Values
 
-The list in 1.0 §6 gains, as values that are not localised:
+The list in [1.0 §6](../../docs/en/prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels) gains, as values that are not localized:
 
 - the names and values of policy tags;
 - selector names;
@@ -806,33 +810,38 @@ The list in 1.0 §6 gains, as values that are not localised:
 
 # 10. Effect on the Summary, the Verdict and the Score
 
-§10 defines how the results of the `email` category enter the summary and the numerical score. The responsible sections are 1.0 §11 and 1.0 §12; the rules for the verdict, for confidence and the scoring formula are not changed here.
+[§10](#10-effect-on-the-summary-the-verdict-and-the-score) defines how the results of the `email` category enter the summary and the numerical score. The responsible sections are [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) and [1.0 §12](../../docs/en/prd/12-domain-health-score.md#12-domain-health-score); the rules for the verdict, for confidence and the scoring formula are not changed here.
 
 ## 10.1. What Changes and What Does Not
 
-The score in 1.0 is not divided between categories: it is a hundred minus the sum of the penalties for issues. A fourth category therefore takes no share from the others — it adds issues that penalties are charged for.
+The MVP 1.0 score is the base score minus Issue penalties. Adding a category changes neither the formula nor a division of weight between categories.
 
-The real question of this section follows from that: how many issues the category may create for one root defect. Without an answer, a domain that simply has no mail is penalised several times for the same thing.
+The `email` category creates Issues under the common rules. Multiple findings with one established cause are merged as specified in [§10.3](#103-merging-issues-inside-the-category).
 
 ## 10.2. A Domain That Sends No Mail
 
-A domain is entitled to send no mail, and RFC 7208 calls `v=spf1 -all` normal practice for such a domain in as many words.
-
-A declared refusal of mail is recognised from a combination:
+A domain may explicitly declare that it neither receives nor sends mail. This intent is identified from the combination:
 
 | Sign | Value |
 |---|---|
-| `MX` | the "I accept no mail" record |
+| `MX` | valid Null MX |
 | SPF | `-all` with no permitting mechanisms |
 | DMARC | `p=reject` |
 
-On a full match every check in the category gives `PASS`: the domain is correctly configured for what it does. No issues, no penalties.
+This combination does not automatically assign `PASS` to every check:
 
-On a partial match the ordinary rules of §3–§8 apply. A domain that declared a refusal halfway declared nothing.
+- valid SPF and MX declarations receive `PASS`;
+- DMARC is assessed under [§4](#4-dmarc), including additional conditions;
+- STARTTLS and PTR receive `NOT_APPLICABLE` under [§2](#2-check-groups-and-the-dependency-on-mx);
+- DKIM is assessed under [§5](#5-dkim); an unfound key without an explicit selector remains `UNKNOWN`.
+
+The refusal of mail itself and inapplicable server checks create no penalties. Confirmed defects in published records remain reportable. An uncertain result reduces confidence under [§10.4](#104-effect-on-confidence).
+
+An incomplete combination does not establish a refusal of mail; the ordinary rules of [§3](#3-spf)–[§8](#8-ptr) apply.
 
 ## 10.3. Merging Issues Inside the Category
 
-The merging rules are 1.0 §11: one root defect gives one Issue and one penalty, and merging is permitted only inside a category.
+The merging rules are [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues): one root defect gives one Issue and one penalty, and merging is permitted only inside a category.
 
 The following merges are defined for this category:
 
@@ -840,33 +849,33 @@ The following merges are defined for this category:
 |---|---|
 | the domain declared no sending policy | an absent SPF and an absent DMARC |
 | no receiving server was found | the `MX` result and everything it blocked |
-| a policy is published but does not work | several records, an unrecognised record, a parse error |
+| a policy is published but does not work | several records, an unrecognized record, a parse error |
 
-The first merge is the important one. An absent SPF and an absent DMARC are not two mistakes but one: the owner never described who may send in the domain's name. Two penalties for it would punish the domain twice for one decision.
+Merging absent SPF and DMARC is an assessment rule of 2check: absence of both policies creates one Issue. It does not make the mechanisms functionally interchangeable. Errors in separate published policies are merged only when a shared cause is established.
 
-Merging with the `dns`, `registry` and `tls` categories is not permitted — 1.0 §11.
+Merging with the `dns`, `registry` and `tls` categories is not permitted — [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues).
 
 ## 10.4. Effect on Confidence
 
-This category produces `UNKNOWN` more often than the others, and the reasons are listed in §3–§8. The substantial one is an unknown DKIM selector: it arises for any domain whose mail provider is unknown to us.
+This category produces `UNKNOWN` more often than the others, and the reasons are listed in [§3](#3-spf)–[§8](#8-ptr). The substantial one is an unknown DKIM selector: it arises for any domain whose mail provider is unknown to us.
 
-The rule in 1.0 §11 is not softened for it: `UNKNOWN` makes the category's completeness `PARTIAL`, confidence `REDUCED`, and the verdict in the absence of issues `NO_CONFIRMED_ISSUES_INCOMPLETE` rather than `HEALTHY`.
+The rule in [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) is not softened for it: `UNKNOWN` makes the category's completeness `PARTIAL`, confidence `REDUCED`, and the verdict in the absence of issues `NO_CONFIRMED_ISSUES_INCOMPLETE` rather than `HEALTHY`.
 
-That is a price paid deliberately. To say "all is well" without having managed to check a signature is to assert more than we know.
+An incomplete check of the published key cannot establish a fully verified category result. Verification of an individual message's signature is outside this release.
 
 ## 10.5. Penalty Values
 
-The category introduces no penalty values of its own: the values in 1.0 §12 apply, by severity. The severities are assigned in §3–§8.
+The category introduces no penalty values of its own: the values in [1.0 §12](../../docs/en/prd/12-domain-health-score.md#12-domain-health-score) apply, by severity. The severities are assigned in [§3](#3-spf)–[§8](#8-ptr).
 
 ## 10.6. Acceptance Criteria
 
 - **AC-10.1** Adding the category changes neither the scoring formula nor the division of shares between categories.
-- **AC-10.2** The combination of the "I accept no mail" record, `-all` with no permitting mechanisms and `p=reject` gives `PASS` for every check in the category.
-- **AC-10.3** A partial match of that combination grants no exemption from the checks.
+- **AC-10.2** The combination of Null MX, `-all` with no permitting mechanisms, and `p=reject` does not assign `PASS` to all checks: STARTTLS and PTR retain `NOT_APPLICABLE`, DKIM is assessed under [§5](#5-dkim), and DMARC under [§4](#4-dmarc).
+- **AC-10.3** A partial match of the combination does not establish a refusal of mail; the ordinary check rules remain in effect.
 - **AC-10.4** An absent SPF and an absent DMARC merge into one Issue with one penalty.
 - **AC-10.5** Results blocked by an absent receiving server create no Issue of their own.
 - **AC-10.6** Merging an `email` Issue with another category is rejected by the configuration check.
-- **AC-10.7** `UNKNOWN` in this category reduces confidence under the rules of 1.0 §11 and is not softened.
+- **AC-10.7** `UNKNOWN` in this category reduces confidence under the rules of [1.0 §11](../../docs/en/prd/11-domain-health-summary-issues.md#11-domain-health-summary-and-identified-issues) and is not softened.
 - **AC-10.8** The category introduces no penalty values of its own.
 
 ---
@@ -875,17 +884,17 @@ The category introduces no penalty values of its own: the values in 1.0 §12 app
 
 # 11. Messages and Localization
 
-§11 defines what the messages of the `email` category tell the reader, and what they do not. The responsible section is 1.0 §13; the rules for the message model, the order of explanation and localization are not changed here.
+[§11](#11-messages-and-localization) defines what the messages of the `email` category tell the user, and what they do not. The responsible section is [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization); the rules for the message model, the order of explanation and localization are not changed here.
 
 ## 11.1. What a Check Reports
 
-The order in 1.0 §13 holds: what was measured, then the consequence, then the recommendation. Consequence and recommendation appear only for confirmed issues.
+The order in [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization) is retained: observation, consequence, recommendation. A consequence and a recommendation for correcting a defect are included only for a confirmed issue.
 
-What is measured, in this category, is what was read in a record, not a restatement of what the record is for. "The sending policy permits everyone" is measured. "SPF protects against forged mail" is a definition, and the message of a particular check is not the place for it.
+The message describes a specific observation: a record found, its value, or a connection result. A definition of SPF, DMARC, or DKIM does not replace the check result.
 
 ## 11.2. Forbidden Causal Claims
 
-The list in 1.0 §13 gains the claims that may not be made in this category:
+The list in [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization) gains the claims that may not be made in this category:
 
 - an absent policy means the domain's mail lands in spam;
 - a present policy means nobody can write in the domain's name;
@@ -894,11 +903,11 @@ The list in 1.0 §13 gains the claims that may not be made in this category:
 - a receiving host without a reverse name means trouble sending;
 - `~all` means weak or incomplete protection.
 
-Each of them sounds reasonable, and each connects what we observed to something we did not. They share one shape of error: a conclusion about the fate of messages is drawn from the state of a domain's records, while the fate of a message depends on the receiver, on the content and on the sending server, none of which we saw.
+These claims exceed the observation. DNS record state alone does not establish message handling, which also depends on the sending server, content, and receiver policy.
 
 ## 11.3. Wording for UNKNOWN
 
-The rule in 1.0 §13 applies unchanged: `UNKNOWN` is described as "could not be checked", with no claim that the domain is faulty.
+The rule in [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization) applies unchanged: `UNKNOWN` is described as "could not be checked", with no claim that the domain is faulty.
 
 Two cases are explained plainly as a limitation of 2check rather than a property of the domain:
 
@@ -907,26 +916,24 @@ Two cases are explained plainly as a limitation of 2check rather than a property
 | the DKIM selector is unknown | we do not know where to look for the key, and we list what was tried |
 | outbound connections are unavailable | encryption cannot be checked in this deployment |
 
-The message about an unknown selector offers to take one — the single place in the category where a reader can add to the check something that public data does not hold.
+The unknown-selector message offers the user a field to refine the search.
 
 ## 11.4. Wording for PASS
 
-`PASS` does not become "everything is configured correctly" — 1.0 §13.
+`PASS` does not become "everything is configured correctly" — [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization).
 
 Two cases matter for this category. The "I accept no mail" record is described as a declared refusal of mail, not as a missing setting. A `p=quarantine` policy is described as in force, with no comparison to `p=reject`: the choice between them belongs to the owner and depends on how sure they are that their list of senders is complete.
 
 ## 11.5. Localization
 
-The required languages are those of 1.0 §13: Russian, Uzbek and English. A missing translation remains a build error.
+Russian, Uzbek, and English are required under [1.0 §13](../../docs/en/prd/13-human-readable-messages-localization.md#13-user-messages-and-localization). A missing translation of any message remains a build error.
 
-The Uzbek wording of this category is prepared the way 1.0's was, and does not hold back the release.
-
-The known limitation stands and is written down here so it is not lost: the category introduces more terms than any other, and a translation that is formally correct while diverging from how the industry uses a term reads to a native speaker as a mistake. A reading by a native speaker remains a task for after the release.
+The Uzbek catalogue is prepared alongside the others. Native-speaker review takes place after release and is not a release gate. Until that review, the quality of specialized terminology remains a translation limitation.
 
 ## 11.6. Acceptance Criteria
 
 - **AC-11.1** A check's message describes what was read in the records, not the purpose of the mechanism.
-- **AC-11.2** The list of forbidden causal claims in §10.2 is enforced by the message configuration check.
+- **AC-11.2** The list of forbidden causal claims in [§11.2](#112-forbidden-causal-claims) is enforced by the message configuration check.
 - **AC-11.3** No message in the category asserts anything about the fate of a message.
 - **AC-11.4** An unknown selector and unavailable outbound connections are explained as a limitation of 2check.
 - **AC-11.5** The message about an unknown selector lists the names tried and offers to take a selector.
@@ -938,9 +945,9 @@ The known limitation stands and is written down here so it is not lost: the cate
 
 <a id="section-12"></a>
 
-# 12. Cache and Freshness
+# 12. Caching and Data Freshness
 
-§12 defines the cache keys of the `email` category, how long entries live, and what may not be cached. The responsible section is 1.0 §14; the cache modes, the coalescing of concurrent requests and the staleness rules are not changed here.
+[§12](#12-caching-and-data-freshness) defines the cache keys of the `email` category, how long entries live, and what may not be cached. The responsible section is [1.0 §14](../../docs/en/prd/14-cache-freshness.md#14-caching-and-data-freshness); the cache modes, the coalescing of concurrent requests and the staleness rules are not changed here.
 
 ## 12.1. Keys
 
@@ -962,23 +969,21 @@ emailModuleConfigVersion
 cacheContractVersion
 ```
 
-`selector` is part of the policy key and is required for DKIM. Without it an answer for one selector would be reused for another, and a reader would be handed somebody else's key as their own.
+`selector` is part of the policy key and is required for DKIM. Without it an answer for one selector would be reused for another, and a user would be handed somebody else's key as their own.
 
-Language is not part of a key — 1.0 §14.
+Language is not part of a key — [1.0 §14](../../docs/en/prd/14-cache-freshness.md#14-caching-and-data-freshness).
 
 ## 12.2. Lifetimes
 
-| What is cached | Order of the lifetime |
+| Observations | Lifetime Scale |
 |---|---|
-| the SPF, DMARC and DKIM policies | hours |
+| SPF, DMARC, and DKIM policies | hours |
 | `MX` records and host addresses | hours |
-| the result of the encryption probe | hours |
+| encryption-probe result | hours |
 
-Exact values are set by versioned configuration under the rules of 1.0 §20.
+Exact values are set by versioned configuration under [1.0 §20](../../docs/en/prd/20-configuration-policy-management.md#20-configuration-and-policy-management). The encryption probe may use a longer lifetime than policies, accounting for the cost of a connection.
 
-The lifetime for the encryption probe sits at the top of that range: it is the only check in the category that needs a connection, and the encryption settings of a mail host rarely change.
-
-The lifetime for the policies sits nearer the bottom. A policy is edited at exactly the moment somebody checks it, and a reader who has fixed a record and pressed "check again" should see the fix.
+A repeat check after records change follows the cache modes in [1.0 §14](../../docs/en/prd/14-cache-freshness.md#14-caching-and-data-freshness). It must not present an earlier observation as a new one.
 
 ## 12.3. What May Not Be Cached
 
@@ -986,23 +991,23 @@ The lifetime for the policies sits nearer the bottom. A policy is edited at exac
 |---|---|
 | an incomplete DMARC tree walk | a result was not obtained; a negative result was not obtained either |
 | an incomplete encryption probe | the same |
-| a selector entered by the reader | it belongs to the request, not to the domain |
+| a selector entered by the user | it belongs to the request, not to the domain |
 
-The last row matters: an entered selector does not make the result the domain's property. Another reader who names no selector must get `UNKNOWN`, not a ready answer found on somebody else's hint.
+An entered selector is not automatically added to the domain's selector candidates for other requests. A request without a selector performs its own search under [§5](#5-dkim); a previous result must not replace its `UNKNOWN`.
 
-The rules for caching technical failures are otherwise those of 1.0 §14.
+The rules for caching technical failures are otherwise those of [1.0 §14](../../docs/en/prd/14-cache-freshness.md#14-caching-and-data-freshness).
 
 ## 12.4. Freshness
 
-`checkedAt` holds the time of the observation, not of the cache lookup — 1.0 §6.
+`checkedAt` holds the time of the observation, not of the cache lookup — [1.0 §6](../../docs/en/prd/06-common-data-contracts-exposure.md#6-common-data-contracts-and-exposure-levels).
 
-For the check that queries several hosts — §7 — the time of observation is the earliest of the times that went into the result. A result is no fresher than its oldest part.
+For the check that queries several hosts — [§7](#7-starttls) — the time of observation is the earliest of the times that went into the result. A result is no fresher than its oldest part.
 
 ## 12.5. Acceptance Criteria
 
 - **AC-12.1** A policy key includes the selector; for DKIM the selector is required.
 - **AC-12.2** An incomplete walk and an incomplete probe are not written to the cache as results.
-- **AC-12.3** A result found through a selector entered by the reader is not reused for a request that names no selector.
+- **AC-12.3** A result found through a selector entered by the user is not reused for a request that names no selector.
 - **AC-12.4** The observation time of a composite result is the earliest of the times of its parts.
 
 ---
@@ -1011,17 +1016,17 @@ For the check that queries several hosts — §7 — the time of observation is 
 
 # 13. Outbound Connection Safety
 
-§13 defines the rules under which a connection to a mail host is permitted. The responsible section for address validation is 1.0 §15; its sequence, address classification and blocking rule are not changed here but extended to a new kind of connection.
+[§13](#13-outbound-connection-safety) defines the rules under which a connection to a mail host is permitted. The responsible section for address validation is [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection); its sequence, address classification and blocking rule are not changed here but extended to a new kind of connection.
 
-## 13.1. Why This Needs a Section
+## 13.1. Applying Existing Security Controls
 
-Before this release the product made outbound connections of two kinds: queries to resolvers and HTTPS requests to the registry. Both go to fixed addresses set by configuration.
+MVP 1.0 already establishes a TLS connection to an address of the domain under test after security validation. Release 1.1 applies the same sequence to mail servers obtained under [§6](#6-mx).
 
-The encryption probe is built differently: it connects to a host whose name the domain under test supplied. This is the first time somebody else's record influences where we connect — and it is exactly the shape of thing 1.0 §15 exists to defend against.
+Additional constraints define the SMTP port, permitted commands, and number of servers probed. The common address-validation and selected-IP pinning rules remain in effect.
 
 ## 13.2. The Sequence
 
-The order in 1.0 §15 applies without exception:
+The order in [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection) applies without exception:
 
 ```text
 MailHostTarget
@@ -1033,7 +1038,7 @@ MailHostTarget
 → pinned connection
 ```
 
-The host's full set of addresses is validated without prior truncation. If even one address is forbidden the whole host is blocked; dropping the forbidden address and connecting to the rest is not permitted — 1.0 §15.
+The host's full set of addresses is validated without prior truncation. If even one address is forbidden the whole host is blocked; dropping the forbidden address and connecting to the rest is not permitted — [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection).
 
 The connection goes to the pinned address. The host name is not resolved again by the connection library.
 
@@ -1042,43 +1047,43 @@ The connection goes to the pinned address. The host name is not resolved again b
 | Constraint | Value |
 |---|---|
 | port | `25` only |
-| source of host names | §6 only |
+| source of host names | [§6](#6-mx) only |
 | session commands | the greeting, the request for extensions, the move to encryption, the close |
-| hosts per check | no more than four — §7 |
+| hosts per check | no more than four — [§7](#7-starttls) |
 
-The port is taken neither from the reader's input nor from the domain's records. An `MX` record holds a name and no port, and there is nowhere for one to come from — this row exists so that a future implementation does not "improve" the check with an arbitrary port.
+The port is not accepted from user input or DNS records. The implementation provides no override.
 
 The sender, recipient and data commands are never issued. The probe sends no mail and therefore cannot be used either to deliver messages or to test whether an address exists.
 
 ## 13.4. What This Rules Out
 
-| Attempt | Why it fails |
+| Scenario | Limiting Control |
 |---|---|
-| making the service connect to an internal address | a host's address is validated under 1.0 §15 like any other |
+| making the service connect to an internal address | a host's address is validated under [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection) like any other |
 | swapping the address between validation and connection | the connection goes to the pinned address |
 | using the service to scan ports | the port is fixed |
-| using the service to amplify load | hosts come only from the records of the domain under test, and their number is bounded |
+| creating excessive outbound load | the host count is bounded; request-rate and concurrency limits in [1.0 §22](../../docs/en/prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits) and [1.0 §25](../../docs/en/prd/25-privacy-data-protection-abuse-boundaries.md#25-privacy-access-and-abuse-prevention) also apply |
 | sending mail through somebody else's hands | the data commands are never issued |
 
 ## 13.5. Our Own Infrastructure
 
-The ban on reaching our own infrastructure — 1.0 §15 — extends to mail hosts unchanged.
+The ban on reaching our own infrastructure — [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection) — extends to mail hosts unchanged.
 
-Blocking for that reason gives `UNKNOWN` with an explanation that it is a limitation of the service, and does not reduce the domain's score. A check that calls our own network policy a defect of somebody's domain is wrong in both directions at once: it accuses the innocent and hides our own problem.
+Blocking for this reason gives `UNKNOWN`, explains the service limitation, and does not reduce the domain's score.
 
 ## 13.6. Time Budget
 
-The probe is subject to the scan's shared budget in 1.0 §22. The category introduces no budget of its own.
+The probe is subject to the scan's shared budget in [1.0 §22](../../docs/en/prd/22-performance-resource-limits-nfr.md#22-performance-and-resource-limits). The category introduces no budget of its own.
 
-The rule in §7 follows from that: hosts beyond the limit are listed as not probed rather than waiting for time to free up. A result obtained in part is reported as partial.
+The rule in [§7](#7-starttls) follows from that: hosts beyond the limit are listed as not probed rather than waiting for time to free up. A result obtained in part is reported as partial.
 
 ## 13.7. Acceptance Criteria
 
-- **AC-13.1** A mail host's addresses pass the safety validation of 1.0 §15 as a full set, without truncation.
+- **AC-13.1** A mail host's addresses pass the safety validation of [1.0 §15](../../docs/en/prd/15-security-ssrf.md#15-security-and-ssrf-protection) as a full set, without truncation.
 - **AC-13.2** A forbidden address blocks the whole host.
 - **AC-13.3** The connection is made to the pinned address; re-resolving the name is not permitted.
 - **AC-13.4** The connection port is `25` and cannot be set by input or by the domain's records.
-- **AC-13.5** Host names come only from the result of §6.
+- **AC-13.5** Host names come only from the result of [§6](#6-mx).
 - **AC-13.6** The session issues no sender, recipient or data commands.
 - **AC-13.7** Blocking under the ban on our own infrastructure gives `UNKNOWN` and does not reduce the domain's score.
 - **AC-13.8** The category introduces no time budget of its own.
@@ -1089,7 +1094,7 @@ The rule in §7 follows from that: hosts beyond the limit are listed as not prob
 
 # 14. The Web API and Scan Modes
 
-§14 defines how the `email` category enters the contract of the internal web API and the scan modes. The responsible sections are 1.0 §17 and 1.0 §3; the endpoints, the acceptance model and the polling rules are not changed here.
+[§14](#14-the-web-api-and-scan-modes) defines how the `email` category enters the contract of the internal web API and the scan modes. The responsible sections are [1.0 §17](../../docs/en/prd/17-internal-web-api-contract.md#17-internal-web-api-contract) and [1.0 §3](../../docs/en/prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes); the endpoints, the acceptance model and the polling rules are not changed here.
 
 ## 14.1. Selecting Categories
 
@@ -1099,9 +1104,9 @@ The enumeration in the request gains one value:
 selectedCategories?: (dns | registry | tls | email)[]
 ```
 
-The rule in 1.0 §17 is kept word for word: `PARTIAL` takes a non-empty proper subset of the categories, and selecting them all creates a `FULL` scan. A proper subset is now a subset of four categories rather than of three.
+The rule in [1.0 §17](../../docs/en/prd/17-internal-web-api-contract.md#17-internal-web-api-contract) is kept word for word: `PARTIAL` takes a non-empty proper subset of the categories, and selecting them all creates a `FULL` scan. A proper subset is now a subset of four categories rather than of three.
 
-One consequence is easy to miss: a `PARTIAL` request for `dns`, `registry` and `tls` was rejected as a full scan before this release and is permitted now. The rule was not rewritten — the set it applies to changed.
+After `email` is added, a `PARTIAL` request selecting `dns`, `registry`, and `tls` is valid because it selects a proper subset of the available categories.
 
 ## 14.2. The Selector
 
@@ -1117,19 +1122,19 @@ CreateScanRequest {
 }
 ```
 
-The field is accepted only when the `email` category is within the scope of the scan. A request carrying a selector without that category is rejected as invalid: HTTP `422`. Silently ignoring the value is not permitted — a client that sent a selector is entitled to know it was not used.
+The field is accepted only when `email` is within the scan scope. Otherwise, the request is rejected with HTTP `422`, identifying the invalid field. The supplied value is not ignored.
 
 The value is validated as a DNS name label. A selector that fails that validation is rejected before any query is made, rather than becoming a search that finds nothing.
 
-The selector belongs to the request and not to the domain: the cache rules are §12.
+The selector belongs to the request and not to the domain: the cache rules are [§12](#12-caching-and-data-freshness).
 
 ## 14.3. Score and Verdict
 
-An overall score and an overall verdict exist only for `FULL + FINAL` — 1.0 §3. Adding a category does not change that: a `PARTIAL` scan of the `email` category alone shows its results without an overall score for the domain.
+An overall score and an overall verdict exist only for `FULL + FINAL` — [1.0 §3](../../docs/en/prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes). Adding a category does not change that: a `PARTIAL` scan of the `email` category alone shows its results without an overall score for the domain.
 
 ## 14.4. Errors
 
-The category introduces no error codes of its own. A rejection over the selector uses the common `WebApiError` contract of 1.0 §17, naming the field.
+The category introduces no error codes of its own. A rejection over the selector uses the common `WebApiError` contract of [1.0 §17](../../docs/en/prd/17-internal-web-api-contract.md#17-internal-web-api-contract), naming the field.
 
 ## 14.5. Acceptance Criteria
 
@@ -1148,45 +1153,45 @@ The category introduces no error codes of its own. A rejection over the selector
 
 # 15. The Interface and the Tool Page
 
-§15 defines how the `email` category is shown to the reader and which tool page corresponds to it. The responsible sections are 1.0 §23 and 1.0 §24; the order of result elements, the verdict rules and the scan route are not changed here.
+[§15](#15-the-interface-and-the-tool-page) defines how the `email` category is shown to the user and which tool page corresponds to it. The responsible sections are [1.0 §23](../../docs/en/prd/23-frontend-ux-result-presentation.md#23-user-interface-and-result-presentation) and [1.0 §24](../../docs/en/prd/24-seo-routing-public-tool-pages.md#24-seo-routing-and-tool-pages); the order of result elements, the verdict rules and the scan route are not changed here.
 
 ## 15.1. The Name of the Category
 
 The main name of the category in the interface is "Mail". The Russian and Uzbek editions use their own names, set by the localization.
 
-The names of the checks use the terms the industry uses — `SPF`, `DMARC`, `DKIM`, `MX`, `STARTTLS`, `PTR` — because those are what the reader will see in their hosting panel. They are not translated.
+The names of the checks use the terms the industry uses — `SPF`, `DMARC`, `DKIM`, `MX`, `STARTTLS`, `PTR` — because those are what the user will see in their hosting panel. They are not translated.
 
-The name of a check group is shown in the category card, while the group itself is not a result of its own — §2.
+The name of a check group is shown in the category card, while the group itself is not a result of its own — [§2](#2-check-groups-and-the-dependency-on-mx).
 
 ## 15.2. The Tool Page
 
-The list of indexable pages in 1.0 §24 gains one:
+The list of indexable pages in [1.0 §24](../../docs/en/prd/24-seo-routing-public-tool-pages.md#24-seo-routing-and-tool-pages) gains one:
 
 ```text
 /{locale}/email-check
 ```
 
-The page creates a `PARTIAL` scan of the single category `email` — the same arrangement the other tool pages have in 1.0 §3.
+The page creates a `PARTIAL` scan of the single category `email` — the same arrangement the other tool pages have in [1.0 §3](../../docs/en/prd/03-user-scenarios-scan-modes.md#3-user-scenarios-and-scan-modes).
 
-The rules for the canonical address, hreflang and language prefixes are those of 1.0 §24, unchanged.
+The rules for the canonical address, hreflang and language prefixes are those of [1.0 §24](../../docs/en/prd/24-seo-routing-public-tool-pages.md#24-seo-routing-and-tool-pages), unchanged.
 
 ## 15.3. The Selector Field
 
 An optional DKIM selector field sits beside the domain field.
 
-It is shown on the tool page and hidden by default in a full scan: a reader who came to check a whole domain usually does not know the word "selector", and demanding one would trade comprehensibility for completeness.
+The field is immediately available on the tool page. In a full scan it is hidden by default and revealed through an additional action. Omitting a selector does not prevent the scan from starting.
 
-The field carries an explanation that without it the key is looked for at the known selectors of the mail provider, and that a key not found does not mean there is none — §5.
+The field carries an explanation that without it the key is looked for at the known selectors of the mail provider, and that a key not found does not mean there is none — [§5](#5-dkim).
 
 ## 15.4. Showing Partial Results
 
-The encryption check may cover part of what was available: not every host was probed — §7.
+The encryption check may cover part of what was available: not every host was probed — [§7](#7-starttls).
 
 The result is then shown together with a statement of what it covers. Showing a partial result as a complete one is not permitted: it is true of what was asked and says nothing about the rest.
 
 ## 15.5. The Result Card
 
-Inapplicable checks are shown neutrally and may be collapsed — 1.0 §23. For this category it matters that the reason for inapplicability stays visible: a domain that deliberately accepts no mail and a domain with no records look the same when collapsed and mean different things — §6.
+Inapplicable checks are shown neutrally and may be collapsed — [1.0 §23](../../docs/en/prd/23-frontend-ux-result-presentation.md#23-user-interface-and-result-presentation). For this category it matters that the reason for inapplicability stays visible: a domain that deliberately accepts no mail and a domain with no records look the same when collapsed and mean different things — [§6](#6-mx).
 
 ## 15.6. Acceptance Criteria
 
@@ -1204,7 +1209,7 @@ Inapplicable checks are shown neutrally and may be collapsed — 1.0 §23. For t
 
 # 16. Observability and Analytics
 
-§16 defines what the `email` category adds to logs, metrics and analytics. The responsible sections are 1.0 §21 and 1.0 §28; the boundaries of analytics are not widened here.
+[§16](#16-observability-and-analytics) defines what the `email` category adds to logs, metrics and analytics. The responsible sections are [1.0 §21](../../docs/en/prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring) and [1.0 §28](../../docs/en/prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics); the boundaries of analytics are not widened here.
 
 ## 16.1. What Analytics Gains
 
@@ -1214,23 +1219,21 @@ The enumeration of tools gains one value:
 tool: home | dns | registry | tls | email
 ```
 
-Nothing else. None of the new quantities — a domain's policy, whether a key exists, support for encryption — is sent to analytics.
-
-The reason is not caution but that those quantities belong to a particular domain. The analytics of 1.0 §28 answers how much the service is used, not what the checked domains hold, and the ban on domains in events would stop working if a sufficiently detailed portrait of the domain travelled alongside the event.
+Domain policy, key availability, and encryption support are not sent to analytics. The analytics defined in [1.0 §28](../../docs/en/prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics) measures service use without collecting characteristics of the domains being checked.
 
 ## 16.2. What Is Additionally Forbidden
 
-The list in 1.0 §28 gains, as values that are not sent:
+The list in [1.0 §28](../../docs/en/prd/28-product-analytics-success-metrics.md#28-product-analytics-and-usage-metrics) gains, as values that are not sent:
 
 - the names and addresses of mail hosts;
-- a selector entered by the reader;
+- a selector entered by the user;
 - the values of policy tags.
 
-The selector matters: it is typed by a reader, and together with the time of an event it would narrow the set of checked domains to a handful.
+The entered selector belongs to the user's request. Excluding it avoids an additional link between an analytics event and the domain being checked.
 
 ## 16.3. Metrics
 
-The metrics of 1.0 §21 gain:
+The metrics of [1.0 §21](../../docs/en/prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring) gain:
 
 | Metric | What it counts |
 |---|---|
@@ -1238,19 +1241,19 @@ The metrics of 1.0 §21 gain:
 | `email_smtp_probe_blocked_total` | probes rejected by the safety validation |
 | `email_dkim_selector_unknown_total` | checks that finished without finding a key |
 
-The last is a working instrument rather than decoration: its rise shows what share of readers the provider-to-selector mapping fails, which is when it is time to extend the configuration — §5.
+The unknown-selector metric counts DKIM searches that found no key. It is considered alongside the total check count when assessing selector-configuration coverage — [§5](#5-dkim).
 
 ## 16.4. Logs
 
-The rules of 1.0 §21 apply unchanged. The names and addresses of mail hosts are permitted in logs: a log is an internal diagnostic instrument with restricted access, not analytics. A selector entered by the reader is not written to logs.
+The rules of [1.0 §21](../../docs/en/prd/21-observability-logging-operational-monitoring.md#21-observability-logging-and-monitoring) apply unchanged. The names and addresses of mail hosts are permitted in logs: a log is an internal diagnostic instrument with restricted access, not analytics. A selector entered by the user is not written to logs.
 
 ## 16.5. Acceptance Criteria
 
 - **AC-16.1** The enumeration of tools in analytics gains the value `email`.
 - **AC-16.2** The results of the category's checks are not sent to analytics.
 - **AC-16.3** The names and addresses of mail hosts and the values of policy tags are not sent to analytics.
-- **AC-16.4** A selector entered by the reader is neither sent to analytics nor written to logs.
-- **AC-16.5** The metrics in §15.3 are defined and are incremented on the corresponding events.
+- **AC-16.4** A selector entered by the user is neither sent to analytics nor written to logs.
+- **AC-16.5** The metrics in [§16.3](#163-metrics) are defined and are incremented on the corresponding events.
 
 ---
 
@@ -1258,7 +1261,7 @@ The rules of 1.0 §21 apply unchanged. The names and addresses of mail hosts are
 
 # 17. Testing and Release Readiness
 
-§17 defines what establishes that the requirements of this document are met, and the conditions under which the category is released. The responsible section for the testing strategy is 1.0 §26.
+[§17](#17-testing-and-release-readiness) defines what establishes that the requirements of this document are met, and the conditions under which the category is released. The responsible section for the testing strategy is [1.0 §26](../../docs/en/prd/26-testing-quality-gates-acceptance-strategy.md#26-testing-and-release-criteria).
 
 ## 17.1. What Is Checked Without a Network
 
@@ -1269,33 +1272,35 @@ The required data sets:
 | Set | What is in it |
 |---|---|
 | SPF records | the term limit exceeded, a loop, every form of `all`, void queries |
-| DMARC records | the tree walk, an unrecognised record, several records, `pct` |
+| DMARC records | the tree walk, an unrecognized record, several records, `pct` |
 | DKIM keys | an empty key, a short key, testing mode, `ed25519` |
 | `MX` records | a declared refusal of mail, an implicit host, an alias, an address in place of a name |
 
-The set of DMARC records is the most important of the four. The tree walk is the only place where a check decides for itself which domain its find belongs to, and a mistake there produces not a wrong status but a right status about the wrong domain.
+DMARC tests must establish that the discovered policy applies to the target domain. The data set must distinguish the domain's own policy from an inherited one and verify the reported source.
 
 ## 17.2. What Is Checked With a Network
 
-The encryption probe needs a connection and is therefore checked separately, outside the mandatory build set. What does not depend on a network stays mandatory: the fixed port, the absence of data commands, the source of host names, and the behaviour when access is denied.
+The encryption probe needs a connection and is therefore checked separately, outside the mandatory build set. What does not depend on a network stays mandatory: the fixed port, the absence of data commands, the source of host names, and the behavior when access is denied.
 
 ## 17.3. Release Conditions
 
 The category is released when all of these hold:
 
-- the tests of §16.1 are covered;
-- the list of forbidden causal claims in §11.2 is enforced automatically;
-- Uzbek wording is present for every message — §11;
-- outbound connections to the mail port are available in the target deployment, or the category is released with an honest `UNKNOWN` for the encryption check — §7.
+- the tests of [§17.1](#171-what-is-checked-without-a-network) are covered;
+- the list of forbidden causal claims in [§11.2](#112-forbidden-causal-claims) is enforced automatically;
+- Uzbek wording is present for every message — [§11](#11-messages-and-localization);
+- outbound connections to the mail port are available in the target deployment, or the category is released with `UNKNOWN` and an explanation of the deployment limitation for the encryption check — [§7](#7-starttls).
 
-The last condition is written with a fork deliberately. An unavailable port is no reason to hold back six other checks, as long as the seventh says honestly that it cannot be performed.
+An unavailable SMTP port does not block release of the other five checks. STARTTLS must then identify the deployment limitation without treating it as a domain defect.
 
 ## 17.4. What Is Checked by Hand
 
-| What | Why it cannot be automatic |
+| Subject | Review Method |
 |---|---|
-| whether the messages are clear to an inexperienced reader | it needs a reader |
-| the behaviour of the tool page on a phone | it needs a device — 1.0 §26 |
+| message clarity | reading by users without mail-administration experience |
+| mobile interface | review on target devices and browsers from [1.0 §26](../../docs/en/prd/26-testing-quality-gates-acceptance-strategy.md#26-testing-and-release-criteria) |
+
+Manual review supplements automated interface and accessibility checks.
 
 ## 17.5. Acceptance Criteria
 
@@ -1303,7 +1308,7 @@ The last condition is written with a fork deliberately. An unavailable port is n
 - **AC-17.2** The DMARC data set contains a record at a parent domain, and a test confirms the source of the policy is reported correctly.
 - **AC-17.3** The constraints of the encryption probe that do not depend on a network are covered by mandatory tests.
 - **AC-17.4** The list of forbidden causal claims is enforced automatically.
-- **AC-17.5** Release with an unavailable mail port is permitted given an honest `UNKNOWN` for the encryption check.
+- **AC-17.5** Release with an unavailable mail port is permitted given `UNKNOWN` and an explanation of the deployment limitation for the encryption check.
 
 ---
 
@@ -1315,22 +1320,22 @@ Each requirement has one responsible section. Where sections conflict, the provi
 
 | Subject | Responsible section |
 |---|---|
-| Release boundary | §1 |
-| Check groups and the dependency on `MX` | §2 |
-| Parsing SPF and its limits | §3 |
-| The DMARC policy and the tree walk | §4 |
-| Finding a DKIM key and its selectors | §5 |
-| The receiving server | §6 |
-| The encryption probe | §7 |
-| Reverse names | §8 |
-| Data contracts and exposure levels | §9 |
-| Merging issues and the effect on the score | §10 |
-| Wording and the forbidden causal claims | §11 |
-| Cache keys and lifetimes | §12 |
-| Rules for outbound connections | §13 |
-| The web API contract and the scope of a scan | §14 |
-| The interface and the tool page | §15 |
-| Metrics and the boundaries of analytics | §16 |
-| Release conditions | §17 |
+| Release boundary | [§1](#1-scope-and-goals-of-mvp-11) |
+| Check groups and the dependency on `MX` | [§2](#2-check-groups-and-the-dependency-on-mx) |
+| Parsing SPF and its limits | [§3](#3-spf) |
+| The DMARC policy and the tree walk | [§4](#4-dmarc) |
+| Finding a DKIM key and its selectors | [§5](#5-dkim) |
+| The receiving server | [§6](#6-mx) |
+| The encryption probe | [§7](#7-starttls) |
+| Reverse names | [§8](#8-ptr) |
+| Data contracts and exposure levels | [§9](#9-data-contracts-and-exposure-levels) |
+| Merging issues and the effect on the score | [§10](#10-effect-on-the-summary-the-verdict-and-the-score) |
+| Wording and the forbidden causal claims | [§11](#11-messages-and-localization) |
+| Cache keys and lifetimes | [§12](#12-caching-and-data-freshness) |
+| Rules for outbound connections | [§13](#13-outbound-connection-safety) |
+| The web API contract and the scope of a scan | [§14](#14-the-web-api-and-scan-modes) |
+| The interface and the tool page | [§15](#15-the-interface-and-the-tool-page) |
+| Metrics and the boundaries of analytics | [§16](#16-observability-and-analytics) |
+| Release conditions | [§17](#17-testing-and-release-readiness) |
 
 Requirements whose responsible section is in MVP 1.0 are not overridden by this document.

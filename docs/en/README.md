@@ -8,7 +8,7 @@
 
 The product purpose, audiences, principles, and frozen MVP scope.
 
-## 02. Product Requirements
+## 02. Product Requirements — MVP 1.0
 
 **[Open the PRD contents →](02-prd.md)**
 
@@ -20,6 +20,6 @@ The product purpose, audiences, principles, and frozen MVP scope.
 
 **[Open the PRD 1.1 contents →](03-prd-1.1.md)**
 
-Domain mail health: SPF, DMARC, DKIM, MX, STARTTLS and PTR. The document is in development; the MVP 1.0 specification is frozen and is not amended by it.
+Domain mail health: SPF, DMARC, DKIM, MX, STARTTLS and PTR. The specification is in development; the `email` category is not yet implemented. The frozen MVP 1.0 PRD is retained separately.
 
 [Read PRD 1.1 as one file](../../dist/en/2check_MVP_1.1_PRD.md)

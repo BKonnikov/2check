@@ -10,12 +10,12 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "6f1a93c27f055ac0cca1e03bde214fd0caaf248872479ec86707ef0b0dfe6c62",
-      "en": "cdb2130357bbc9592f9d5e258755eae3d6450abb3564e46a9e4c41f95ce74889"
+      "ru": "2bc75f4d4b71e75cfcfea53bb63b89a0232d32e147e52fc3f0f39c11899f44de",
+      "en": "36465610deb9d9fc2d7cd1853c2b45ecf0de491dc59cc98bf7acd3f9bd80eb0f"
     },
     "docs/README.md": {
-      "ru": "e690ec0cc5f0205cd11c18289c668f27b87a39ea87a14bca9872455521fe2cd1",
-      "en": "bcb956d7eae3d5595a47fe4222674469a29389ca0193c1908153f19a0b809ce0"
+      "ru": "3ebd641fcb1cca247e5336da56a508d3e5369d9f71dea5cb5421ad13c66f040b",
+      "en": "0ef85ce1bc5376a84ecbe8caf40cd50d0351b3abf97449e5b9e9e4bd724410e2"
     },
     "docs/prd/01-product-goal-positioning.md": {
       "ru": "8a2b95b1fecd6ae532d7355656aee6ad0cffa86d0800813459572dae874ea34c",
@@ -142,88 +142,92 @@
       "en": "d84d54b3c8a1f524c33e651dc503d7989e914b3a920a825d75555014b0f1ed25"
     },
     "docs/prd-1.1/01-scope-goals.md": {
-      "ru": "cd12f4c8da7880bc4d07f9f935290c5369301867cb9634b93c7fca059b165d43",
-      "en": "4b82050ac8d9a72953330728a3b764b744e0f07662f50fa7517406588f674f6e"
+      "ru": "44b75a55dfd2f9cd7d4d182cd4f7c746e13245cd740c37550bc42b94842eeb5d",
+      "en": "ccbad131efb4b81ebe68993c64511c228d5eead9e8e336b40bb31bd7fccc28fb"
     },
     "docs/prd-1.1/02-check-groups-dependencies.md": {
-      "ru": "21aeef3fc3e84d3315ac2760a38f82b54fb4871301906d1df33aa400a67fb9ab",
-      "en": "1bc51a19f4f15dc3b80744d40eca0eef933b383e5e7742c20f1f0b351a725bcf"
+      "ru": "e89353764205f521ecefdeb1282ba61f0899e48c37fa789bdd94820d96231391",
+      "en": "e57f0b02d64ac107a176e46897724de47838172b5d00617564a3ed787be27ece"
     },
     "docs/prd-1.1/03-spf.md": {
-      "ru": "7dbc7b032cad70903382063f0f63e4c6a8c5685b4eadfd928f40317dfce8dadb",
-      "en": "99e44322b155a620598da41e6a5d5b32fc623ce7997ad93949b50ebc4b4a32ea"
+      "ru": "b11a24bf78d005d1f1ed5f7400ccc1136dce21075082c3d7b125dda96e3fc418",
+      "en": "f704de9b3dccf25fb653fe5fbb273ca677a4acf751776aab2193994e78d19c75"
     },
     "docs/prd-1.1/04-dmarc.md": {
-      "ru": "1ef8857f4c07c7a243243afb788921445a62c4db6b126274b5af4cf5b943633c",
-      "en": "8b8427ca1775a717f7beeaf5c9576f0596048964b4cfc751cb9766ef1e385dc2"
+      "ru": "4a002bdbadfe70e21aab80b97b6e1a160fd8a38de68e5bd8415dbb9d50cc88a2",
+      "en": "87096018ae04b40e29e31a4193690cebabb782ee3ed8abebc8958ee2f4bbe6ed"
     },
     "docs/prd-1.1/05-dkim.md": {
-      "ru": "32ff8593f66b472f76ea778fe8088d591610b19fbb266de1c116034c51c04b76",
-      "en": "bc983002a8f106dcaec5a74a357832fcfd50e9b80c91efcecceb1b49e34ab422"
+      "ru": "a6157fd854081b9a882be20e7d842ae6c51951ff8c0f1ef75d52c38bb07a66b5",
+      "en": "b60324069c81635011acabbafbbf72b9f683ec54e316078e584af38d21be2c4e"
     },
     "docs/prd-1.1/06-mx.md": {
-      "ru": "d557d3889af667d08acd5089e240b754553e6b6e4a23ed1a904abce9bf489ad9",
-      "en": "b25f609a928b67a2a992bbb22298b0d8100c990c8fad043fd6c2fc1197876dbb"
+      "ru": "a9455e8c99019aea28eeedd774d3bb5eabca40a79f86fe62a283135a1f4748bc",
+      "en": "971b33c49287cdcb45d5cbaca7a6f6b1cf8792b12c9ee687f45edfd1b30434e9"
     },
     "docs/prd-1.1/07-starttls.md": {
-      "ru": "8ef3cc02e87fc3bb1487ddfc256fc0a02559b2741852e291c9ae0f462e67c487",
-      "en": "f6d7008824c6ffe10d51d148ae68e15acacca0b9b779a9718a90d528dc7390a9"
+      "ru": "bffe630701c8c63ebe1639a71a19724b9628d30c9439819cc4aedea15c69b918",
+      "en": "a08b897646646b601a73448bc8a19985e71176a86a62d20bb6ff0b77f14cfd7c"
     },
     "docs/prd-1.1/08-ptr.md": {
-      "ru": "c1e9e49e09aa49f7f1a362b52242cf66d4ec7f840993bafe6a798c90fd8bf6c7",
-      "en": "c1a44ff7cd1e23e7d87d530040ba11507802405b1d060544e69da3bea0db8d04"
+      "ru": "f73382630eacb9034e660c571e47372f61a926249d714426d8f68c03a62c71d1",
+      "en": "029e670d4c7af840a36ff292cafccc1827f7a2684e54040676449820444c857a"
     },
     "docs/prd-1.1/09-data-contracts.md": {
-      "ru": "f0072fbbd78560bf5112b00befed4409eb5e9fd11399a708d1e61509e2788124",
-      "en": "4654bfb7ecab0b12d2a4aa5f10b4144a8d8dbad37a1c44efb2b97edd6d0c8322"
+      "ru": "021e7d1a7fa1a2cbb5208c60f1d9586772cf9f67871a18df7ca3507d67151acb",
+      "en": "e031bba239a694f61de16e148e6374ea999505c03e5c170d8cad0636bbed4012"
     },
     "docs/prd-1.1/10-summary-score.md": {
-      "ru": "d4808f143340d1113b5a3a32d480f7524b56e49dcf17813cf76b053586b73c63",
-      "en": "4fe51b37ea5512cef32c426e53c29095db7ce9d96d8119715cc89e260285be4b"
+      "ru": "eb7b68502d4a7965abb69523053740e4bf7e52bf2ef3a7cc25e6264a9f4ec3f5",
+      "en": "1e9802f90fef69e6e93cb3a42fa38d962de2e009ed4db822139f32b4eec3a96a"
     },
     "docs/prd-1.1/11-messages.md": {
-      "ru": "db0f3df0f9aa2bfd1ea124da38b2bcb954e28b022322c6cb5c1836aa5986d135",
-      "en": "8d22e2a36199ac0a719048bc2f62119ac444e307a64f5d4ad702c5bf933a3709"
+      "ru": "1d5324e246cf4512e2ad6fc94bde24277a1be784f64bcc8c5a651ba3b7781700",
+      "en": "8eab1194561c0acbefab1060f89b7059478e0bd25422d9225e389750bc2301a1"
     },
     "docs/prd-1.1/12-cache.md": {
-      "ru": "220267776f75a1cfb8405716fd0d2424922490cf8b53534e36f3dc12bb0434ee",
-      "en": "5ec2d4a77f369c74a2e4beed424bf04ba2547d9d68c39689a7a2e5edd4925482"
+      "ru": "eb8ba10d8864475dcf980d434a780474915d6ce80d37b16c252b9c04bf48f4ff",
+      "en": "8f272890303b835083dbe1cb9caa64e131c60290b14f43ac50280daf88855655"
     },
     "docs/prd-1.1/13-outbound-security.md": {
-      "ru": "d368da83c4a204f043c594dc7d3f16335f82651397f5c0f857bda80f6bed7ee3",
-      "en": "96dcddc91b6e6a8e48b738be7f5724e4d619f90f5712c1fc770b88eefcf82421"
+      "ru": "e5d2796e596b1dce1a39ebdd4d96627bcba25841368eb759165d54e3cd66cf75",
+      "en": "00609156a2e25898d316f37a3d403eb44e6c629df3fcdc21047021a7d5671ad1"
     },
     "docs/prd-1.1/14-web-api.md": {
-      "ru": "005e4172bddc5b7e4e42d08dbfb704c53d954de5d6bd7c0e064d3ead79bd7c4c",
-      "en": "44e955fd51f06dc104ffcbba1503b61edb5125efebaa16be6b96f734b2890ae7"
+      "ru": "d1265504111b09d6dc4b3c82616219d48cd8b28ce262c275c8642d3865b95822",
+      "en": "65d6ef2300d21018c08dfe3bfe327eb458ea4b081b71addf385b3c07aae334f3"
     },
     "docs/prd-1.1/15-interface.md": {
-      "ru": "4a751a71cd3546c1b58d3ce5191fca90d8b813c35e43f74d696d57b49a6404ef",
-      "en": "c0ccbe5ad814bd40262347de81cc51ffb5b5b5bf7f091631a65faced4e2969fb"
+      "ru": "2468ad35d9c9d821e31ad1fd5beb041989744dc6accb0cd9a91a3650bd18f73b",
+      "en": "76abde017a5b34a84095ec4f97a4468cbc10451e6404728091f35bf90c617087"
     },
     "docs/prd-1.1/16-observability.md": {
-      "ru": "b39f4edfb0047da6cf3451c7156485166ebe2b4b5961560edf8b8b89a74fc918",
-      "en": "4d10b3b1f321ffbba987e8bfb8e72fb398d8927243edfc643ae24b459864507c"
+      "ru": "b2e2bdffa72b782ca42f0d33c59facae8653b197fde7644a0a9a329b5e081f23",
+      "en": "1db179286159062b049ecf8d31bf37b82e316e6250786ae2c38cbeb50338ecee"
     },
     "docs/prd-1.1/17-testing-readiness.md": {
-      "ru": "f3ac013ef4a5f31de6f30a9d4abced495d8a3c1630c80416b1c3026a37bec790",
-      "en": "3bec3086c877533264879e4222eb5819b72b709408e847da0a9dd7f07e3f62ce"
+      "ru": "a80e37186546f120173a63e66ca9f441b3236da303e465bb297a6bd37b7ac690",
+      "en": "442ef5018cf30b1e38d0a688c53e76ef4b0c525efc6bad59913e37c02e5ce5cd"
     },
     "docs/prd-1.1/appendix-a.md": {
-      "ru": "7c0092b928e151dd8ee4b79d8a06506dc22c3f240bfdeea56e7f51d5d99e3a5a",
-      "en": "97906e543c090ef47c27456cbfce7df7ea6505117d65862b1de3b08d20ac91af"
+      "ru": "cc8d04908ae73d050ccad8c36aeaa94ac77593179be88a87dbb46e65467651ed",
+      "en": "ed4edd33727a743d53ef57f902f66bf711c76554c0e94d7d01419e8849863af8"
     },
     "docs/prd-1.1/preamble.md": {
       "ru": "6d6838e81035ff7765954feb6f0c1a044e5bdd28e2d3adc0e930ec608d1f58b6",
-      "en": "ea59fbb8ca6e0d3cf9cc8e4ce60c971fb82dc3dd9ce0be9f88c2e280fca547d4"
+      "en": "846e8b3dc10c87e69cd523e95635e1c3947a26b9b3892c3744555b13595334ef"
     },
     "README": {
-      "ru": "7280449ec18a02ee304e32c4be10eec4ac4c2437eb127727a5ae0415646aef33",
-      "en": "567ef28bd4fc39c6d82ee176929012f3b9c8fe96e0f5c9c2515e295a2da5125c"
+      "ru": "d7a3bcb74aac04642cf1513a260622797faf203280363280946be77b2ed3b014",
+      "en": "da6709008a1c4122785931e67d802f6a2cb2b11a70ec1354fbb71665dacf5237"
     },
     "CONTRIBUTING": {
-      "ru": "40563e9cd2e272c8f6a11a2e2082fdfc2b1820fec1bb57c07f5f0036cd088659",
-      "en": "7a25384bc4ed1ae031fe70cbfb82dd5dcb4ab8feb97bb660b2fd952c5412222a"
+      "ru": "fe1010f177692c9b7d615a0cbfc038795aa0f49602f466e8914952abff23af81",
+      "en": "f7d4c6250ba21e900881e44f9a8e661c713b76d14a4af04c3f33fe11dc333435"
+    },
+    "DEPLOY": {
+      "ru": "c79cced8508bf8b5be852d263d6f1f917a2f0eec78e92586d1c59714eab074e7",
+      "en": "7f0de0151941518b4ae1a400a990a442adb964f5916c012ddbfb40a89237dce5"
     },
     "PR-template": {
       "ru": "65586214858c4635efbc39ee012e2de264ba0214ba6a58ca65df4f99b336afe9",

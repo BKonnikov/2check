@@ -10,7 +10,7 @@ Work is performed directly in `main`. Do not create branches or pull requests un
 
 The concept is the first document in both editions' navigation. The original `docs/concept.md` is frozen and is not edited without an explicit decision to revise the concept. The reading editions are in `docs/ru/01-concept.md` and `docs/en/01-concept.md`. Their wording may be edited together, checking product decisions and constraints against the original.
 
-Requirements are edited in `docs/ru/prd/` and `docs/en/prd/`. Each rule has one responsible section. Other sections reference it; repeated descriptions do not establish additional contracts.
+The frozen MVP 1.0 requirements are in `docs/ru/prd/` and `docs/en/prd/`. The MVP 1.1 addition is edited in `docs/ru/prd-1.1/` and `docs/en/prd-1.1/`. Each rule has one responsible section. Other sections reference it; repeated descriptions do not establish additional contracts.
 
 ## 3. Two Consistent Editions
 
@@ -39,6 +39,6 @@ Do not invent personal experience, research, or statements on the author's behal
 4. Review the final changes and confirm that the frozen concept is unchanged.
 5. Commit the verified change to `main` and push it to `origin`.
 
-The build creates RU and EN PRDs and a compatible Russian PRD copy at the previous location. Do not edit these outputs manually. Both concept pages are source documents and are edited as a pair. Normal validation is read-only and fails on an unreviewed translation change, contract mismatch, invalid numbering, broken link, or outdated build.
+The build creates PRD 1.0 and PRD 1.1 for RU and EN and a compatible Russian PRD copy at the previous location. Do not edit these outputs manually. Both concept pages are source documents and are edited as a pair. Normal validation is read-only and fails on an unreviewed translation change, contract mismatch, invalid numbering, broken link, or outdated build.
 
 When changing the build or validation rules, also run `python3 scripts/test_docs.py`. This suite checks error detection using temporary document copies.
