@@ -10,8 +10,8 @@
       "en": "9ed23e1b087bc996d5d28b8eec6f99c917b55ae0fd3f06b0df5cd8380ba512cd"
     },
     "docs/03-prd-1.1.md": {
-      "ru": "947524aaae7f87ee359f6528528704e36c0b002db92f0529b57da7545c44c4cb",
-      "en": "d01968a5ffcbf48b42741598570454a5b1b520e7b40e53f0358ed5a80f39bcc5"
+      "ru": "6beabb72c8436ae4cdf1d657b9b7e68bdf5597110f4be9e6dec3082d71243a9d",
+      "en": "b3e395a498333dc50182a219139650b7b0eb6bbd80e7afb1e60451dbd51527fb"
     },
     "docs/README.md": {
       "ru": "3cc4a2e45fdfa73155c8b1093d3d7b27da66c68d2dda36dfe74e3793d516cf3d",
@@ -168,6 +168,14 @@
     "docs/prd-1.1/07-starttls.md": {
       "ru": "90c14b11708ffa372012468b4f65e0d9a3b9f32209c9a44790eed6e19d1240f9",
       "en": "2d2c66d5a860b95823d5bf87680e8d3e4eb514e5661cfe90bef83f0ecab30f68"
+    },
+    "docs/prd-1.1/08-ptr.md": {
+      "ru": "c1e9e49e09aa49f7f1a362b52242cf66d4ec7f840993bafe6a798c90fd8bf6c7",
+      "en": "c1a44ff7cd1e23e7d87d530040ba11507802405b1d060544e69da3bea0db8d04"
+    },
+    "docs/prd-1.1/09-dnsbl.md": {
+      "ru": "1ac3928124f2489a12b22ed8000377ac452227f3575d7641ee28b765c9948743",
+      "en": "8b3ca6c7907d100087ea7cb45e5dea91256cb2769384405dd67e0bcdd769003e"
     },
     "docs/prd-1.1/appendix-a.md": {
       "ru": "7ca83cce8fbf191dbcc22721acb20c52d45544c44303467b415d74643382923e",

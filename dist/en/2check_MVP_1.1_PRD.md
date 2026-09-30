@@ -25,6 +25,8 @@ The Russian and English editions describe the same requirements. Identifiers, fo
 - [5. DKIM](#section-05)
 - [6. MX](#section-06)
 - [7. STARTTLS](#section-07)
+- [8. PTR](#section-08)
+- [9. Blocklists of the Receiving Server](#section-09)
 - [Appendix A. Responsible Sections](#appendix-a)
 
 <a id="section-01"></a>
@@ -618,6 +620,152 @@ In all three cases the status is `UNKNOWN`.
 - **AC-7.6** Faults in the certificate give `FAIL` with severity `warning`.
 - **AC-7.7** Unavailable outbound connections give `UNKNOWN` with `reasonCode = outbound_smtp_unavailable` and do not reduce the domain's numerical score.
 - **AC-7.8** The check's messages do not assert that the server will or will not accept a message.
+
+---
+
+<a id="section-08"></a>
+
+# 8. PTR
+
+§8 defines the check of the receiving server's reverse names: what counts as a configured reverse name, how its confirmation is tested, and what does not follow from either.
+
+## 8.1. What Is Being Checked
+
+What is checked are the addresses of the hosts obtained from §6. Each address is asked for its reverse name, and each name for the address it points to.
+
+## 8.2. A Confirmed Reverse Name
+
+A reverse name counts as confirmed when the name obtained from an address resolves back to that same address. Such agreement is a long-standing requirement of host configuration: RFC 1912 requires forward and reverse records to be kept consistent and forbids pointing a reverse record at an alias.
+
+An unconfirmed name means the address calls itself by a name that does not belong to it. That is a configuration error, not a sign of ill intent.
+
+## 8.3. Addresses of Both Versions
+
+Addresses of version four and version six are checked separately and give separate results.
+
+The split is needed because a reverse zone for version six addresses is set up less often: a host with a configured reverse name for its version four address frequently has none for version six, and its owner does not know.
+
+## 8.4. Results
+
+| What was found | Status | Severity |
+|---|---|---|
+| a reverse name exists and is confirmed | `PASS` | — |
+| a reverse name exists but is not confirmed | `FAIL` | `warning` |
+| no reverse name for a version four address | `FAIL` | `warning` |
+| no reverse name for a version six address | `FAIL` | `informational` |
+| the reverse name points at an alias | `FAIL` | `informational` |
+
+Several reverse names for one address are permitted and are reported as fact.
+
+## 8.5. What Is Not Judged
+
+The look of the name itself is not judged. A name that contains the address, or that resembles one handed out automatically, is not treated as a defect.
+
+Such a judgement would be a guess: a name cannot establish how a host is configured or how receivers regard it, and a message saying so would read as a claim about the fate of mail. The general rule is 1.0 §13.
+
+## 8.6. Technical Failure
+
+| Cause | `reasonCode` |
+|---|---|
+| the reverse query did not complete | `ptr_lookup_failed` |
+| the forward query for confirmation did not complete | `ptr_confirmation_incomplete` |
+
+An incomplete confirmation gives `UNKNOWN`: without the forward answer we do not know whether the name is confirmed, and we are not entitled to call it unconfirmed.
+
+## 8.7. What the Check Does Not Assert
+
+- That the domain's mail will or will not land in spam: the reverse name of a receiving host does not describe the sending one and says nothing about the fate of outbound messages — §2.
+- That the host is badly configured in general: a reverse name is one setting, not an assessment of a host.
+- That the name belongs to the domain's owner: the addresses of a receiving host often belong to a mail provider.
+
+## 8.8. Acceptance Criteria
+
+- **AC-8.1** The addresses checked are those of the hosts obtained from §6; no other address is queried.
+- **AC-8.2** A reverse name counts as confirmed only when it resolves back to the same address.
+- **AC-8.3** Addresses of version four and version six give separate results.
+- **AC-8.4** No reverse name for a version four address gives `FAIL` with severity `warning`, and for version six with severity `informational`.
+- **AC-8.5** An unconfirmed reverse name gives `FAIL` with severity `warning`.
+- **AC-8.6** The look of a reverse name affects no status and is not judged in the message.
+- **AC-8.7** An incomplete confirmation gives `UNKNOWN` with a `reasonCode`, not a conclusion that the name is unconfirmed.
+- **AC-8.8** The check's messages assert nothing about the fate of the domain's outbound mail.
+
+---
+
+<a id="section-09"></a>
+
+# 9. Blocklists of the Receiving Server
+
+§9 defines the check of the receiving server's addresses against blocklists: which lists may be used, how their answers are read, and why a refusal never means "clean".
+
+## 9.1. What Is Being Checked
+
+What is checked are the addresses of the hosts obtained from §6. The check answers whether the receiving server's address is listed, and nothing else.
+
+## 9.2. Which Lists May Be Used
+
+Only lists whose published terms permit a public checking service to query them are used.
+
+The set of lists is not enumerated in this section. It is set by versioned configuration under the rules of 1.0 §20, and for each list the configuration holds a link to the terms that permit this use. Terms change more often than a specification does, and a section naming providers by name would go stale before it was implemented.
+
+The rule is strict for a reason rather than out of caution. The terms of the largest of them, Spamhaus, explicitly exclude free queries from services answering other people's requests and require a paid subscription or a key. Another well-known list, SORBS, was closed by its owner in the year two thousand and twenty-four. The obvious set of providers turns out not to be one.
+
+## 9.3. How an Answer Is Read
+
+A list answers a query in one of three ways, and telling them apart is mandatory:
+
+| Answer | What it means |
+|---|---|
+| the address is listed | a confirmed hit |
+| the address is not listed | a confirmed absence |
+| the query was refused | there is no answer |
+
+The third is a refusal to serve the query: a rate limit exceeded, an unrecognised source, a key demanded. Lists answer such a query with codes from their own reserved range, for example `127.255.255.254`, and in form those codes are indistinguishable from an answer of "listed".
+
+A refusal is never read as "clean". A check that quietly turns a refusal into a favourable result is worse than no check: it asserts something nobody verified.
+
+## 9.4. Results
+
+| State | Status | Severity |
+|---|---|---|
+| no address is listed in any list | `PASS` | — |
+| an address is listed in at least one list | `FAIL` | `warning` |
+| every list refused the query | `UNKNOWN` | — |
+| some lists refused the query and there are no hits | `UNKNOWN` | — |
+
+A partial answer gives `UNKNOWN` rather than `PASS`: without having asked them all, we do not know whether the address is clean. A hit, meanwhile, is settled and is reported whether or not the remaining lists answered.
+
+The severity of a hit is `warning` rather than `critical`: being listed does not stop a domain receiving mail, and these data say nothing about the mail it sends — §2.
+
+## 9.5. What the Reader Is Told
+
+The name of the list holding the address, and the address of that list's page where an owner can see the reason and ask to be removed. The reason for the listing is not retold: it is the list that states it, not us.
+
+If no permitted list is configured, the check gives `UNKNOWN` with `reasonCode = dnsbl_no_permitted_source`. That is a state of the deployment, not a property of the domain, and it does not reduce the domain's score.
+
+## 9.6. Technical Failure
+
+| Cause | `reasonCode` |
+|---|---|
+| the queries to the lists did not complete | `dnsbl_lookup_failed` |
+| every list refused the query | `dnsbl_query_refused` |
+| no permitted list is configured | `dnsbl_no_permitted_source` |
+
+## 9.7. What the Check Does Not Assert
+
+- That the domain's mail will land in spam: the lists describe the address of the receiving server, not the address the domain sends from — §2.
+- That a listing is deserved: the grounds for inclusion are stated by the list, and public data cannot confirm them.
+- That absence from the lists means a good reputation: reputation is not assessed this way and is outside the release boundary — §1.
+
+## 9.8. Acceptance Criteria
+
+- **AC-9.1** Only lists whose published terms permit a public checking service to query them are used; the configuration holds a link to those terms for each list.
+- **AC-9.2** The set of lists is set by versioned configuration and is not held in the code.
+- **AC-9.3** An answer refusing to serve the query is distinguished from an answer of "listed" and is never read as "not listed".
+- **AC-9.4** A hit in at least one list gives `FAIL` with severity `warning`.
+- **AC-9.5** No hits with an incomplete set of answers gives `UNKNOWN`, not `PASS`.
+- **AC-9.6** No configured permitted list gives `UNKNOWN` with a `reasonCode` and does not reduce the domain's numerical score.
+- **AC-9.7** The reader is told the name of the list and the address of its page; the reason for the listing is not retold.
+- **AC-9.8** The check's messages assert nothing about the domain's outbound mail and do not assess its reputation.
 
 ---
 
