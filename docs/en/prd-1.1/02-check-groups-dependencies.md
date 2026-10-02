@@ -36,12 +36,14 @@ No `MX` does not mean mail has nowhere to go. RFC 7505 describes the order laid 
 
 There is no subject in two cases:
 
-| State of the domain | Value of `blockedBy` |
+| State of the domain | What establishes it |
 |---|---|
-| neither `MX` nor address records | `mx_missing` |
-| an `MX` published to say "I accept no mail" | `null_mx` |
+| neither `MX` nor address records | the result of the `MX` check |
+| an `MX` published to say "I accept no mail" | the result of the `MX` check |
 
 The second is a deliberate declaration by the owner under RFC 7505, not an omission. Both are detailed in [§6](06-mx.md#6-mx).
+
+In both cases the `blockedBy` field names the check that blocked them, as the contract in [1.0 §7](../prd/07-shared-status-dependency-category-scan-semantics.md#7-statuses-dependencies-and-scan-results) requires: it answers what stood in the way, not why. Which of the two states obtained is told apart by the messages of the blocked checks themselves — otherwise one field would mean something different in this category than in every other.
 
 ## 2.4. When There Is No Subject
 
@@ -67,9 +69,10 @@ The results of `PTR` are therefore stated as the condition of the receiving serv
 
 - **AC-2.1** The `SPF`, `DMARC` and `DKIM` checks run whether or not `MX` is present.
 - **AC-2.2** With no `MX` but with address records for the domain, the checks of the receiving server run against the implicit server.
-- **AC-2.3** Where there is no subject, the `STARTTLS` and `PTR` checks return `NOT_APPLICABLE` with a `blockedBy` drawn from the values `mx_missing` and `null_mx`.
-- **AC-2.4** An absent receiving server is not itself a reason for `UNKNOWN` in the category.
-- **AC-2.5** The state of the receiving server reduces the numerical score once, through the result of the `MX` check.
-- **AC-2.6** The messages of the `PTR` check describe the receiving server and assert nothing about the domain's outbound mail.
+- **AC-2.3** Where there is no subject, the `STARTTLS` and `PTR` checks return `NOT_APPLICABLE`, and their `blockedBy` names the `MX` check.
+- **AC-2.4** The messages of the blocked checks tell an absence of records apart from a declared refusal of mail.
+- **AC-2.5** An absent receiving server is not itself a reason for `UNKNOWN` in the category.
+- **AC-2.6** The state of the receiving server reduces the numerical score once, through the result of the `MX` check.
+- **AC-2.7** The messages of the `PTR` check describe the receiving server and assert nothing about the domain's outbound mail.
 
 ---

@@ -188,6 +188,69 @@ export const uz: Catalogue = {
       "Ba'zi tekshiruvlarni yakunlab bo'lmadi, shuning uchun bu to'liq sog'liq xulosasi emas.",
   },
 
+  "email.mx.records.present": {
+    title: "Qabul qiluvchi serverlar ko'rsatilgan",
+    fact: "Yaroqli xostlar: {count}",
+    explanation:
+      "MX yozuvlari jo'natuvchilar shu domen uchun pochtani yetkazadigan serverlarni afzallik tartibida nomlaydi.",
+  },
+  "email.mx.records.null": {
+    title: "Domen pochta qabul qilmasligini e'lon qilgan",
+    fact: "Xosti bo'lmagan MX yozuvi e'lon qilingan",
+    explanation:
+      "RFC 7505 bunday yozuvni egasining aniq e'loni deb belgilaydi. Jo'natuvchi buni darhol biladi va xatni navbatda ushlab turmaydi.",
+  },
+  "email.mx.records.fail.implicit": {
+    title: "MX yozuvlari yo'q, pochta domenning manzil yozuvlari bo'yicha boradi",
+    explanation:
+      "RFC 5321 bo'yicha MX topa olmagan jo'natuvchi domenning o'z manzil yozuvlariga murojaat qiladi. Pochta yetib boradi — sayt uchun javob beradigan xostga.",
+    impact: "Pochta qayerga yetkazilishini boshqa savolga javob beradigan yozuv hal qiladi.",
+    recommendation:
+      "Domen pochta qabul qilsa MX yozuvlarini, qabul qilmasa xosti bo'lmagan MX yozuvini e'lon qiling.",
+  },
+  "email.mx.records.fail.missing": {
+    title: "Domenda na MX, na manzil yozuvlari bor",
+    explanation: "Jo'natuvchida bu domen uchun pochtani yetkazadigan joy yo'q.",
+    impact: "Bu domendagi manzillarga xatlar yetkazilmaydi.",
+    recommendation:
+      "Domen pochta qabul qilishi kerak bo'lsa MX yozuvlarini, kerak bo'lmasa xosti bo'lmagan MX yozuvini e'lon qiling.",
+  },
+  "email.mx.records.fail.unusable": {
+    title: "MX yozuvlaridagi birorta xost yaroqli emas",
+    fact: "Yaroqsiz xostlar: {count}",
+    explanation: "Xostlarda manzil yozuvlari yo'q yoki nom o'rniga manzil yozilgan.",
+    impact: "MX yozuvlari e'lon qilingan bo'lsa-da, jo'natuvchida yetkazadigan joy yo'q.",
+    recommendation:
+      "MX yozuvlaridagi xost nomlarini va shu nomlarning manzil yozuvlarini tekshiring.",
+  },
+  "email.mx.records.fail.literal": {
+    title: "MX yozuvida nom o'rniga manzil yozilgan",
+    fact: "Bunday yozuvlar: {hosts}",
+    explanation: "MX yozuvining xosti IP manzil emas, domen nomi bo'lishi kerak.",
+    impact: "Jo'natuvchilar bunday yozuvdan foydalanmaydi.",
+    recommendation: "Serverga nom bering, MX ga shuni, manzilni esa A yoki AAAA yozuviga qo'ying.",
+  },
+  "email.mx.records.fail.alias": {
+    title: "MX xosti taxallus (CNAME)",
+    fact: "Bunday xostlar: {hosts}",
+    explanation:
+      "RFC 2181 MX xosti CNAME taxallusi emas, manzil yozuvlariga ega nom bo'lishini talab qiladi.",
+    impact: "Ayrim jo'natuvchilar bunday yozuvni boshqalardan farqli ishlaydi.",
+    recommendation: "MX da o'z A yoki AAAA yozuvlariga ega nomni ko'rsating.",
+  },
+  "email.mx.records.fail.partial": {
+    title: "MX yozuvlaridagi ayrim xostlar yaroqsiz",
+    fact: "Manzil yozuvlarisiz: {hosts}",
+    explanation: "Bu nomlarda A yoki AAAA yozuvlari yo'q, shuning uchun ularga ulanib bo'lmaydi.",
+    impact:
+      "Yetkazish qolgan xostlar orqali davom etadi; egasi mo'ljallagan zaxira ko'ringanidan kichik.",
+    recommendation: "Bu nomlarga manzil yozuvlarini bering yoki ularni MX dan olib tashlang.",
+  },
+  "email.mx.records.unknown": {
+    title: "Qabul qiluvchi serverni aniqlash imkoni bo'lmadi",
+    explanation:
+      "So'rovlar aniq natija bermadi. Bu yozuvlar yo'q yoki xostlar yaroqsiz degani emas.",
+  },
   "email.spf.record.present": {
     title: "Jo'natish siyosati e'lon qilingan",
     fact: "Bitta SPF yozuvi",

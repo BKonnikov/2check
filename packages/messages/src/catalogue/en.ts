@@ -183,6 +183,70 @@ export const en: Catalogue = {
     explanation: "Some checks could not be completed, so this is not a clean bill of health.",
   },
 
+  "email.mx.records.present": {
+    title: "Receiving servers are named",
+    fact: "Usable hosts: {count}",
+    explanation:
+      "MX records name the servers senders deliver mail for this domain to, in order of preference.",
+  },
+  "email.mx.records.null": {
+    title: "The domain declares that it accepts no mail",
+    fact: "An MX record with an empty host is published",
+    explanation:
+      "RFC 7505 defines such a record as an explicit declaration by the owner. A sender learns of it at once and does not hold the message in a queue.",
+  },
+  "email.mx.records.fail.implicit": {
+    title: "There are no MX records; mail will follow the domain's address records",
+    explanation:
+      "RFC 5321 has a sender that finds no MX turn to the domain's own address records. The mail does arrive — at the host that answers for the website.",
+    impact: "Where mail is delivered is decided by a record that answers a different question.",
+    recommendation:
+      "Publish MX records if the domain receives mail, or an MX record with an empty host if it does not.",
+  },
+  "email.mx.records.fail.missing": {
+    title: "The domain has neither MX records nor address records",
+    explanation: "A sender has nowhere to deliver mail for this domain.",
+    impact: "Messages to addresses in this domain will not be delivered.",
+    recommendation:
+      "Publish MX records if the domain should receive mail, or an MX record with an empty host if it should not.",
+  },
+  "email.mx.records.fail.unusable": {
+    title: "No host in the MX records is usable",
+    fact: "Unusable hosts: {count}",
+    explanation: "The hosts have no address records, or an address is written in place of a name.",
+    impact: "A sender has nowhere to deliver to, although MX records are published.",
+    recommendation:
+      "Check the host names in the MX records and the address records of those names.",
+  },
+  "email.mx.records.fail.literal": {
+    title: "An MX record holds an address in place of a name",
+    fact: "Those records: {hosts}",
+    explanation: "The host of an MX record must be a domain name, not an IP address.",
+    impact: "Senders do not use such a record.",
+    recommendation:
+      "Give the server a name, put that in MX, and put the address in an A or AAAA record.",
+  },
+  "email.mx.records.fail.alias": {
+    title: "An MX host is an alias",
+    fact: "Those hosts: {hosts}",
+    explanation:
+      "RFC 2181 requires an MX host to be a name with address records rather than a CNAME alias.",
+    impact: "Some senders handle such a record differently from others.",
+    recommendation: "Point MX at a name that has address records of its own.",
+  },
+  "email.mx.records.fail.partial": {
+    title: "Some hosts in the MX records are unusable",
+    fact: "Without address records: {hosts}",
+    explanation: "These names have no A or AAAA records, so nothing can connect to them.",
+    impact:
+      "Delivery proceeds through the remaining hosts; the redundancy the owner counted on is smaller than it looks.",
+    recommendation: "Give these names address records, or remove them from MX.",
+  },
+  "email.mx.records.unknown": {
+    title: "The receiving server could not be determined",
+    explanation:
+      "The queries gave no definite result. That does not mean there are no records, or that the hosts are unusable.",
+  },
   "email.spf.record.present": {
     title: "A sending policy is published",
     fact: "One SPF record",
