@@ -30,8 +30,8 @@ export type AcceptanceState = (typeof ACCEPTANCE_STATES)[number];
 export const SCAN_MODES = ["FULL", "PARTIAL"] as const;
 export type ScanMode = (typeof SCAN_MODES)[number];
 
-/** PRD 17.2 — categories a PARTIAL scan may select. */
-export const SCAN_CATEGORIES = ["dns", "registry", "tls"] as const;
+/** PRD 17.2, and 1.1 §14.1 — categories a PARTIAL scan may select. */
+export const SCAN_CATEGORIES = ["dns", "registry", "tls", "email"] as const;
 export type ScanCategory = (typeof SCAN_CATEGORIES)[number];
 
 /** PRD 17.2 — cache mode. */
@@ -336,8 +336,49 @@ export interface TlsExecutionMetadata {
 }
 
 /** PRD 6.2 */
-export type ModuleCheckTarget = DnsCheckTarget | RegistryCheckTarget | TlsCheckTarget;
-export type ModuleCheckSource = DnsCheckSource | RegistryCheckSource | TlsCheckSource;
+/**
+ * 1.1 §9.2 — what an email check is about.
+ *
+ * `queriedName` is part of the subject rather than a detail: for DMARC it may belong to a parent
+ * domain and for DKIM it carries a selector, so a result cannot be read without it.
+ */
+export interface EmailPolicyTarget {
+  readonly kind: "EMAIL_POLICY";
+  readonly policy: "SPF" | "DMARC" | "DKIM";
+  readonly queriedName: string;
+}
+
+/** 1.1 §9.2 — one host that receives mail for the domain. */
+export interface MailHostTarget {
+  readonly kind: "MAIL_HOST";
+  readonly hostname: string;
+  readonly preference?: number;
+  readonly ipFamily?: TlsIpFamily;
+  /** 1.1 §6.2 — taken from the domain's address records because no MX was published. */
+  readonly implicit?: boolean;
+}
+
+export type EmailCheckTarget = EmailPolicyTarget | MailHostTarget;
+
+/** 1.1 §9.3 — where an email result came from. */
+export interface DnsRecordSource {
+  readonly kind: "DNS_RECORD";
+  readonly traversedNames?: readonly string[];
+  readonly voidLookups?: number;
+}
+
+export type EmailCheckSource = DnsRecordSource;
+
+export type ModuleCheckTarget =
+  | DnsCheckTarget
+  | RegistryCheckTarget
+  | TlsCheckTarget
+  | EmailCheckTarget;
+export type ModuleCheckSource =
+  | DnsCheckSource
+  | RegistryCheckSource
+  | TlsCheckSource
+  | EmailCheckSource;
 
 /** PRD 6.2 */
 export interface CheckResult<TDetails = unknown> {
