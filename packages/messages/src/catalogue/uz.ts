@@ -188,6 +188,121 @@ export const uz: Catalogue = {
       "Ba'zi tekshiruvlarni yakunlab bo'lmadi, shuning uchun bu to'liq sog'liq xulosasi emas.",
   },
 
+  "email.spf.record.present": {
+    title: "Jo'natish siyosati e'lon qilingan",
+    fact: "Bitta SPF yozuvi",
+    explanation:
+      "SPF — bu DNS yozuvi bo'lib, unda domen egasi o'z nomidan pochta jo'natadigan serverlarni sanab o'tadi.",
+  },
+  "email.spf.record.fail.absent": {
+    title: "Jo'natish siyosati e'lon qilinmagan",
+    explanation:
+      "SPF — bu DNS yozuvi bo'lib, unda domen egasi o'z nomidan pochta jo'natadigan serverlarni sanab o'tadi. Qabul qiluvchi xat kelgan manzilni shu ro'yxat bilan solishtiradi.",
+    impact: "Qabul qiluvchida jo'natuvchi manzilini solishtirish uchun hech narsa yo'q.",
+    recommendation:
+      "v=spf1 bilan boshlanadigan TXT yozuvini e'lon qiling va o'zingiz jo'natadigan serverlarni sanab o'ting.",
+  },
+  "email.spf.record.fail.multiple": {
+    title: "SPF yozuvlari bir nechta",
+    fact: "Topilgan yozuvlar: {count}",
+    explanation: "RFC 7208 bir domenga faqat bitta SPF yozuviga ruxsat beradi.",
+    impact: "Qabul qiluvchi ulardan birini tanlamaydi, balki siyosatni butunlay rad etadi.",
+    recommendation: "Bitta yozuvni qoldiring va qolganlarining mazmunini unga ko'chiring.",
+  },
+  "email.spf.record.fail.unparseable": {
+    title: "SPF yozuvi tahlil qilinmaydi",
+    explanation: "Yozuvda RFC 7208 grammatikasida yo'q atama bor.",
+    impact: "Qabul qiluvchi bunday siyosatni butunlay rad etadi.",
+    recommendation: "Yozuvdagi mexanizm va modifikatorlarda xato bor-yo'qligini tekshiring.",
+  },
+  "email.spf.record.unknown": {
+    title: "SPF yozuvini olish imkoni bo'lmadi",
+    explanation: "TXT so'rovi aniq natija bermadi. Bu yozuv yo'q degani emas.",
+  },
+  "email.spf.limits.pass": {
+    title: "Yozuv o'tish cheklovlariga sig'adi",
+    fact: "DNS so'rovi keltiradigan atamalar: {limit} dan {count} ta",
+  },
+  "email.spf.limits.fail.lookups": {
+    title: "Yozuvda DNS so'rovi keltiradigan atamalar {limit} tadan ko'p",
+    fact: "DNS so'rovi keltiradigan atamalar: {count}",
+    explanation:
+      "RFC 7208 bitta tekshiruvda hisoblanadigan include, a, mx, ptr, exists va redirect atamalari sonini cheklaydi, ichki yozuvlar ham shunga kiradi.",
+    impact: "Chegaradan oshish qabul qiluvchida yozuv xatosini beradi.",
+    recommendation:
+      "Ichki include lar sonini kamaytiring yoki ularning bir qismini aniq ip4 va ip6 manzillariga almashtiring.",
+  },
+  "email.spf.limits.fail.void": {
+    title: "Yozuvda javobsiz nomlar {limit} tadan ko'p",
+    fact: "Javobsiz nomlar: {count}",
+    explanation:
+      "RFC 7208 hech narsa qaytarmagan yoki mavjud bo'lmagan nomga tushgan so'rovlar sonini cheklashni tavsiya qiladi.",
+    impact:
+      "Qabul qiluvchilar bu tavsiyaga turlicha amal qiladi, shuning uchun yozuv ularda har xil ishlaydi.",
+    recommendation: "Yozuvdan endi mavjud bo'lmagan nomlarni olib tashlang.",
+  },
+  "email.spf.limits.fail.loop": {
+    title: "Yozuvni o'tish aylanib qolgan",
+    fact: "Nom ikki marta uchradi: {name}",
+    explanation: "Ichki yozuvlardan biri allaqachon o'tilgan nomga qaytib ishora qiladi.",
+    impact: "Qabul qiluvchi hisoblashni to'xtatadi va yozuvni xato deb biladi.",
+    recommendation: "include yoki redirect zanjirini yopadigan havolani olib tashlang.",
+  },
+  "email.spf.limits.unknown": {
+    title: "Yozuvni o'tish tugamadi",
+    fact: "O'tilgan, DNS so'rovi keltiradigan atamalar: {count}",
+    explanation:
+      "Ayrim ichki nomlarni o'tish imkoni bo'lmadi, shuning uchun atamalar soni to'liq ma'lum emas va chegaradan oshish haqida hukm chiqarib bo'lmaydi.",
+  },
+  "email.spf.limits.blocked": { title: "O'tish cheklovlari tekshirilmadi" },
+  "email.spf.policy.pass.reject": {
+    title: "Ro'yxatda yo'q jo'natuvchilar rad etiladi",
+    fact: "Yozuv -all bilan tugaydi",
+  },
+  "email.spf.policy.pass.mark": {
+    title: "Ro'yxatda yo'q jo'natuvchilar belgilanadi",
+    fact: "Yozuv ~all bilan tugaydi",
+    explanation:
+      "Ro'yxatda yo'q manzildan kelgan xat qabul qilinadi, lekin belgilanadi. Bu jo'natuvchilar ro'yxatini hali aniqlayotgan domen uchun ish rejimi.",
+  },
+  "email.spf.policy.fail.neutral": {
+    title: "Yozuv ro'yxatda yo'q jo'natuvchilar haqida hech nima demaydi",
+    fact: "Yozuv ?all bilan tugaydi",
+    explanation: "?all mexanizmi egasi bunday manzillar uchun natijani belgilamaganini bildiradi.",
+    impact: "Qabul qiluvchida yozuvda yo'q manzildan kelgan xatga qo'llaydigan narsa yo'q.",
+    recommendation:
+      "Jo'natuvchilar ro'yxati to'liq bo'lgach, ?all ni ~all yoki -all ga almashtiring.",
+  },
+  "email.spf.policy.fail.open": {
+    title: "Yozuv istalgan manzildan jo'natishga ruxsat beradi",
+    fact: "Yozuv +all bilan tugaydi",
+    explanation: "+all mexanizmi istalgan manzilga ijobiy SPF natijasini beradi.",
+    impact: "Yozuv jo'natuvchilar doirasini cheklamaydi.",
+    recommendation:
+      "+all ni -all ga almashtiring va jo'natuvchi serverlaringizni aniq sanab o'ting.",
+  },
+  "email.spf.policy.fail.absent": {
+    title: "Yozuvda na all, na redirect bor",
+    explanation: "Yakuniy mexanizmsiz yozuv unda sanalmagan manzillar uchun natijani belgilamaydi.",
+    impact: "Qabul qiluvchida bunday manzildan kelgan xatga qo'llaydigan narsa yo'q.",
+    recommendation: "Yozuv oxiriga -all yoki ~all qo'shing.",
+  },
+  "email.spf.policy.unknown": {
+    title: "Yakuniy siyosatni o'qish imkoni bo'lmadi",
+    explanation:
+      "Yozuv qarorni redirect orqali boshqa yozuvga topshiradi, uni oxirigacha o'tish imkoni bo'lmadi.",
+  },
+  "email.spf.policy.blocked": { title: "Yakuniy siyosat baholanmadi" },
+  "email.spf.deprecated.fail.ptr": {
+    title: "Yozuvda ptr mexanizmi ishlatilgan",
+    explanation:
+      "RFC 7208 ptr ni e'lon qilishni tavsiya qilmaydi: u sekin va ishonchsiz teskari so'rovlarni talab qiladi.",
+    impact: "Ayrim qabul qiluvchilar bu mexanizmni boshqalardan farqli ishlaydi.",
+    recommendation: "ptr ni aniq ip4 va ip6 manzillariga yoki a mexanizmiga almashtiring.",
+  },
+  "email.spf.deprecated.absent": { title: "Yozuvda eskirgan mexanizm yo'q" },
+  "email.spf.deprecated.blocked": { title: "Yozuv mexanizmlari tekshirilmadi" },
+  "category.email": { title: "Pochta" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domen" },
   "category.tls": { title: "SSL/TLS" },

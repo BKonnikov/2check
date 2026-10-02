@@ -183,6 +183,120 @@ export const en: Catalogue = {
     explanation: "Some checks could not be completed, so this is not a clean bill of health.",
   },
 
+  "email.spf.record.present": {
+    title: "A sending policy is published",
+    fact: "One SPF record",
+    explanation:
+      "SPF is a DNS record in which a domain's owner lists the servers that send mail in its name.",
+  },
+  "email.spf.record.fail.absent": {
+    title: "No sending policy is published",
+    explanation:
+      "SPF is a DNS record in which a domain's owner lists the servers that send mail in its name. A receiver checks the address a message came from against it.",
+    impact: "A receiver has nothing to check the sending address against.",
+    recommendation:
+      "Publish a TXT record beginning with v=spf1 and list the servers you send from.",
+  },
+  "email.spf.record.fail.multiple": {
+    title: "There is more than one SPF record",
+    fact: "Records found: {count}",
+    explanation: "RFC 7208 allows a domain only one SPF record.",
+    impact: "A receiver does not pick one of them; it rejects the policy outright.",
+    recommendation: "Keep one record and move the contents of the others into it.",
+  },
+  "email.spf.record.fail.unparseable": {
+    title: "The SPF record does not parse",
+    explanation: "The record holds a term the RFC 7208 grammar does not admit.",
+    impact: "A receiver rejects such a policy outright.",
+    recommendation: "Check the record for typos in its mechanisms and modifiers.",
+  },
+  "email.spf.record.unknown": {
+    title: "The SPF record could not be retrieved",
+    explanation: "The TXT query gave no definite result. That does not mean there is no record.",
+  },
+  "email.spf.limits.pass": {
+    title: "The record stays inside the traversal limits",
+    fact: "Terms causing a DNS query: {count} of {limit}",
+  },
+  "email.spf.limits.fail.lookups": {
+    title: "The record holds more than {limit} terms causing a DNS query",
+    fact: "Terms causing a DNS query: {count}",
+    explanation:
+      "RFC 7208 limits the number of include, a, mx, ptr, exists and redirect terms evaluated in one check, nested records included.",
+    impact: "Exceeding the limit produces a record error at the receiver.",
+    recommendation:
+      "Reduce the number of nested includes, or replace some of them with explicit ip4 and ip6 addresses.",
+  },
+  "email.spf.limits.fail.void": {
+    title: "The record holds more than {limit} names that answer with nothing",
+    fact: "Names answering with nothing: {count}",
+    explanation:
+      "RFC 7208 recommends limiting the number of queries that return an empty answer or a name that does not exist.",
+    impact:
+      "Receivers honour that recommendation unevenly, so the record behaves differently at different ones.",
+    recommendation: "Remove names that no longer exist from the record.",
+  },
+  "email.spf.limits.fail.loop": {
+    title: "The traversal of the record loops",
+    fact: "A name was reached twice: {name}",
+    explanation: "One of the nested records points back at a name already walked.",
+    impact: "A receiver stops evaluating and treats the record as an error.",
+    recommendation: "Remove the reference that closes the include or redirect chain.",
+  },
+  "email.spf.limits.unknown": {
+    title: "The traversal of the record did not finish",
+    fact: "Terms causing a DNS query walked: {count}",
+    explanation:
+      "Some nested names could not be followed, so the number of terms is not fully known and no judgement about the limit can be made.",
+  },
+  "email.spf.limits.blocked": { title: "The traversal limits were not checked" },
+  "email.spf.policy.pass.reject": {
+    title: "Unlisted senders are rejected",
+    fact: "The record ends with -all",
+  },
+  "email.spf.policy.pass.mark": {
+    title: "Unlisted senders are marked",
+    fact: "The record ends with ~all",
+    explanation:
+      "A message from an unlisted address is accepted but marked. This is the working setting for a domain still confirming its list of senders.",
+  },
+  "email.spf.policy.fail.neutral": {
+    title: "The record states nothing about unlisted senders",
+    fact: "The record ends with ?all",
+    explanation: "The ?all mechanism means the owner set no result for such addresses.",
+    impact: "A receiver has nothing to apply to a message from an address the record omits.",
+    recommendation: "Replace ?all with ~all or -all once the list of senders is complete.",
+  },
+  "email.spf.policy.fail.open": {
+    title: "The record permits sending from any address",
+    fact: "The record ends with +all",
+    explanation: "The +all mechanism gives any address a positive SPF result.",
+    impact: "The record places no limit on who may send.",
+    recommendation: "Replace +all with -all and list the servers you send from explicitly.",
+  },
+  "email.spf.policy.fail.absent": {
+    title: "The record holds neither all nor redirect",
+    explanation:
+      "Without a final mechanism the record sets no result for addresses it does not list.",
+    impact: "A receiver has nothing to apply to a message from such an address.",
+    recommendation: "Add -all or ~all to the end of the record.",
+  },
+  "email.spf.policy.unknown": {
+    title: "The final policy could not be read",
+    explanation:
+      "The record hands the decision to another record through redirect, and that one could not be walked to the end.",
+  },
+  "email.spf.policy.blocked": { title: "The final policy was not assessed" },
+  "email.spf.deprecated.fail.ptr": {
+    title: "The record uses the ptr mechanism",
+    explanation:
+      "RFC 7208 advises against publishing ptr: it requires reverse queries, which are slow and unreliable.",
+    impact: "Some receivers handle this mechanism differently from others.",
+    recommendation: "Replace ptr with explicit ip4 and ip6 addresses, or with the a mechanism.",
+  },
+  "email.spf.deprecated.absent": { title: "The record uses no deprecated mechanism" },
+  "email.spf.deprecated.blocked": { title: "The record's mechanisms were not checked" },
+  "category.email": { title: "Mail" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domain" },
   "category.tls": { title: "SSL/TLS" },

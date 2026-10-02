@@ -1,4 +1,11 @@
-import type { CheckResult, EmailPolicyTarget, Severity } from "@2check/contracts";
+import type {
+  CheckResult,
+  EmailPolicyTarget,
+  MessageDescriptor,
+  Severity,
+} from "@2check/contracts";
+
+type MessageParams = NonNullable<MessageDescriptor["params"]>;
 
 /**
  * 1.1 §3 — the SPF policy check.
@@ -108,6 +115,8 @@ export type SpfRecordState = "ABSENT" | "SINGLE" | "MULTIPLE" | "UNPARSEABLE" | 
 
 export interface SpfAnalysis {
   readonly recordState: SpfRecordState;
+  /** How many records claimed to be SPF, which only matters when there was more than one. */
+  readonly recordCount: number;
   readonly record?: SpfRecord;
   /** The first reachable `all` on the record's own chain, following `redirect` but not `include`. */
   readonly allQualifier?: SpfQualifier;
@@ -120,6 +129,8 @@ export interface SpfAnalysis {
   /** True when a name could not be followed, so the count is a lower bound. */
   readonly traversalIncomplete: boolean;
   readonly loopDetected: boolean;
+  /** The name the chain came back to, which is what a reader needs in order to break it. */
+  readonly loopName?: string;
   readonly usesPtr: boolean;
   readonly traversedNames: readonly string[];
 }
@@ -129,6 +140,7 @@ interface Walk {
   voids: number;
   incomplete: boolean;
   loop: boolean;
+  loopName?: string;
   ptr: boolean;
   /** The `all` that decides the policy, which `redirect` carries onward and `include` does not. */
   effectiveAll?: SpfQualifier;
@@ -180,6 +192,7 @@ async function walk(
 ): Promise<void> {
   if (state.visited.has(name)) {
     state.loop = true;
+    state.loopName ??= name;
     return;
   }
   state.visited.add(name);
@@ -270,6 +283,7 @@ export async function analyseSpf(options: SpfAnalysisOptions): Promise<SpfAnalys
   const { domain, answer, lookup } = options;
   const empty: SpfAnalysis = {
     recordState: "ABSENT",
+    recordCount: 0,
     hasRedirect: false,
     lookupCount: 0,
     voidLookups: 0,
@@ -287,7 +301,7 @@ export async function analyseSpf(options: SpfAnalysisOptions): Promise<SpfAnalys
     return empty;
   }
   if (records.length > 1) {
-    return { ...empty, recordState: "MULTIPLE" };
+    return { ...empty, recordState: "MULTIPLE", recordCount: records.length };
   }
   const record = parseSpfRecord(records[0] ?? "");
   if (record === undefined) {
@@ -308,6 +322,7 @@ export async function analyseSpf(options: SpfAnalysisOptions): Promise<SpfAnalys
   const { redirect } = reachableTerms(record);
   return {
     recordState: "SINGLE",
+    recordCount: 1,
     record,
     ...(state.effectiveAll === undefined ? {} : { allQualifier: state.effectiveAll }),
     ...(state.effectiveFrom === undefined || state.effectiveFrom === domain
@@ -318,6 +333,7 @@ export async function analyseSpf(options: SpfAnalysisOptions): Promise<SpfAnalys
     voidLookups: state.voids,
     traversalIncomplete: state.incomplete,
     loopDetected: state.loop,
+    ...(state.loopName === undefined ? {} : { loopName: state.loopName }),
     usesPtr: state.ptr,
     traversedNames: state.order,
   };
@@ -346,17 +362,18 @@ function check(
   severity: Severity,
   titleCode: string,
   options: SpfCheckOptions,
-  extra: Partial<CheckResult> = {},
+  extra: Partial<CheckResult> & { readonly params?: MessageParams } = {},
 ): CheckResult {
+  const { params, ...rest } = extra;
   return {
     checkId,
     category: "email",
     status,
     severity,
     target: target(options.domain),
-    message: { titleCode },
+    message: { titleCode, ...(params === undefined ? {} : { params }) },
     freshness: options.freshness,
-    ...extra,
+    ...rest,
   };
 }
 
@@ -374,15 +391,28 @@ function recordCheck(analysis: SpfAnalysis, options: SpfCheckOptions): CheckResu
       return check(SPF_CHECK_IDS.record, "PASS", "none", "email.spf.record.present", options);
     case "ABSENT":
       // An absent record is a confirmed fact rather than an unknown one — 1.1 §3.3.
-      return check(SPF_CHECK_IDS.record, "FAIL", "warning", "email.spf.record.absent", options);
+      return check(
+        SPF_CHECK_IDS.record,
+        "FAIL",
+        "warning",
+        "email.spf.record.fail.absent",
+        options,
+      );
     case "MULTIPLE":
-      return check(SPF_CHECK_IDS.record, "FAIL", "critical", "email.spf.record.multiple", options);
+      return check(
+        SPF_CHECK_IDS.record,
+        "FAIL",
+        "critical",
+        "email.spf.record.fail.multiple",
+        options,
+        { params: { count: analysis.recordCount } },
+      );
     case "UNPARSEABLE":
       return check(
         SPF_CHECK_IDS.record,
         "FAIL",
         "critical",
-        "email.spf.record.unparseable",
+        "email.spf.record.fail.unparseable",
         options,
       );
     default:
@@ -399,33 +429,53 @@ function recordCheck(analysis: SpfAnalysis, options: SpfCheckOptions): CheckResu
  */
 function limitsCheck(analysis: SpfAnalysis, options: SpfCheckOptions): CheckResult {
   if (analysis.loopDetected) {
-    return check(SPF_CHECK_IDS.limits, "FAIL", "critical", "email.spf.limits.loop", options);
+    return check(SPF_CHECK_IDS.limits, "FAIL", "critical", "email.spf.limits.fail.loop", options, {
+      params: { name: analysis.loopName ?? options.domain },
+    });
   }
   if (analysis.lookupCount > SPF_LOOKUP_LIMIT) {
-    return check(SPF_CHECK_IDS.limits, "FAIL", "critical", "email.spf.limits.lookups", options);
+    return check(
+      SPF_CHECK_IDS.limits,
+      "FAIL",
+      "critical",
+      "email.spf.limits.fail.lookups",
+      options,
+      { params: { count: analysis.lookupCount, limit: SPF_LOOKUP_LIMIT } },
+    );
   }
   if (analysis.traversalIncomplete) {
     return check(SPF_CHECK_IDS.limits, "UNKNOWN", "none", "email.spf.limits.unknown", options, {
       reasonCode: "spf_traversal_incomplete",
+      params: { count: analysis.lookupCount },
     });
   }
   if (analysis.voidLookups > SPF_VOID_LOOKUP_LIMIT) {
-    return check(SPF_CHECK_IDS.limits, "FAIL", "warning", "email.spf.limits.void", options);
+    return check(SPF_CHECK_IDS.limits, "FAIL", "warning", "email.spf.limits.fail.void", options, {
+      params: { count: analysis.voidLookups, limit: SPF_VOID_LOOKUP_LIMIT },
+    });
   }
-  return check(SPF_CHECK_IDS.limits, "PASS", "none", "email.spf.limits.pass", options);
+  return check(SPF_CHECK_IDS.limits, "PASS", "none", "email.spf.limits.pass", options, {
+    params: { count: analysis.lookupCount, limit: SPF_LOOKUP_LIMIT },
+  });
 }
 
 /** 1.1 §3.5 — what the record says about senders it does not list. */
 function policyCheck(analysis: SpfAnalysis, options: SpfCheckOptions): CheckResult {
   switch (analysis.allQualifier) {
     case "-":
-      return check(SPF_CHECK_IDS.policy, "PASS", "none", "email.spf.policy.fail", options);
+      return check(SPF_CHECK_IDS.policy, "PASS", "none", "email.spf.policy.pass.reject", options);
     case "~":
-      return check(SPF_CHECK_IDS.policy, "PASS", "none", "email.spf.policy.softfail", options);
+      return check(SPF_CHECK_IDS.policy, "PASS", "none", "email.spf.policy.pass.mark", options);
     case "?":
-      return check(SPF_CHECK_IDS.policy, "FAIL", "warning", "email.spf.policy.neutral", options);
+      return check(
+        SPF_CHECK_IDS.policy,
+        "FAIL",
+        "warning",
+        "email.spf.policy.fail.neutral",
+        options,
+      );
     case "+":
-      return check(SPF_CHECK_IDS.policy, "FAIL", "critical", "email.spf.policy.open", options);
+      return check(SPF_CHECK_IDS.policy, "FAIL", "critical", "email.spf.policy.fail.open", options);
     default:
       break;
   }
@@ -435,7 +485,7 @@ function policyCheck(analysis: SpfAnalysis, options: SpfCheckOptions): CheckResu
       reasonCode: "spf_traversal_incomplete",
     });
   }
-  return check(SPF_CHECK_IDS.policy, "FAIL", "warning", "email.spf.policy.absent", options);
+  return check(SPF_CHECK_IDS.policy, "FAIL", "warning", "email.spf.policy.fail.absent", options);
 }
 
 export function evaluateSpfChecks(
@@ -456,7 +506,7 @@ export function evaluateSpfChecks(
     limitsCheck(analysis, options),
     policyCheck(analysis, options),
     analysis.usesPtr
-      ? check(SPF_CHECK_IDS.deprecated, "FAIL", "warning", "email.spf.deprecated.ptr", options)
+      ? check(SPF_CHECK_IDS.deprecated, "FAIL", "warning", "email.spf.deprecated.fail.ptr", options)
       : check(SPF_CHECK_IDS.deprecated, "PASS", "none", "email.spf.deprecated.absent", options),
   ];
 }
