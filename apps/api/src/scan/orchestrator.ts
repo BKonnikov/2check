@@ -7,6 +7,7 @@ import type {
 } from "@2check/contracts";
 import {
   addressEvidenceIsSufficient,
+  analyseSpf,
   buildCategoryResult,
   buildDeadlineChecks,
   buildDnsCacheKey,
@@ -19,6 +20,7 @@ import {
   evaluateRegistryLookup,
   evaluateResolveCheck,
   evaluateResolverConsistency,
+  evaluateSpfChecks,
   evaluateTlsBlockedChecks,
   evaluateTlsChecks,
   markServedFromCache,
@@ -42,6 +44,7 @@ import {
   DEFAULT_RESOLVER_SET_VERSION,
   queryResolverSet,
 } from "../dns/resolver-set.js";
+import { createSpfLookup, type SpfLookupPort, toSpfAnswer } from "../email/spf-lookup.js";
 import {
   isSupportedZone,
   lookupRegistration,
@@ -53,6 +56,8 @@ import type { ScanRecord, ScanStore } from "./store.js";
 
 /** Injectable so tests run against golden fixtures rather than the public internet (AC-26.2). */
 export type DnsQuery = (qname: string) => Promise<readonly DnsProviderResult[]>;
+/** 1.1 §3.2 — the policy and the names it leads to; injectable so tests run against fixtures. */
+export type SpfLookupFactory = () => SpfLookupPort;
 export type TlsProbe = (
   address: string,
   hostname: string,
@@ -63,6 +68,7 @@ export interface ScanDependencies {
   readonly dnsQuery?: DnsQuery;
   readonly registryLookup?: RegistryLookup;
   readonly tlsProbe?: TlsProbe;
+  readonly spfLookup?: SpfLookupFactory;
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
   readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
@@ -286,6 +292,23 @@ export async function runScan(
             registryAge === undefined
               ? [registryCheck]
               : markServedFromCache([registryCheck], registryAge),
+          ),
+        );
+      }
+
+      if (category === "email") {
+        /**
+         * 1.1 §3 — the policy is read from the domain's own TXT, and the walk goes on from there.
+         * The record comes through the same port as the nested names so that a scan reading a
+         * fixture reads the whole walk from it, the root record included.
+         */
+        const port = (deps.spfLookup ?? createSpfLookup)();
+        const answer = await port.lookup(qname);
+        const analysis = await analyseSpf({ domain: qname, answer, lookup: port.lookup });
+        categories.push(
+          buildCategoryResult(
+            "email",
+            evaluateSpfChecks(analysis, { domain: qname, freshness: freshnessNow() }),
           ),
         );
       }

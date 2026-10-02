@@ -78,6 +78,13 @@ const PERMITTED_DETAIL_FIELDS: Readonly<Record<ScanCategory, readonly string[]>>
     "fingerprintVariation",
     "chainErrorCode",
   ],
+  /**
+   * 1.1 §9.4 — the email category publishes no detail fields yet: SPF reports what it found in
+   * the message's own fact line, and the record's original text is Technical, which this list
+   * governs. A field named here is a field that leaves the service, so it is added when a check
+   * actually produces one.
+   */
+  email: [],
 };
 
 const REGISTRANT_FIELDS = ["name", "email", "phone", "address"] as const;

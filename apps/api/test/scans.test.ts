@@ -1,4 +1,5 @@
 import type { DnsProviderResult, DnsQType, WebScanResponse } from "@2check/contracts";
+import { SCAN_CATEGORIES } from "@2check/contracts";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import { type Env, loadEnv } from "../src/config/env.js";
@@ -145,14 +146,26 @@ describe("PRD 17.2 and 17.9 — request validation", () => {
     await instance.close();
   });
 
-  it("rejects PARTIAL with all three categories as an invalid scope", async () => {
+  it("rejects PARTIAL with every category as an invalid scope", async () => {
+    const instance = app();
+    const response = await createScan(instance, {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: [...SCAN_CATEGORIES],
+    });
+    expect(response.statusCode).toBe(422);
+    await instance.close();
+  });
+
+  it("accepts PARTIAL with the three categories that used to be all of them", async () => {
+    // AC-14.3 — the rule did not change, the set it applies to did.
     const instance = app();
     const response = await createScan(instance, {
       input: "example.uz",
       mode: "PARTIAL",
       selectedCategories: ["dns", "registry", "tls"],
     });
-    expect(response.statusCode).toBe(422);
+    expect(response.statusCode).toBe(202);
     await instance.close();
   });
 

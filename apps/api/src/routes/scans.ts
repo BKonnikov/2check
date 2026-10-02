@@ -8,7 +8,7 @@ import type {
   WebApiError,
   WebScanResponse,
 } from "@2check/contracts";
-import { WEB_API_BASE_PATH } from "@2check/contracts";
+import { SCAN_CATEGORIES, WEB_API_BASE_PATH } from "@2check/contracts";
 import { canonicalizeDomain } from "@2check/domain";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
@@ -28,7 +28,7 @@ const createScanSchema = z
   .object({
     input: z.string().min(1),
     mode: z.enum(["FULL", "PARTIAL"]),
-    selectedCategories: z.array(z.enum(["dns", "registry", "tls"])).optional(),
+    selectedCategories: z.array(z.enum(SCAN_CATEGORIES)).optional(),
     cacheMode: z.enum(["NORMAL", "FORCE_REFRESH"]).optional(),
   })
   .strict();
@@ -38,8 +38,15 @@ const POLL_AFTER_MS = 400;
 /** How long past the scan budget a record may stay non-terminal before a reader is told the truth. */
 const STALE_MARGIN_MS = 10_000;
 
-/** Categories this deployment can actually execute. Registry and TLS are not implemented yet. */
-const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls"];
+/** Categories this deployment can actually execute. */
+const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls", "email"];
+
+/**
+ * 1.1 §1.1 — the mail category belongs in a full scan too, and joins this list once its checks
+ * are all built. Until then it is reachable as a PARTIAL scan, because half a category in every
+ * full scan would report a domain's mail on the strength of one of its six checks.
+ */
+const FULL_SCAN_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls"];
 
 function apiError(
   reply: FastifyReply,
@@ -157,8 +164,13 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
           retryable: false,
         });
       }
-      if (new Set(selectedCategories).size === 3) {
-        // PRD 17.2 — all three categories must be sent as FULL; no implicit conversion.
+      if (new Set(selectedCategories).size === SCAN_CATEGORIES.length) {
+        /**
+         * PRD 17.2 and 1.1 §14.1 — selecting every category must be sent as FULL, with no
+         * implicit conversion. The count comes from the enumeration rather than a literal: when
+         * the mail category was added, a literal three would have quietly started accepting a
+         * PARTIAL scan of everything the release before it had.
+         */
         return apiError(reply, 422, {
           errorCode: "scan_scope_invalid",
           titleCode: "web.error.scan_scope_invalid",
@@ -212,7 +224,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
     }
 
     const requested: readonly ScanCategory[] =
-      mode === "FULL" ? ["dns", "registry", "tls"] : [...new Set(selectedCategories ?? [])];
+      mode === "FULL" ? FULL_SCAN_CATEGORIES : [...new Set(selectedCategories ?? [])];
     const unavailable = requested.filter((category) => !IMPLEMENTED_CATEGORIES.includes(category));
     if (unavailable.length > 0) {
       // PRD 17.7 — 503 when a scan cannot be accepted safely, rather than silently narrowing it.
