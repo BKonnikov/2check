@@ -189,6 +189,18 @@ export const en: Catalogue = {
     explanation:
       "MX records name the servers senders deliver mail for this domain to, in order of preference.",
   },
+  "email.mx.records.present.service": {
+    title: "The domain's mail is received by {service}",
+    fact: "Usable hosts: {count}",
+    explanation:
+      "The MX records point at this service's hosts. That is read from the records and says where delivery is directed, not what an organisation uses.",
+  },
+  "email.mx.records.present.forwarding": {
+    title: "The domain's mail is received by {service} forwarding",
+    fact: "Usable hosts: {count}",
+    explanation:
+      "{service} is a forwarding service: it accepts a message and passes it to another address, keeping no mailbox of its own. The records look the same as an ordinary mail provider's while the arrangement differs, which is why this is said separately.",
+  },
   "email.mx.records.null": {
     title: "The domain declares that it accepts no mail",
     fact: "An MX record with an empty host is published",

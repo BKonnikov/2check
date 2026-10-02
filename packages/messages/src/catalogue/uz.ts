@@ -194,6 +194,18 @@ export const uz: Catalogue = {
     explanation:
       "MX yozuvlari jo'natuvchilar shu domen uchun pochtani yetkazadigan serverlarni afzallik tartibida nomlaydi.",
   },
+  "email.mx.records.present.service": {
+    title: "Domen pochtasini {service} qabul qiladi",
+    fact: "Yaroqli xostlar: {count}",
+    explanation:
+      "MX yozuvlari shu xizmatning xostlariga ishora qiladi. Bu yozuvlardan o'qilgan va yetkazish qayerga yo'naltirilganini bildiradi, tashkilot nimadan foydalanishini emas.",
+  },
+  "email.mx.records.present.forwarding": {
+    title: "Domen pochtasini {service} qayta yo'naltirishi qabul qiladi",
+    fact: "Yaroqli xostlar: {count}",
+    explanation:
+      "{service} — qayta yo'naltirish xizmati: u xatni qabul qiladi va boshqa manzilga uzatadi, o'zida pochta qutisi saqlamaydi. Yozuvlar oddiy pochta provayderiniki kabi ko'rinadi, tuzilishi esa boshqacha — shuning uchun bu alohida aytiladi.",
+  },
   "email.mx.records.null": {
     title: "Domen pochta qabul qilmasligini e'lon qilgan",
     fact: "Xosti bo'lmagan MX yozuvi e'lon qilingan",

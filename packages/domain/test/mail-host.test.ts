@@ -178,3 +178,52 @@ describe("AC-6.7 — an unfinished lookup", () => {
     expect(analysis.state).toBe("INDETERMINATE");
   });
 });
+
+describe("naming the service the records point at", () => {
+  it("says a domain's mail is forwarded when the hosts are a forwarder's", () => {
+    // Cloudflare Email Routing publishes route1/2/3.mx.cloudflare.net.
+    const { result, analysis } = evaluate({
+      mx: mx(
+        { preference: 10, exchange: "route1.mx.cloudflare.net" },
+        { preference: 20, exchange: "route2.mx.cloudflare.net" },
+      ),
+      hosts: [
+        host("route1.mx.cloudflare.net", ["203.0.113.1"]),
+        host("route2.mx.cloudflare.net", ["203.0.113.2"]),
+      ],
+    });
+    expect(analysis.recognisedService).toEqual({
+      name: "Cloudflare Email Routing",
+      kind: "mail",
+      delivery: "forwarding",
+    });
+    expect(result.message.titleCode).toBe("email.mx.records.present.forwarding");
+    expect(result.status).toBe("PASS");
+  });
+
+  it("names a mailbox provider without calling it a forwarder", () => {
+    const { result } = evaluate({
+      mx: mx({ preference: 10, exchange: "aspmx.l.google.com" }),
+      hosts: [host("aspmx.l.google.com", ["203.0.113.1"])],
+    });
+    expect(result.message.titleCode).toBe("email.mx.records.present.service");
+    expect(result.message.params).toMatchObject({ service: "Google Workspace" });
+  });
+
+  it("says nothing about a service it does not recognise", () => {
+    const { result } = evaluate({
+      mx: mx({ preference: 10, exchange: "mail.example.uz" }),
+      hosts: [host("mail.example.uz", ["203.0.113.1"])],
+    });
+    expect(result.message.titleCode).toBe("email.mx.records.present");
+  });
+
+  it("does not name a service when no host is usable", () => {
+    // Recognising a name is not the same as finding somewhere to deliver.
+    const { result } = evaluate({
+      mx: mx({ preference: 10, exchange: "route1.mx.cloudflare.net" }),
+      hosts: [host("route1.mx.cloudflare.net", [])],
+    });
+    expect(result.status).toBe("FAIL");
+  });
+});

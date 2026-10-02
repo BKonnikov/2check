@@ -1,4 +1,5 @@
 import type { CheckResult, MailHostTarget, MessageDescriptor, Severity } from "@2check/contracts";
+import { type RecognisedService, recogniseMailProvider } from "./services.js";
 
 /**
  * 1.1 §6 — locating the server that receives mail for a domain.
@@ -55,6 +56,8 @@ export interface MailServerAnalysis {
   readonly literalHosts: readonly string[];
   readonly unusableHosts: readonly string[];
   readonly indeterminateHosts: readonly string[];
+  /** PRD 8.3 — the service the hosts point at, where the records name one. */
+  readonly recognisedService?: RecognisedService;
 }
 
 /** RFC 7505 §3 — preference 0 and an empty host, and nothing else alongside it. */
@@ -166,7 +169,16 @@ export function analyseMailServer(input: MailServerInput): MailServerAnalysis {
       : { state: "NO_USABLE_HOST", ...empty, aliasHosts, literalHosts, unusableHosts };
   }
 
-  return { state: "HOSTS", hosts, aliasHosts, literalHosts, unusableHosts, indeterminateHosts };
+  const service = recogniseMailProvider(records.map((record) => record.exchange));
+  return {
+    state: "HOSTS",
+    hosts,
+    aliasHosts,
+    literalHosts,
+    unusableHosts,
+    indeterminateHosts,
+    ...(service === undefined ? {} : { recognisedService: service }),
+  };
 }
 
 export const MAIL_CHECK_IDS = { records: "email.mx.records" } as const;
@@ -252,6 +264,22 @@ export function evaluateMailServerCheck(
   if (analysis.unusableHosts.length > 0) {
     return check("FAIL", "warning", "email.mx.records.fail.partial", analysis, options, {
       params: { hosts: analysis.unusableHosts.join(", ") },
+    });
+  }
+  const service = analysis.recognisedService;
+  if (service?.delivery === "forwarding") {
+    /**
+     * The records look like any other provider's, and the arrangement behind them is a different
+     * one: nothing is stored here, the message goes on to an address somewhere else. That is a
+     * published property of the service — what happens to a particular message is not claimed.
+     */
+    return check("PASS", "none", "email.mx.records.present.forwarding", analysis, options, {
+      params: { service: service.name, count: analysis.hosts.length },
+    });
+  }
+  if (service !== undefined) {
+    return check("PASS", "none", "email.mx.records.present.service", analysis, options, {
+      params: { service: service.name, count: analysis.hosts.length },
     });
   }
   return check("PASS", "none", "email.mx.records.present", analysis, options, {

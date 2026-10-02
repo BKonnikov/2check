@@ -16,14 +16,26 @@
 
 export type ServiceKind = "mail" | "sender" | "verification";
 
+/**
+ * What a mail service does with a message it accepts.
+ *
+ * A forwarding service keeps no mailbox: it takes the message and passes it to an address
+ * somewhere else. That is a published property of the service, not an inference about the
+ * domain, and it is worth saying because the records look identical to a mailbox provider's
+ * while the arrangement behind them is a different one.
+ */
+export type MailDelivery = "mailbox" | "forwarding";
+
 export interface RecognisedService {
   readonly name: string;
   readonly kind: ServiceKind;
+  readonly delivery?: MailDelivery;
 }
 
 interface Rule {
   readonly name: string;
   readonly kind: ServiceKind;
+  readonly delivery?: MailDelivery;
   /** Matched against a lowercased record value. */
   readonly needles: readonly string[];
 }
@@ -58,7 +70,13 @@ const MAIL_RULES: readonly Rule[] = [
   { name: "Fastmail", kind: "mail", needles: [".messagingengine.com", ".fastmail.com"] },
   { name: "iCloud Mail", kind: "mail", needles: [".icloud.com", ".mail.me.com"] },
   { name: "Migadu", kind: "mail", needles: [".migadu.com"] },
-  { name: "ImprovMX", kind: "mail", needles: [".improvmx.com"] },
+  {
+    name: "Cloudflare Email Routing",
+    kind: "mail",
+    delivery: "forwarding",
+    needles: [".mx.cloudflare.net"],
+  },
+  { name: "ImprovMX", kind: "mail", delivery: "forwarding", needles: [".improvmx.com"] },
   { name: "Tencent Exmail", kind: "mail", needles: [".qq.com"] },
   { name: "Mail.Biz / cPanel", kind: "mail", needles: [".mailspamprotection.com"] },
   { name: "Hostinger", kind: "mail", needles: [".hostinger.com", "mx1.hostinger"] },
@@ -70,6 +88,12 @@ const MAIL_RULES: readonly Rule[] = [
 /** Senders declared in SPF, and the tokens services ask a domain to publish. */
 const TXT_RULES: readonly Rule[] = [
   { name: "Google Workspace", kind: "sender", needles: ["include:_spf.google.com"] },
+  {
+    name: "Cloudflare Email Routing",
+    kind: "sender",
+    delivery: "forwarding",
+    needles: ["include:_spf.mx.cloudflare.net"],
+  },
   { name: "Microsoft 365", kind: "sender", needles: ["include:spf.protection.outlook.com"] },
   { name: "Yandex 360", kind: "sender", needles: ["include:_spf.yandex.net"] },
   { name: "VK WorkMail", kind: "sender", needles: ["include:_spf.mail.ru", "include:spf.mail.ru"] },
@@ -161,7 +185,11 @@ export function recogniseMailProvider(values: readonly string[]): RecognisedServ
   const hosts = values.map(mailHost);
   for (const rule of MAIL_RULES) {
     if (hosts.some((host) => matches(rule, host))) {
-      return { name: rule.name, kind: rule.kind };
+      return {
+        name: rule.name,
+        kind: rule.kind,
+        ...(rule.delivery === undefined ? {} : { delivery: rule.delivery }),
+      };
     }
   }
   return undefined;
@@ -177,7 +205,11 @@ export function recogniseTxtServices(values: readonly string[]): readonly Recogn
   const found: RecognisedService[] = [];
   for (const rule of TXT_RULES) {
     if (haystack.some((value) => matches(rule, value))) {
-      found.push({ name: rule.name, kind: rule.kind });
+      found.push({
+        name: rule.name,
+        kind: rule.kind,
+        ...(rule.delivery === undefined ? {} : { delivery: rule.delivery }),
+      });
     }
   }
   return found;
