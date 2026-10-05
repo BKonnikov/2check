@@ -457,6 +457,12 @@ export const uz: Catalogue = {
     recommendation: "none, quarantine yoki reject qiymatli p tegini qo'shing.",
   },
   "email.dmarc.policy.blocked": { title: "DMARC siyosati baholanmadi" },
+  "email.dmarc.reports.present.at": {
+    title: "Yozuv jamlangan hisobotlarni so'raydi",
+    fact: "Qabul qiluvchi domenlar: {domains}",
+    explanation:
+      "Jamlangan hisobotlar domen nomidan kim xat jo'natayotganini va bu xatlar tekshiruvdan qanday o'tayotganini ko'rsatadi. Qabul qiluvchi domen yozuvda ko'rinadi va hisobotlar uchinchi tomon xizmatiga ketayotganini aytadi.",
+  },
   "email.dmarc.reports.present": {
     title: "Yozuv jamlangan hisobotlarni so'raydi",
     fact: "Yozuvda rua tegi mavjud",

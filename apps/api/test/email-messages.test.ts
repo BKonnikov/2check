@@ -156,6 +156,7 @@ async function everyOutcome() {
   const dmarc = await Promise.all([
     dmarcOutcome(answer("v=DMARC1; p=reject; rua=mailto:d@example.uz")),
     dmarcOutcome(answer("v=DMARC1; p=quarantine; pct=50")),
+    dmarcOutcome(answer("v=DMARC1; p=reject; rua=https://reports.example.net/dmarc")),
     dmarcOutcome(answer("v=DMARC1; p=none")),
     dmarcOutcome(answer("v=DMARC1; rua=")),
     dmarcOutcome(answer("v=DMARC1; p=reject", "v=DMARC1; p=none")),

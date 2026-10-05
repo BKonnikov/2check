@@ -452,6 +452,12 @@ export const en: Catalogue = {
     recommendation: "Add a p tag holding none, quarantine or reject.",
   },
   "email.dmarc.policy.blocked": { title: "The DMARC policy was not assessed" },
+  "email.dmarc.reports.present.at": {
+    title: "The record asks for aggregate reports",
+    fact: "Recipient domains: {domains}",
+    explanation:
+      "Aggregate reports show who sends messages in the domain's name and how those messages fare in the checks. The recipient domain is visible in the record and says whether the reports go to a third party.",
+  },
   "email.dmarc.reports.present": {
     title: "The record asks for aggregate reports",
     fact: "The record carries an rua tag",

@@ -312,6 +312,18 @@ describe("AC-4.9 — aggregate reports", () => {
     expect(by(DMARC_CHECK_IDS.reports)?.status).toBe("FAIL");
   });
 
+  it("names the domains the reports are addressed to", async () => {
+    // 1.1 §9.4 — the recipient domain is public, because it says whether the reports leave.
+    const { analysis, by } = await checks(
+      "example.uz",
+      answer("v=DMARC1; p=reject; rua=mailto:dmarc@example.uz!10m,mailto:agg@reports.example.net"),
+    );
+    expect(analysis.reportDomains).toEqual(["example.uz", "reports.example.net"]);
+    expect(by(DMARC_CHECK_IDS.reports)?.message.params?.domains).toBe(
+      "example.uz, reports.example.net",
+    );
+  });
+
   it("keeps the addresses out of the result, because they belong to the owner", async () => {
     const { results } = await checks(
       "example.uz",

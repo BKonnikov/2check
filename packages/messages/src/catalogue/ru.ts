@@ -443,6 +443,12 @@ export const ru: Catalogue = {
     recommendation: "Добавьте тег p со значением none, quarantine или reject.",
   },
   "email.dmarc.policy.blocked": { title: "Политика DMARC не оценивалась" },
+  "email.dmarc.reports.present.at": {
+    title: "Запись запрашивает агрегированные отчёты",
+    fact: "Домены получателей: {domains}",
+    explanation:
+      "Агрегированные отчёты показывают, кто отправляет письма от имени домена и как эти письма проходят проверку. Домен получателя виден в записи и говорит, идут ли отчёты стороннему сервису.",
+  },
   "email.dmarc.reports.present": {
     title: "Запись запрашивает агрегированные отчёты",
     fact: "В записи есть тег rua",

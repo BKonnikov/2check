@@ -247,15 +247,34 @@ function effectivePolicy(
   return {};
 }
 
-function requestsReports(record: DmarcRecord): boolean {
-  const value = record.tags.get("rua");
-  if (value === undefined) {
-    return false;
-  }
-  return value
+function reportUris(record: DmarcRecord): readonly string[] {
+  return (record.tags.get("rua") ?? "")
     .split(",")
     .map((entry) => entry.trim())
-    .some((entry) => URI.test(entry));
+    .filter((entry) => URI.test(entry));
+}
+
+/**
+ * 1.1 §9.4 — the domain a report goes to is public, the full address is not. The domain is what
+ * tells a reader whether the reports leave for a third party; the local part adds nothing to that
+ * and is already more of somebody's address than the question needs.
+ *
+ * RFC 9989 §4.7 allows a size limit after the URI, as in `mailto:d@example.uz!10m`.
+ */
+function reportDomains(uris: readonly string[]): readonly string[] {
+  const domains = new Set<string>();
+  for (const uri of uris) {
+    const [address] = uri.split("!");
+    const at = (address ?? "").lastIndexOf("@");
+    if (!/^mailto:/i.test(uri) || at < 0) {
+      continue;
+    }
+    const domain = (address ?? "").slice(at + 1).toLowerCase();
+    if (domain !== "") {
+      domains.add(domain);
+    }
+  }
+  return [...domains];
 }
 
 export type DmarcRecordState =
@@ -280,6 +299,8 @@ export interface DmarcAnalysis {
   readonly effectivePolicy?: DmarcPolicy;
   readonly policyTag?: DmarcPolicyTag;
   readonly requestsAggregateReports: boolean;
+  /** 1.1 §9.4 — the domains the reports are addressed to, never the addresses themselves. */
+  readonly reportDomains: readonly string[];
   readonly usesDeprecatedPct: boolean;
   readonly queries: number;
   readonly visitedNames: readonly string[];
@@ -301,6 +322,7 @@ export async function analyseDmarc(input: DmarcAnalysisInput): Promise<DmarcAnal
     organisationalDomain: domain,
     fromPublicSuffix: false,
     requestsAggregateReports: false,
+    reportDomains: [],
     usesDeprecatedPct: false,
     queries: 1,
     visitedNames: [domain],
@@ -316,6 +338,7 @@ export async function analyseDmarc(input: DmarcAnalysisInput): Promise<DmarcAnal
 
   const found = (name: string, record: DmarcRecord, inherited: boolean, walk?: Walk) => {
     const { policy, tag } = effectivePolicy(record, inherited, domainExists);
+    const uris = reportUris(record);
     return {
       recordState: inherited ? ("INHERITED" as const) : ("OWN" as const),
       recordCount: 1,
@@ -325,7 +348,8 @@ export async function analyseDmarc(input: DmarcAnalysisInput): Promise<DmarcAnal
       fromPublicSuffix: walk?.psd?.value === "y" && walk.psd.name === name,
       ...(policy === undefined ? {} : { effectivePolicy: policy }),
       ...(tag === undefined ? {} : { policyTag: tag }),
-      requestsAggregateReports: requestsReports(record),
+      requestsAggregateReports: uris.length > 0,
+      reportDomains: reportDomains(uris),
       usesDeprecatedPct: record.tags.has("pct"),
       queries: walk?.queries ?? 1,
       visitedNames: [domain, ...(walk?.nodes ?? []).map((node) => node.name)],
@@ -545,7 +569,18 @@ export function evaluateDmarcChecks(
     record,
     policyCheck(analysis, options),
     analysis.requestsAggregateReports
-      ? check(DMARC_CHECK_IDS.reports, "PASS", "none", "email.dmarc.reports.present", options)
+      ? check(
+          DMARC_CHECK_IDS.reports,
+          "PASS",
+          "none",
+          analysis.reportDomains.length > 0
+            ? "email.dmarc.reports.present.at"
+            : "email.dmarc.reports.present",
+          options,
+          analysis.reportDomains.length > 0
+            ? { params: { domains: analysis.reportDomains.join(", ") } }
+            : {},
+        )
       : check(
           DMARC_CHECK_IDS.reports,
           "FAIL",
