@@ -635,12 +635,18 @@ export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
 export const ANALYTICS_LOCALES = ["ru", "uz", "en"] as const;
 export type AnalyticsLocale = (typeof ANALYTICS_LOCALES)[number];
 
-/** PRD 28.3 — which page the event happened on. A bounded set, never a URL. */
-export const ANALYTICS_TOOLS = ["home", "dns", "registry", "tls", "scan"] as const;
+/**
+ * PRD 28.3 and 1.1 §16.1 — which page the event happened on. A bounded set, never a URL.
+ */
+export const ANALYTICS_TOOLS = ["home", "dns", "registry", "tls", "email", "scan"] as const;
 export type AnalyticsTool = (typeof ANALYTICS_TOOLS)[number];
 
-/** PRD 28.3 — the selected scope, as a bounded enumeration rather than a free list. */
-export const ANALYTICS_SCOPES = ["all", "dns", "registry", "tls"] as const;
+/**
+ * PRD 28.3 — the selected scope, as a bounded enumeration rather than a free list. It holds one
+ * entry per category, so adding a category without adding it here stops the interface compiling
+ * rather than letting a scope be reported as something it is not.
+ */
+export const ANALYTICS_SCOPES = ["all", "dns", "registry", "tls", "email"] as const;
 export type AnalyticsScope = (typeof ANALYTICS_SCOPES)[number];
 
 export const ANALYTICS_OUTCOMES = ["COMPLETED", "FAILED"] as const;

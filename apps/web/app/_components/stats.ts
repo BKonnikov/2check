@@ -71,6 +71,7 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
       dns: "Только DNS",
       registry: "Только регистрацию домена",
       tls: "Только сертификат SSL/TLS",
+      email: "Только почту",
     },
     deviceNames: {
       desktop: "Компьютер",
@@ -115,6 +116,7 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
       dns: "DNS only",
       registry: "Domain registration only",
       tls: "SSL/TLS certificate only",
+      email: "Mail only",
     },
     deviceNames: {
       desktop: "Desktop",
@@ -160,6 +162,7 @@ export const STATS: Readonly<Record<Locale, StatsCopy>> = {
       dns: "Faqat DNS",
       registry: "Faqat domen ro'yxatini",
       tls: "Faqat SSL/TLS sertifikatini",
+      email: "Faqat pochtani",
     },
     deviceNames: {
       desktop: "Kompyuter",
