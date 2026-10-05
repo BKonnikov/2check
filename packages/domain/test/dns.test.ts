@@ -268,7 +268,9 @@ describe("PRD 8.3 — the MX check says where the mail goes", () => {
     expect(check.status).toBe("PASS");
     expect(check.message.titleCode).toBe("dns.record.resolve.present.mail");
     expect(check.message.params?.service).toBe("Google Workspace");
-    expect(check.details?.recognisedServices).toEqual([{ name: "Google Workspace", kind: "mail" }]);
+    expect(check.details?.recognisedServices).toEqual([
+      { name: "Google Workspace", kind: "mail", dkimSelectors: ["google"] },
+    ]);
   });
 
   it("falls back to the plain wording when the exchanger is not one it knows", () => {

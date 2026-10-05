@@ -1,5 +1,10 @@
 import type { WebScanResponse } from "@2check/contracts";
-import type { HostObservation, MxObservation, SpfLookupAnswer } from "@2check/domain";
+import type {
+  DkimLookupAnswer,
+  HostObservation,
+  MxObservation,
+  SpfLookupAnswer,
+} from "@2check/domain";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import { type Env, loadEnv } from "../src/config/env.js";
@@ -12,9 +17,9 @@ const env: Env = loadEnv({
 });
 
 /**
- * 1.1 §3, §4 and §6 — the mail category end to end, over a zone recorded in advance. Each port is
- * fed from the same fixture, so one object describes everything a scan of this domain can see.
- * SPF and DMARC read different names, so one TXT map serves both of their walks.
+ * 1.1 §3 to §6 — the mail category end to end, over a zone recorded in advance. Each port is fed
+ * from the same fixture, so one object describes everything a scan of this domain can see. SPF,
+ * DMARC and DKIM read different names, so one TXT map serves all three of their walks.
  */
 interface Fixture {
   readonly txt?: Readonly<Record<string, SpfLookupAnswer>>;
@@ -33,6 +38,11 @@ function app(fixture: Fixture) {
       provider: "fixture",
       lookup: async (name) => fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
     }),
+    dkimLookup: () => ({
+      provider: "fixture",
+      lookup: async (name): Promise<DkimLookupAnswer> =>
+        fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
+    }),
     mailHostLookup: () => ({
       provider: "fixture",
       mx: async () => fixture.mx ?? { outcome: "EMPTY" },
@@ -46,6 +56,10 @@ function answer(...records: string[]): SpfLookupAnswer {
   return { outcome: "ANSWER", records };
 }
 
+/** A real 2048-bit key, so the DER walk in the domain module is exercised through the stack. */
+const RSA_2048 =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmG1javSGSFFzqR4KGGKsiNnMipYtbWR7RA7MDLeLbJeLYw4n1UhYqRPvoM3yMgHSRh01T5JSkzJVqyCPbxcKXfJcVppbmfzxPah7hBGUcF85j5A+kI4S2rruj1u3aFMd8iLgYA26qO2LlkXi3CpJ0MFXDU00LKJkpBjV5BL6a1pepgRa3LgJiu4vqqAQL3Hn37+safjVJhOvkKScDRPWf95X61mrkcAoxTdw7C2JCtFcXko0zEQAppaFv16bcL4pXoacOWCwBnS5lrWt/nPwxvf52DP3S346S9ZM4Ky3H2LeYV0hw+YHzGVctt4tCL/wyU4SBLBl62qPNKQI01TGywIDAQAB";
+
 function host(hostname: string, ...addresses: string[]): HostObservation {
   return { hostname, outcome: addresses.length > 0 ? "ANSWER" : "EMPTY", addresses };
 }
@@ -55,6 +69,7 @@ const SOUND: Fixture = {
   txt: {
     "example.uz": answer("v=spf1 ip4:203.0.113.0/24 -all"),
     "_dmarc.example.uz": answer("v=DMARC1; p=reject; rua=mailto:dmarc@example.uz"),
+    "mine._domainkey.example.uz": answer(`v=DKIM1; k=rsa; p=${RSA_2048}`),
   },
   mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "mail.example.uz" }] },
   addresses: {
@@ -63,12 +78,17 @@ const SOUND: Fixture = {
   },
 };
 
-async function scan(fixture: Fixture) {
+async function scan(fixture: Fixture, dkimSelector?: string) {
   const instance = app(fixture);
   const created = await instance.inject({
     method: "POST",
     url: "/api/web/v1/scans",
-    payload: { input: "example.uz", mode: "PARTIAL", selectedCategories: ["email"] },
+    payload: {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["email"],
+      ...(dkimSelector === undefined ? {} : { dkimSelector }),
+    },
   });
   expect(created.statusCode).toBe(202);
   const { scanId } = created.json<{ scanId: string }>();
@@ -96,7 +116,7 @@ function check(body: WebScanResponse, checkId: string) {
 
 describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
   it("is accepted and produces every check in the category", async () => {
-    const body = await scan(SOUND);
+    const body = await scan(SOUND, "mine");
     expect(body.executionState).toBe("COMPLETED");
     // 1.1 §2.1 — the groups, in the order that section lists them.
     expect(category(body)?.checks.map((entry) => entry.checkId)).toEqual([
@@ -108,6 +128,7 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
       "email.dmarc.policy",
       "email.dmarc.reports",
       "email.dmarc.deprecated",
+      "email.dkim.key",
       "email.mx.records",
     ]);
     expect(category(body)?.status).toBe("PASS");
@@ -214,6 +235,83 @@ describe("1.1 §4 — DMARC through the whole stack", () => {
     expect(check(body, "email.dmarc.reports")?.status).toBe("PASS");
     expect(JSON.stringify(body)).not.toContain("dmarc@example.uz");
   });
+});
+
+describe("1.1 §5 and §14.2 — DKIM through the whole stack", () => {
+  it("tries the selector the request gave and reports the key it finds", async () => {
+    const body = await scan(SOUND, "mine");
+    const key = check(body, "email.dkim.key");
+    expect(key?.status).toBe("PASS");
+    expect(key?.message.params?.selector).toBe("mine");
+  });
+
+  it("keeps the key material out of the answer", async () => {
+    const body = await scan(SOUND, "mine");
+    expect(JSON.stringify(body)).not.toContain(RSA_2048.slice(0, 40));
+  });
+
+  it("calls a missing key under the caller's own selector a confirmed absence", async () => {
+    const body = await scan(SOUND, "other");
+    const key = check(body, "email.dkim.key");
+    expect(key?.status).toBe("FAIL");
+    expect(key?.severity).toBe("warning");
+  });
+
+  it("has nothing to ask when the MX names no service it knows and no selector was given", async () => {
+    const body = await scan(SOUND);
+    const key = check(body, "email.dkim.key");
+    expect(key?.status).toBe("UNKNOWN");
+    expect(key?.reasonCode).toBe("dkim_selector_unknown");
+  });
+
+  it("tries the selectors of the service the MX records name", async () => {
+    const body = await scan({
+      ...SOUND,
+      mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "aspmx.l.google.com" }] },
+      addresses: { "aspmx.l.google.com": host("aspmx.l.google.com", "203.0.113.1") },
+      txt: { ...SOUND.txt, "google._domainkey.example.uz": answer(`v=DKIM1; p=${RSA_2048}`) },
+    });
+    const key = check(body, "email.dkim.key");
+    expect(key?.status).toBe("PASS");
+    expect(key?.message.params?.selector).toBe("google");
+  });
+
+  it("refuses a selector sent without the mail category, and runs nothing", async () => {
+    const instance = app(SOUND);
+    const response = await instance.inject({
+      method: "POST",
+      url: "/api/web/v1/scans",
+      payload: {
+        input: "example.uz",
+        mode: "PARTIAL",
+        selectedCategories: ["dns"],
+        dkimSelector: "mine",
+      },
+    });
+    await instance.close();
+    expect(response.statusCode).toBe(422);
+    expect(response.json<{ field?: string }>().field).toBe("dkimSelector");
+  });
+
+  it.each(["not a label", "-leading", "trailing-", "a".repeat(64), ""])(
+    "refuses %s as a selector before any query runs",
+    async (selector) => {
+      const instance = app(SOUND);
+      const response = await instance.inject({
+        method: "POST",
+        url: "/api/web/v1/scans",
+        payload: {
+          input: "example.uz",
+          mode: "PARTIAL",
+          selectedCategories: ["email"],
+          dkimSelector: selector,
+        },
+      });
+      await instance.close();
+      expect(response.statusCode).toBe(422);
+      expect(response.json<{ field?: string }>().field).toBe("dkimSelector");
+    },
+  );
 });
 
 describe("1.1 §6 — the receiving server through the whole stack", () => {

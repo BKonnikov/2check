@@ -481,6 +481,76 @@ export const en: Catalogue = {
   },
   "email.dmarc.deprecated.blocked": { title: "The tags of the DMARC record were not checked" },
 
+  "email.dkim.key.present": {
+    title: "A DKIM key is published",
+    fact: "Selector {selector}",
+    explanation:
+      "DKIM is a pair of keys: the mail server signs messages with the private one, and the domain owner publishes the public one in DNS under a chosen name, the selector. Publishing a key and signing messages are different acts, and DNS says nothing about the second.",
+  },
+  "email.dkim.key.fail.revoked": {
+    title: "The DKIM key is revoked",
+    fact: "Selector {selector}: the p tag is empty",
+    explanation: "Under RFC 6376 an empty p tag means the owner has revoked the key.",
+    impact: "A verifier does not treat signatures made with this key as valid.",
+    recommendation: "Publish a working key under this selector, or remove the record.",
+  },
+  "email.dkim.key.fail.short": {
+    title: "The DKIM key is shorter than {limit} bits",
+    fact: "Selector {selector}: {bits} bits",
+    explanation:
+      "RFC 8301 updates RFC 6376 and forbids a verifier to treat signatures made with RSA keys shorter than {limit} bits as valid.",
+    impact: "A verifier does not treat signatures made with this key as valid.",
+    recommendation: "Reissue the key at 2048 bits and publish it under the same selector.",
+  },
+  "email.dkim.key.fail.sha1": {
+    title: "The DKIM key admits sha1 and nothing else",
+    fact: "Selector {selector}: the h tag holds sha1 alone",
+    explanation: "RFC 8301 forbids rsa-sha1 for both signing and verifying.",
+    impact: "A verifier does not treat signatures made under this key as valid.",
+    recommendation: "Remove the h tag, or list sha256 in it.",
+  },
+  "email.dkim.key.fail.testing": {
+    title: "The DKIM key declares itself a test key",
+    fact: "Selector {selector}: the t tag holds y",
+    explanation:
+      "Under RFC 6376 the t=y flag asks a receiver to treat the domain as though the message were unsigned.",
+    impact: "A receiver does not act on the outcome of verifying the signature.",
+    recommendation: "Drop y from the t tag once the signing setup is finished.",
+  },
+  "email.dkim.key.fail.unreadable": {
+    title: "The DKIM record cannot be read",
+    fact: "Selector {selector}",
+    explanation:
+      "The record carries no p tag with a key, or its v tag holds something other than DKIM1.",
+    impact: "A verifier has nothing in the record to check a signature against.",
+    recommendation: "Publish a record of the form v=DKIM1; k=rsa; p=<public key>.",
+  },
+  "email.dkim.key.fail.absent": {
+    title: "There is no record under the selector given",
+    fact: "Selector tried: {selector}",
+    explanation:
+      "The name of this selector under _domainkey was queried. That says nothing about the domain's other selectors.",
+    impact: "A verifier cannot reach a key under this name.",
+    recommendation:
+      "Check the spelling of the selector, or take it from the mail service's settings.",
+  },
+  "email.dkim.key.unknown.selector": {
+    title: "No DKIM key was found under the names tried",
+    fact: "Selectors tried: {selectors}",
+    explanation:
+      "The selector is the domain owner's to choose, and DNS cannot be asked which selectors exist: a name can only be queried once it is known. This does not mean the domain has no DKIM. Enter a selector beside the domain if you know one.",
+  },
+  "email.dkim.key.unknown.nothing": {
+    title: "The DKIM selector is not known",
+    explanation:
+      "The selector is the domain owner's to choose, and DNS cannot be asked which selectors exist. The MX records name no mail service we recognise and no selector was entered, so there was nothing to query. Enter a selector beside the domain if you know one.",
+  },
+  "email.dkim.key.unknown.lookup": {
+    title: "The DKIM record could not be retrieved",
+    fact: "Selectors tried: {selectors}",
+    explanation: "The TXT query gave no definite result. That does not mean there is no key.",
+  },
+
   "category.email": { title: "Mail" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domain" },

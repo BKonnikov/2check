@@ -487,6 +487,77 @@ export const uz: Catalogue = {
   },
   "email.dmarc.deprecated.blocked": { title: "DMARC yozuvining teglari tekshirilmadi" },
 
+  "email.dkim.key.present": {
+    title: "DKIM kaliti e'lon qilingan",
+    fact: "Selektor {selector}",
+    explanation:
+      "DKIM — kalitlar juftligi: pochta serveri xatlarni yopiq kalit bilan imzolaydi, domen egasi esa ochiq kalitni DNS da o'zi tanlagan nom — selektor ostida e'lon qiladi. Kalitni e'lon qilish va xatlarni imzolash — har xil ishlar, ikkinchisi DNS orqali tekshirilmaydi.",
+  },
+  "email.dkim.key.fail.revoked": {
+    title: "DKIM kaliti bekor qilingan",
+    fact: "Selektor {selector}: p tegi qiymatsiz",
+    explanation:
+      "RFC 6376 bo'yicha qiymatsiz p tegi kalit egasi tomonidan bekor qilinganini bildiradi.",
+    impact: "Tekshiruvchi tomon bu kalit bilan qo'yilgan imzolarni haqiqiy deb hisoblamaydi.",
+    recommendation:
+      "Bu selektor ostida ishlaydigan kalitni e'lon qiling yoki yozuvni olib tashlang.",
+  },
+  "email.dkim.key.fail.short": {
+    title: "DKIM kaliti {limit} bitdan qisqa",
+    fact: "Selektor {selector}: {bits} bit",
+    explanation:
+      "RFC 8301 RFC 6376 ni yangilaydi va tekshiruvchi tomonga {limit} bitdan qisqa RSA kalitlari bilan qo'yilgan imzolarni haqiqiy deb hisoblashni taqiqlaydi.",
+    impact: "Tekshiruvchi tomon bu kalit bilan qo'yilgan imzolarni haqiqiy deb hisoblamaydi.",
+    recommendation:
+      "Kalitni 2048 bit uzunlikda qayta chiqaring va o'sha selektor ostida e'lon qiling.",
+  },
+  "email.dkim.key.fail.sha1": {
+    title: "DKIM kaliti faqat sha1 ga ruxsat beradi",
+    fact: "Selektor {selector}: h tegida yolg'iz sha1 bor",
+    explanation: "RFC 8301 rsa-sha1 ni imzolashda ham, tekshirishda ham taqiqlaydi.",
+    impact: "Tekshiruvchi tomon bu kalit bo'yicha qo'yilgan imzolarni haqiqiy deb hisoblamaydi.",
+    recommendation: "h tegini olib tashlang yoki unda sha256 ni ko'rsating.",
+  },
+  "email.dkim.key.fail.testing": {
+    title: "DKIM kaliti sinov kaliti deb e'lon qilingan",
+    fact: "Selektor {selector}: t tegida y bor",
+    explanation:
+      "RFC 6376 bo'yicha t=y bayrog'i qabul qiluvchidan domenga xat imzolanmagandek munosabatda bo'lishni so'raydi.",
+    impact: "Qabul qiluvchi imzo tekshiruvi natijasini xatga qo'llamaydi.",
+    recommendation: "Imzolash sozlamasi tugagach, t tegidan y qiymatini olib tashlang.",
+  },
+  "email.dkim.key.fail.unreadable": {
+    title: "DKIM yozuvi o'qilmaydi",
+    fact: "Selektor {selector}",
+    explanation: "Yozuvda kalitli p tegi yo'q yoki v tegida DKIM1 dan boshqa qiymat turibdi.",
+    impact: "Tekshiruvchi tomonda yozuvdan imzoni tekshirish uchun oladigan narsa yo'q.",
+    recommendation: "v=DKIM1; k=rsa; p=<ochiq kalit> ko'rinishidagi yozuvni e'lon qiling.",
+  },
+  "email.dkim.key.fail.absent": {
+    title: "Ko'rsatilgan selektor ostida yozuv yo'q",
+    fact: "Sinab ko'rilgan selektor: {selector}",
+    explanation:
+      "Bu selektorning _domainkey ostidagi nomi so'raldi. Bu domenning boshqa selektorlari haqida hech narsa demaydi.",
+    impact: "Bu nom ostida tekshiruvchi tomon kalitga yeta olmaydi.",
+    recommendation: "Selektor yozilishini tekshiring yoki uni pochta xizmati sozlamalaridan oling.",
+  },
+  "email.dkim.key.unknown.selector": {
+    title: "Sinab ko'rilgan nomlar ostida DKIM kaliti topilmadi",
+    fact: "Sinab ko'rilgan selektorlar: {selectors}",
+    explanation:
+      "Selektorni domen egasi tanlaydi va DNS dan qaysi selektorlar borligini so'rab bo'lmaydi: nomni faqat oldindan bilgan holda so'rash mumkin. Bu domenda DKIM yo'q degani emas. Agar selektor ma'lum bo'lsa, uni domen yoniga kiriting.",
+  },
+  "email.dkim.key.unknown.nothing": {
+    title: "DKIM selektori noma'lum",
+    explanation:
+      "Selektorni domen egasi tanlaydi va DNS dan qaysi selektorlar borligini so'rab bo'lmaydi. MX yozuvlari biz taniydigan pochta xizmatini atamadi, selektor ham kiritilmadi — so'raydigan narsa yo'q. Agar selektor ma'lum bo'lsa, uni domen yoniga kiriting.",
+  },
+  "email.dkim.key.unknown.lookup": {
+    title: "DKIM yozuvini olish imkoni bo'lmadi",
+    fact: "Sinab ko'rilgan selektorlar: {selectors}",
+    explanation: "TXT so'rovi aniq natija bermadi. Bu kalit yo'q degani emas.",
+  },
+
   "category.email": { title: "Pochta" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domen" },

@@ -7,6 +7,7 @@ import type {
 } from "@2check/contracts";
 import {
   addressEvidenceIsSufficient,
+  analyseDkim,
   analyseDmarc,
   analyseMailServer,
   analyseSpf,
@@ -17,8 +18,10 @@ import {
   buildSummary,
   collectAddressCandidates,
   DEFAULT_ISSUE_GROUPS,
+  dkimSelectors,
   dmarcPolicyName,
   dnsCacheTtlSeconds,
+  evaluateDkimCheck,
   evaluateDmarcChecks,
   evaluateMailServerCheck,
   evaluateNameExistence,
@@ -49,6 +52,7 @@ import {
   DEFAULT_RESOLVER_SET_VERSION,
   queryResolverSet,
 } from "../dns/resolver-set.js";
+import { createDkimLookup, type DkimLookupPort } from "../email/dkim-lookup.js";
 import { createDmarcLookup, type DmarcLookupPort } from "../email/dmarc-lookup.js";
 import {
   createMailHostLookup,
@@ -71,6 +75,8 @@ export type DnsQuery = (qname: string) => Promise<readonly DnsProviderResult[]>;
 export type SpfLookupFactory = () => SpfLookupPort;
 /** 1.1 §4.3 — the policy name and the names above it, walked once per scan. */
 export type DmarcLookupFactory = () => DmarcLookupPort;
+/** 1.1 §5.2 — one name per selector, from the request and from the recognised service. */
+export type DkimLookupFactory = () => DkimLookupPort;
 /** 1.1 §6.2 — the MX records and the addresses of the hosts they name. */
 export type MailHostFactory = () => MailHostPort;
 export type TlsProbe = (
@@ -85,6 +91,7 @@ export interface ScanDependencies {
   readonly tlsProbe?: TlsProbe;
   readonly spfLookup?: SpfLookupFactory;
   readonly dmarcLookup?: DmarcLookupFactory;
+  readonly dkimLookup?: DkimLookupFactory;
   readonly mailHostLookup?: MailHostFactory;
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
@@ -164,10 +171,20 @@ async function sealAddressCandidates(
   return sealed;
 }
 
+/**
+ * 1.1 §14.2 — what the caller asked for on this request, as opposed to what the deployment
+ * provides. The DKIM selector belongs here and not on the stored record: it is a property of the
+ * request, so it never reaches the store, a log or analytics — 1.1 §12.3 and §16.4.
+ */
+export interface ScanInputs {
+  readonly dkimSelector?: string;
+}
+
 export async function runScan(
   record: ScanRecord,
   store: ScanStore,
   deps: ScanDependencies = {},
+  inputs: ScanInputs = {},
 ): Promise<void> {
   record.executionState = "RUNNING";
   await store.save(record);
@@ -361,12 +378,28 @@ export async function runScan(
             : { domainExists: mx.outcome !== "NAME_NOT_FOUND" }),
         });
 
+        /**
+         * 1.1 §5.2 — the selector the caller gave, then the ones the service recognised from the
+         * MX records is documented to publish keys under. Recognising the receiving service is a
+         * hint about where to look, not a claim that the outgoing mail goes through the same one.
+         */
+        const dkimPort = (deps.dkimLookup ?? createDkimLookup)();
+        const dkim = await analyseDkim({
+          domain: qname,
+          selectors: dkimSelectors({
+            provided: inputs.dkimSelector,
+            service: mail.recognisedService?.dkimSelectors,
+          }),
+          lookup: dkimPort.lookup,
+        });
+
         // 1.1 §2.1 — the groups in the order the section lists them.
         const freshness = freshnessNow();
         categories.push(
           buildCategoryResult("email", [
             ...evaluateSpfChecks(spf, { domain: qname, freshness }),
             ...evaluateDmarcChecks(dmarc, { domain: qname, freshness }),
+            evaluateDkimCheck(dkim, { domain: qname, freshness }),
             evaluateMailServerCheck(mail, { domain: qname, freshness }),
           ]),
         );

@@ -13,7 +13,11 @@ const OLX_MX = [
 
 describe("PRD 8.3 — reading where the mail goes", () => {
   it("names the mail service the exchangers point at", () => {
-    expect(recogniseMailProvider(OLX_MX)).toEqual({ name: "Google Workspace", kind: "mail" });
+    expect(recogniseMailProvider(OLX_MX)).toEqual({
+      name: "Google Workspace",
+      kind: "mail",
+      dkimSelectors: ["google"],
+    });
   });
 
   it.each([
@@ -82,7 +86,7 @@ describe("PRD 8.3 — reading the tokens in TXT", () => {
 describe("recognition is per record type", () => {
   it("reads MX as delivery and TXT as tokens, and leaves A alone", () => {
     expect(recogniseServices("MX", { google: OLX_MX, cloudflare: OLX_MX })).toEqual([
-      { name: "Google Workspace", kind: "mail" },
+      { name: "Google Workspace", kind: "mail", dkimSelectors: ["google"] },
     ]);
     expect(recogniseServices("A", { google: ["93.184.216.34"] })).toEqual([]);
     expect(recogniseServices("TXT", { google: ["include:sendgrid.net"] })).toEqual([

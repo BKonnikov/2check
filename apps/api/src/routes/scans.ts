@@ -9,7 +9,7 @@ import type {
   WebScanResponse,
 } from "@2check/contracts";
 import { SCAN_CATEGORIES, WEB_API_BASE_PATH } from "@2check/contracts";
-import { canonicalizeDomain } from "@2check/domain";
+import { canonicalizeDomain, isDkimSelector } from "@2check/domain";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { Metrics } from "../observability/metrics.js";
@@ -30,6 +30,8 @@ const createScanSchema = z
     mode: z.enum(["FULL", "PARTIAL"]),
     selectedCategories: z.array(z.enum(SCAN_CATEGORIES)).optional(),
     cacheMode: z.enum(["NORMAL", "FORCE_REFRESH"]).optional(),
+    /** 1.1 §14.2 — a hint for the DKIM search, checked against the scope and the label grammar. */
+    dkimSelector: z.string().optional(),
   })
   .strict();
 
@@ -144,7 +146,7 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
       });
     }
 
-    const { input, mode, selectedCategories, cacheMode = "NORMAL" } = parsed.data;
+    const { input, mode, selectedCategories, cacheMode = "NORMAL", dkimSelector } = parsed.data;
 
     // PRD 17.2 — FULL carries no selectedCategories; PARTIAL carries a non-empty proper subset.
     if (mode === "FULL" && selectedCategories !== undefined) {
@@ -175,6 +177,28 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
           errorCode: "scan_scope_invalid",
           titleCode: "web.error.scan_scope_invalid",
           field: "selectedCategories",
+          retryable: false,
+        });
+      }
+    }
+
+    /**
+     * 1.1 §14.2 — the selector is accepted only where it has something to do, and a value that
+     * is not a DNS label is refused here rather than turned into a lookup that was always going
+     * to find nothing. Neither case is answered by ignoring the field: a caller who sent it
+     * meant it, and a scan that quietly dropped it would report an absence under the wrong name.
+     *
+     * The scope is read from the request rather than from the resolved category list, because
+     * FULL does not carry one and must keep accepting the field while the category is being
+     * built — a request can ask for mail only as PARTIAL until then.
+     */
+    if (dkimSelector !== undefined) {
+      const inScope = mode === "FULL" || (selectedCategories ?? []).includes("email");
+      if (!inScope || !isDkimSelector(dkimSelector)) {
+        return apiError(reply, 422, {
+          errorCode: "request_invalid",
+          titleCode: "web.error.request_invalid",
+          field: "dkimSelector",
           retryable: false,
         });
       }
@@ -257,7 +281,9 @@ export function registerScanRoutes(app: FastifyInstance, deps: ScanRouteDependen
     }
 
     // PRD 17.3 — POST acknowledges acceptance; it never terminalizes, even on a full cache hit.
-    void runScan(record, deps.store, deps)
+    void runScan(record, deps.store, deps, {
+      ...(dkimSelector === undefined ? {} : { dkimSelector }),
+    })
       .catch((error: unknown) => {
         // PRD 21.3 — a background failure that nobody logs is a failure nobody can diagnose.
         app.log.error({ error: String(error), scanId: record.scanId }, "scan execution failed");

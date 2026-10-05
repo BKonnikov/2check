@@ -30,15 +30,30 @@ export interface RecognisedService {
   readonly name: string;
   readonly kind: ServiceKind;
   readonly delivery?: MailDelivery;
+  /** 1.1 §5.2 — selectors this service is documented to publish keys under. */
+  readonly dkimSelectors?: readonly string[];
 }
 
 interface Rule {
   readonly name: string;
   readonly kind: ServiceKind;
   readonly delivery?: MailDelivery;
+  readonly dkimSelectors?: readonly string[];
   /** Matched against a lowercased record value. */
   readonly needles: readonly string[];
 }
+
+/**
+ * 1.1 §5.2 — the selector table, which is a hint about where to look and nothing more.
+ *
+ * DNS cannot be asked which names exist under a zone, so a DKIM key can only be found at a name
+ * somebody already knows. These are the names the services below document, and the table is
+ * deliberately short: a selector that is merely plausible costs a query and teaches nothing,
+ * while a wrong one would have us report a domain's key under somebody else's name. A service
+ * that generates a selector per tenant has none listed, because there is nothing to list.
+ *
+ * Changing this table is a change of emailModuleConfigVersion — 1.0 §20.
+ */
 
 /**
  * Mail exchangers, matched on the host the record points at. Ordered from the specific to the
@@ -48,28 +63,51 @@ const MAIL_RULES: readonly Rule[] = [
   {
     name: "Google Workspace",
     kind: "mail",
+    dkimSelectors: ["google"],
     needles: ["aspmx.l.google.com", ".googlemail.com", "aspmx.google.com"],
   },
   {
     name: "Microsoft 365",
     kind: "mail",
+    dkimSelectors: ["selector1", "selector2"],
     needles: [".mail.protection.outlook.com", ".protection.outlook.com"],
   },
   {
     name: "Yandex 360",
     kind: "mail",
+    dkimSelectors: ["mail"],
     needles: ["mx.yandex.net", "mx.yandex.ru", ".mail.yandex.net"],
   },
-  { name: "VK WorkMail", kind: "mail", needles: ["emx.mail.ru", "mxs.mail.ru", ".mail.ru"] },
-  { name: "Zoho Mail", kind: "mail", needles: [".zoho.com", ".zoho.eu", ".zohomail."] },
+  {
+    name: "VK WorkMail",
+    kind: "mail",
+    dkimSelectors: ["mailru"],
+    needles: ["emx.mail.ru", "mxs.mail.ru", ".mail.ru"],
+  },
+  {
+    name: "Zoho Mail",
+    kind: "mail",
+    dkimSelectors: ["zoho"],
+    needles: [".zoho.com", ".zoho.eu", ".zohomail."],
+  },
   { name: "Proofpoint", kind: "mail", needles: [".pphosted.com", ".ppe-hosted.com"] },
   { name: "Mimecast", kind: "mail", needles: [".mimecast.com"] },
   { name: "Barracuda", kind: "mail", needles: [".barracudanetworks.com"] },
   { name: "Cisco Secure Email", kind: "mail", needles: [".iphmx.com"] },
   { name: "Amazon WorkMail", kind: "mail", needles: ["inbound-smtp.", ".awsapps.com"] },
-  { name: "Fastmail", kind: "mail", needles: [".messagingengine.com", ".fastmail.com"] },
-  { name: "iCloud Mail", kind: "mail", needles: [".icloud.com", ".mail.me.com"] },
-  { name: "Migadu", kind: "mail", needles: [".migadu.com"] },
+  {
+    name: "Fastmail",
+    kind: "mail",
+    dkimSelectors: ["fm1", "fm2", "fm3"],
+    needles: [".messagingengine.com", ".fastmail.com"],
+  },
+  {
+    name: "iCloud Mail",
+    kind: "mail",
+    dkimSelectors: ["sig1"],
+    needles: [".icloud.com", ".mail.me.com"],
+  },
+  { name: "Migadu", kind: "mail", dkimSelectors: ["key1", "key2"], needles: [".migadu.com"] },
   {
     name: "Cloudflare Email Routing",
     kind: "mail",
@@ -189,6 +227,7 @@ export function recogniseMailProvider(values: readonly string[]): RecognisedServ
         name: rule.name,
         kind: rule.kind,
         ...(rule.delivery === undefined ? {} : { delivery: rule.delivery }),
+        ...(rule.dkimSelectors === undefined ? {} : { dkimSelectors: rule.dkimSelectors }),
       };
     }
   }
@@ -209,6 +248,7 @@ export function recogniseTxtServices(values: readonly string[]): readonly Recogn
         name: rule.name,
         kind: rule.kind,
         ...(rule.delivery === undefined ? {} : { delivery: rule.delivery }),
+        ...(rule.dkimSelectors === undefined ? {} : { dkimSelectors: rule.dkimSelectors }),
       });
     }
   }

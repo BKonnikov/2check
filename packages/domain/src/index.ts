@@ -2,6 +2,7 @@ export * from "./aggregation.js";
 export * from "./cache.js";
 export * from "./canonical-domain.js";
 export * from "./category.js";
+export * from "./dkim.js";
 export * from "./dmarc.js";
 export * from "./dns.js";
 export * from "./mail-host.js";

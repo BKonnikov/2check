@@ -1,8 +1,12 @@
 import {
+  analyseDkim,
   analyseDmarc,
   analyseMailServer,
   analyseSpf,
+  type DkimLookupAnswer,
+  type DkimSelector,
   type DmarcLookupAnswer,
+  evaluateDkimCheck,
   evaluateDmarcChecks,
   evaluateMailServerCheck,
   evaluateSpfChecks,
@@ -50,6 +54,28 @@ async function dmarcOutcome(
   });
   return evaluateDmarcChecks(analysis, { domain: "example.uz", freshness: FRESHNESS });
 }
+
+async function dkimOutcome(
+  selectors: readonly DkimSelector[],
+  zone: Readonly<Record<string, DkimLookupAnswer>> = {},
+) {
+  const analysis = await analyseDkim({
+    domain: "example.uz",
+    selectors,
+    lookup: async (name) => zone[name] ?? { outcome: "NAME_NOT_FOUND" },
+  });
+  return [evaluateDkimCheck(analysis, { domain: "example.uz", freshness: FRESHNESS })];
+}
+
+/** A real 2048-bit key, and a real 512-bit one, so the short-key branch is a real short key. */
+const RSA_2048 =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmG1javSGSFFzqR4KGGKsiNnMipYtbWR7RA7MDLeLbJeLYw4n1UhYqRPvoM3yMgHSRh01T5JSkzJVqyCPbxcKXfJcVppbmfzxPah7hBGUcF85j5A+kI4S2rruj1u3aFMd8iLgYA26qO2LlkXi3CpJ0MFXDU00LKJkpBjV5BL6a1pepgRa3LgJiu4vqqAQL3Hn37+safjVJhOvkKScDRPWf95X61mrkcAoxTdw7C2JCtFcXko0zEQAppaFv16bcL4pXoacOWCwBnS5lrWt/nPwxvf52DP3S346S9ZM4Ky3H2LeYV0hw+YHzGVctt4tCL/wyU4SBLBl62qPNKQI01TGywIDAQAB";
+const RSA_512 =
+  "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAMAurHsw1IP24kALgZYw8qdO9laQwG26bn9S4OFFpwO48lbPNAb74ZIMm0iX1Px3uxjfcf88+t13kCVqvjP21jcCAwEAAQ==";
+
+const KEY = "mine._domainkey.example.uz";
+const MINE: readonly DkimSelector[] = [{ selector: "mine", origin: "USER" }];
+const FROM_SERVICE: readonly DkimSelector[] = [{ selector: "google", origin: "SERVICE" }];
 
 function mailOutcome(overrides: Partial<MailServerInput>) {
   const analysis = analyseMailServer({
@@ -171,7 +197,19 @@ async function everyOutcome() {
       true,
     ),
   ]);
-  return [...results, ...mail, ...dmarc].flat();
+  const dkim = await Promise.all([
+    dkimOutcome(MINE, { [KEY]: answer(`v=DKIM1; k=rsa; p=${RSA_2048}`) }),
+    dkimOutcome(MINE, { [KEY]: answer("v=DKIM1; p=") }),
+    dkimOutcome(MINE, { [KEY]: answer(`v=DKIM1; p=${RSA_512}`) }),
+    dkimOutcome(MINE, { [KEY]: answer(`v=DKIM1; h=sha1; p=${RSA_2048}`) }),
+    dkimOutcome(MINE, { [KEY]: answer(`v=DKIM1; t=y; p=${RSA_2048}`) }),
+    dkimOutcome(MINE, { [KEY]: answer("v=DKIM2; p=abc") }),
+    dkimOutcome(MINE),
+    dkimOutcome(FROM_SERVICE),
+    dkimOutcome([]),
+    dkimOutcome(MINE, { [KEY]: { outcome: "INDETERMINATE" } }),
+  ]);
+  return [...results, ...mail, ...dmarc, ...dkim].flat();
 }
 
 describe("the mail messages", () => {
