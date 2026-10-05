@@ -235,7 +235,9 @@ export function evaluateMailServerCheck(
     case "NULL_MX":
       return check("PASS", "none", "email.mx.records.null", analysis, options);
     case "IMPLICIT":
-      return check("FAIL", "warning", "email.mx.records.fail.implicit", analysis, options);
+      return check("FAIL", "warning", "email.mx.records.fail.implicit", analysis, options, {
+        params: { host: analysis.hosts[0]?.hostname ?? options.domain },
+      });
     case "MISSING":
       return check("FAIL", "warning", "email.mx.records.fail.missing", analysis, options);
     case "NO_USABLE_HOST":
@@ -274,16 +276,24 @@ export function evaluateMailServerCheck(
      * published property of the service — what happens to a particular message is not claimed.
      */
     return check("PASS", "none", "email.mx.records.present.forwarding", analysis, options, {
-      params: { service: service.name, count: analysis.hosts.length },
+      params: {
+        service: service.name,
+        count: analysis.hosts.length,
+        host: analysis.hosts[0]?.hostname ?? options.domain,
+      },
     });
   }
   if (service !== undefined) {
     return check("PASS", "none", "email.mx.records.present.service", analysis, options, {
-      params: { service: service.name, count: analysis.hosts.length },
+      params: {
+        service: service.name,
+        count: analysis.hosts.length,
+        host: analysis.hosts[0]?.hostname ?? options.domain,
+      },
     });
   }
   return check("PASS", "none", "email.mx.records.present", analysis, options, {
-    params: { count: analysis.hosts.length },
+    params: { count: analysis.hosts.length, host: analysis.hosts[0]?.hostname ?? options.domain },
   });
 }
 

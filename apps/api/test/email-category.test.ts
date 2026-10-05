@@ -1,5 +1,5 @@
 import type { WebScanResponse } from "@2check/contracts";
-import type { SpfLookupAnswer } from "@2check/domain";
+import type { HostObservation, MxObservation, SpfLookupAnswer } from "@2check/domain";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import { type Env, loadEnv } from "../src/config/env.js";
@@ -12,15 +12,27 @@ const env: Env = loadEnv({
 });
 
 /**
- * 1.1 §3 — the mail category end to end, over a zone recorded in advance. The root record comes
- * through the same port as the names it leads to, so one fixture holds the whole walk.
+ * 1.1 §3 and §6 — the mail category end to end, over a zone recorded in advance. Each port is
+ * fed from the same fixture, so one object describes everything a scan of this domain can see.
  */
-function app(zone: Readonly<Record<string, SpfLookupAnswer>>) {
+interface Fixture {
+  readonly txt?: Readonly<Record<string, SpfLookupAnswer>>;
+  readonly mx?: MxObservation;
+  readonly addresses?: Readonly<Record<string, HostObservation>>;
+}
+
+function app(fixture: Fixture) {
   return buildApp({
     env,
     spfLookup: () => ({
       provider: "fixture",
-      lookup: async (name) => zone[name] ?? { outcome: "NAME_NOT_FOUND" },
+      lookup: async (name) => fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
+    }),
+    mailHostLookup: () => ({
+      provider: "fixture",
+      mx: async () => fixture.mx ?? { outcome: "EMPTY" },
+      addresses: async (name) =>
+        fixture.addresses?.[name] ?? { hostname: name, outcome: "EMPTY", addresses: [] },
     }),
   });
 }
@@ -29,8 +41,22 @@ function answer(...records: string[]): SpfLookupAnswer {
   return { outcome: "ANSWER", records };
 }
 
-async function scan(zone: Readonly<Record<string, SpfLookupAnswer>>) {
-  const instance = app(zone);
+function host(hostname: string, ...addresses: string[]): HostObservation {
+  return { hostname, outcome: addresses.length > 0 ? "ANSWER" : "EMPTY", addresses };
+}
+
+/** A domain whose mail is in order, so a case can change one thing and keep the rest sound. */
+const SOUND: Fixture = {
+  txt: { "example.uz": answer("v=spf1 ip4:203.0.113.0/24 -all") },
+  mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "mail.example.uz" }] },
+  addresses: {
+    "mail.example.uz": host("mail.example.uz", "203.0.113.1"),
+    "example.uz": host("example.uz", "203.0.113.5"),
+  },
+};
+
+async function scan(fixture: Fixture) {
+  const instance = app(fixture);
   const created = await instance.inject({
     method: "POST",
     url: "/api/web/v1/scans",
@@ -52,63 +78,126 @@ async function scan(zone: Readonly<Record<string, SpfLookupAnswer>>) {
   throw new Error("the scan did not finish");
 }
 
+function category(body: WebScanResponse) {
+  return body.categories?.find((entry) => entry.category === "email");
+}
+
+function check(body: WebScanResponse, checkId: string) {
+  return category(body)?.checks.find((entry) => entry.checkId === checkId);
+}
+
 describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
-  it("is accepted and produces the category", async () => {
-    const body = await scan({ "example.uz": answer("v=spf1 ip4:203.0.113.0/24 -all") });
+  it("is accepted and produces every check in the category", async () => {
+    const body = await scan(SOUND);
     expect(body.executionState).toBe("COMPLETED");
-    const email = body.categories?.find((category) => category.category === "email");
-    expect(email?.status).toBe("PASS");
-    expect(email?.checks.map((check) => check.checkId)).toEqual([
+    expect(category(body)?.checks.map((entry) => entry.checkId)).toEqual([
+      "email.mx.records",
       "email.spf.record",
       "email.spf.limits",
       "email.spf.policy",
       "email.spf.deprecated",
     ]);
+    expect(category(body)?.status).toBe("PASS");
   });
 
   it("carries no overall score or verdict, as a PARTIAL scan does not", async () => {
-    // AC-14.7, and PRD 3.4 before it.
-    const body = await scan({ "example.uz": answer("v=spf1 -all") });
+    const body = await scan(SOUND);
     expect(body.summary?.score).toBeUndefined();
     expect(body.summary?.verdictCode).toBeUndefined();
   });
 
+  it("publishes no detail fields for the category yet", async () => {
+    // 1.1 §9.4 — a field reaches the reader only once a check actually produces one.
+    const body = await scan(SOUND);
+    for (const entry of category(body)?.checks ?? []) {
+      expect(entry.details).toBeUndefined();
+    }
+  });
+});
+
+describe("1.1 §3 — SPF through the whole stack", () => {
   it("reports a domain with no policy as a confirmed finding", async () => {
-    const body = await scan({ "example.uz": { outcome: "EMPTY" } });
-    const email = body.categories?.find((category) => category.category === "email");
-    expect(email?.status).toBe("FAIL");
-    expect(email?.severity).toBe("warning");
-    expect(email?.completeness).toBe("COMPLETE");
+    const body = await scan({ ...SOUND, txt: { "example.uz": { outcome: "EMPTY" } } });
+    expect(check(body, "email.spf.record")?.status).toBe("FAIL");
+    expect(category(body)?.severity).toBe("warning");
   });
 
   it("walks the names a record leads to and reports what it spent", async () => {
     const body = await scan({
-      "example.uz": answer("v=spf1 include:mail.uz -all"),
-      "mail.uz": answer("v=spf1 a mx -all"),
+      ...SOUND,
+      txt: {
+        "example.uz": answer("v=spf1 include:mail.uz -all"),
+        "mail.uz": answer("v=spf1 a mx -all"),
+      },
     });
-    const email = body.categories?.find((category) => category.category === "email");
-    const limits = email?.checks.find((check) => check.checkId === "email.spf.limits");
+    const limits = check(body, "email.spf.limits");
     expect(limits?.status).toBe("PASS");
     expect(limits?.message.params).toEqual({ count: 3, limit: 10 });
   });
 
   it("reports a walk it could not finish as incomplete rather than as a failure", async () => {
     const body = await scan({
-      "example.uz": answer("v=spf1 include:unreachable.uz -all"),
-      "unreachable.uz": { outcome: "INDETERMINATE" },
+      ...SOUND,
+      txt: {
+        "example.uz": answer("v=spf1 include:unreachable.uz -all"),
+        "unreachable.uz": { outcome: "INDETERMINATE" },
+      },
     });
-    const email = body.categories?.find((category) => category.category === "email");
-    const limits = email?.checks.find((check) => check.checkId === "email.spf.limits");
-    expect(limits?.status).toBe("UNKNOWN");
-    expect(email?.completeness).toBe("PARTIAL");
+    expect(check(body, "email.spf.limits")?.status).toBe("UNKNOWN");
+    expect(category(body)?.completeness).toBe("PARTIAL");
+  });
+});
+
+describe("1.1 §6 — the receiving server through the whole stack", () => {
+  it("names the hosts the MX records point at", async () => {
+    const body = await scan(SOUND);
+    // PRD 6.4 — target stays inside the service; what a reader is told travels in the message.
+    const mx = check(body, "email.mx.records");
+    expect(mx?.status).toBe("PASS");
+    expect(mx?.message.params).toMatchObject({ host: "mail.example.uz", count: 1 });
   });
 
-  it("publishes no detail fields for the category yet", async () => {
-    // 1.1 §9.4 — a field reaches the reader only once a check actually produces one.
-    const body = await scan({ "example.uz": answer("v=spf1 -all") });
-    const email = body.categories?.find((category) => category.category === "email");
-    for (const check of email?.checks ?? []) {
-      expect(check.details).toBeUndefined();
-    }
+  it("falls back to the domain's own addresses, and says the mail will follow them", async () => {
+    const body = await scan({ ...SOUND, mx: { outcome: "EMPTY" } });
+    const mx = check(body, "email.mx.records");
+    expect(mx?.status).toBe("FAIL");
+    expect(mx?.severity).toBe("warning");
+    expect(mx?.message.titleCode).toBe("email.mx.records.fail.implicit");
+    expect(mx?.message.params).toMatchObject({ host: "example.uz" });
+  });
+
+  it("passes a domain that declares it accepts no mail", async () => {
+    const body = await scan({
+      ...SOUND,
+      mx: { outcome: "ANSWER", records: [{ preference: 0, exchange: "." }] },
+    });
+    expect(check(body, "email.mx.records")?.status).toBe("PASS");
+  });
+
+  it("marks a forwarding service apart from a mailbox provider", async () => {
+    const body = await scan({
+      ...SOUND,
+      mx: {
+        outcome: "ANSWER",
+        records: [
+          { preference: 10, exchange: "route1.mx.cloudflare.net" },
+          { preference: 20, exchange: "route2.mx.cloudflare.net" },
+        ],
+      },
+      addresses: {
+        "route1.mx.cloudflare.net": host("route1.mx.cloudflare.net", "203.0.113.1"),
+        "route2.mx.cloudflare.net": host("route2.mx.cloudflare.net", "203.0.113.2"),
+      },
+    });
+    const mx = check(body, "email.mx.records");
+    expect(mx?.message.titleCode).toBe("email.mx.records.present.forwarding");
+    expect(mx?.message.params).toMatchObject({ service: "Cloudflare Email Routing" });
+  });
+
+  it("does not turn a failed MX lookup into a domain with no records", async () => {
+    const body = await scan({ ...SOUND, mx: { outcome: "INDETERMINATE" } });
+    const mx = check(body, "email.mx.records");
+    expect(mx?.status).toBe("UNKNOWN");
+    expect(mx?.reasonCode).toBe("mx_lookup_failed");
   });
 });

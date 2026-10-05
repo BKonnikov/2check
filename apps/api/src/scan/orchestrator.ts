@@ -7,6 +7,7 @@ import type {
 } from "@2check/contracts";
 import {
   addressEvidenceIsSufficient,
+  analyseMailServer,
   analyseSpf,
   buildCategoryResult,
   buildDeadlineChecks,
@@ -16,6 +17,7 @@ import {
   collectAddressCandidates,
   DEFAULT_ISSUE_GROUPS,
   dnsCacheTtlSeconds,
+  evaluateMailServerCheck,
   evaluateNameExistence,
   evaluateRegistryLookup,
   evaluateResolveCheck,
@@ -44,7 +46,12 @@ import {
   DEFAULT_RESOLVER_SET_VERSION,
   queryResolverSet,
 } from "../dns/resolver-set.js";
-import { createSpfLookup, type SpfLookupPort, toSpfAnswer } from "../email/spf-lookup.js";
+import {
+  createMailHostLookup,
+  MAX_MAIL_HOSTS,
+  type MailHostPort,
+} from "../email/mail-host-lookup.js";
+import { createSpfLookup, type SpfLookupPort } from "../email/spf-lookup.js";
 import {
   isSupportedZone,
   lookupRegistration,
@@ -58,6 +65,8 @@ import type { ScanRecord, ScanStore } from "./store.js";
 export type DnsQuery = (qname: string) => Promise<readonly DnsProviderResult[]>;
 /** 1.1 §3.2 — the policy and the names it leads to; injectable so tests run against fixtures. */
 export type SpfLookupFactory = () => SpfLookupPort;
+/** 1.1 §6.2 — the MX records and the addresses of the hosts they name. */
+export type MailHostFactory = () => MailHostPort;
 export type TlsProbe = (
   address: string,
   hostname: string,
@@ -69,6 +78,7 @@ export interface ScanDependencies {
   readonly registryLookup?: RegistryLookup;
   readonly tlsProbe?: TlsProbe;
   readonly spfLookup?: SpfLookupFactory;
+  readonly mailHostLookup?: MailHostFactory;
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
   readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
@@ -304,12 +314,36 @@ export async function runScan(
          */
         const port = (deps.spfLookup ?? createSpfLookup)();
         const answer = await port.lookup(qname);
-        const analysis = await analyseSpf({ domain: qname, answer, lookup: port.lookup });
+        const spf = await analyseSpf({ domain: qname, answer, lookup: port.lookup });
+
+        /**
+         * 1.1 §6 — the MX records, then the addresses of the hosts they name. The host lookups
+         * run together because they are independent of each other, and their number is bounded:
+         * the list is somebody else's to write.
+         */
+        const mailPort = (deps.mailHostLookup ?? createMailHostLookup)();
+        const mx = await mailPort.mx(qname);
+        const named = (mx.records ?? [])
+          .filter((record) => record.exchange.trim() !== "" && record.exchange.trim() !== ".")
+          .slice(0, MAX_MAIL_HOSTS)
+          .map((record) => record.exchange);
+        const [domainAddresses, ...hosts] = await Promise.all([
+          mailPort.addresses(qname),
+          ...named.map((name) => mailPort.addresses(name)),
+        ]);
+        const mail = analyseMailServer({
+          domain: qname,
+          mx,
+          domainAddresses: domainAddresses ?? { hostname: qname, outcome: "INDETERMINATE" },
+          hosts,
+        });
+
+        const freshness = freshnessNow();
         categories.push(
-          buildCategoryResult(
-            "email",
-            evaluateSpfChecks(analysis, { domain: qname, freshness: freshnessNow() }),
-          ),
+          buildCategoryResult("email", [
+            evaluateMailServerCheck(mail, { domain: qname, freshness }),
+            ...evaluateSpfChecks(spf, { domain: qname, freshness }),
+          ]),
         );
       }
 

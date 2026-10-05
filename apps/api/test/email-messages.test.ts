@@ -1,9 +1,18 @@
-import { analyseSpf, evaluateSpfChecks, SPF_CHECK_IDS, type SpfLookupAnswer } from "@2check/domain";
+import {
+  analyseMailServer,
+  analyseSpf,
+  evaluateMailServerCheck,
+  evaluateSpfChecks,
+  type HostObservation,
+  type MailServerInput,
+  SPF_CHECK_IDS,
+  type SpfLookupAnswer,
+} from "@2check/domain";
 import { LANGUAGES, resolveMessage } from "@2check/messages";
 import { describe, expect, it } from "vitest";
 
 /**
- * 1.1 §11 — every outcome the SPF module can produce has to be sayable in all three languages.
+ * 1.1 §11 — every outcome the mail modules can produce has to be sayable in all three languages.
  * The domain module and the catalogue live in different packages and are tested separately, so
  * this is the only place a code that nobody wrote a message for would be caught.
  */
@@ -25,7 +34,27 @@ function answer(...records: string[]): SpfLookupAnswer {
   return { outcome: "ANSWER", records };
 }
 
-/** One of every branch the module can take. */
+function mailOutcome(overrides: Partial<MailServerInput>) {
+  const analysis = analyseMailServer({
+    domain: "example.uz",
+    mx: { outcome: "EMPTY" },
+    domainAddresses: { outcome: "EMPTY", addresses: [] },
+    hosts: [],
+    ...overrides,
+  });
+  return [evaluateMailServerCheck(analysis, { domain: "example.uz", freshness: FRESHNESS })];
+}
+
+function host(hostname: string, addresses: readonly string[], alias = false): HostObservation {
+  return {
+    hostname,
+    outcome: addresses.length > 0 ? "ANSWER" : "EMPTY",
+    addresses,
+    ...(alias ? { alias: true } : {}),
+  };
+}
+
+/** One of every branch the modules can take. */
 async function everyOutcome() {
   const loop = {
     "loop.uz": answer("v=spf1 include:example.uz -all"),
@@ -48,7 +77,46 @@ async function everyOutcome() {
     outcome({ outcome: "EMPTY" }),
     outcome({ outcome: "INDETERMINATE" }),
   ]);
-  return results.flat();
+  const mail = [
+    mailOutcome({
+      mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "mail.uz" }] },
+      hosts: [host("mail.uz", ["203.0.113.1"])],
+    }),
+    mailOutcome({
+      mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "aspmx.l.google.com" }] },
+      hosts: [host("aspmx.l.google.com", ["203.0.113.1"])],
+    }),
+    mailOutcome({
+      mx: {
+        outcome: "ANSWER",
+        records: [{ preference: 10, exchange: "route1.mx.cloudflare.net" }],
+      },
+      hosts: [host("route1.mx.cloudflare.net", ["203.0.113.1"])],
+    }),
+    mailOutcome({ mx: { outcome: "ANSWER", records: [{ preference: 0, exchange: "." }] } }),
+    mailOutcome({ domainAddresses: { outcome: "ANSWER", addresses: ["203.0.113.9"] } }),
+    mailOutcome({}),
+    mailOutcome({
+      mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "mail.uz" }] },
+      hosts: [host("mail.uz", [])],
+    }),
+    mailOutcome({
+      mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "203.0.113.1" }] },
+      hosts: [],
+    }),
+    mailOutcome({
+      mx: {
+        outcome: "ANSWER",
+        records: [
+          { preference: 10, exchange: "alias.uz" },
+          { preference: 20, exchange: "dead.uz" },
+        ],
+      },
+      hosts: [host("alias.uz", ["203.0.113.1"], true), host("dead.uz", [])],
+    }),
+    mailOutcome({ mx: { outcome: "INDETERMINATE" } }),
+  ];
+  return [...results, ...mail].flat();
 }
 
 describe("the SPF messages", () => {

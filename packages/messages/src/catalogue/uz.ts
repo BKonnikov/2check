@@ -223,7 +223,7 @@ export const uz: Catalogue = {
   "email.mx.records.fail.missing": {
     title: "Domenda na MX, na manzil yozuvlari bor",
     explanation: "Jo'natuvchida bu domen uchun pochtani yetkazadigan joy yo'q.",
-    impact: "Bu domendagi manzillarga xatlar yetkazilmaydi.",
+    impact: "Domen yozuvlari pochtani yo'naltirish mumkin bo'lgan birorta manzilni nomlamaydi.",
     recommendation:
       "Domen pochta qabul qilishi kerak bo'lsa MX yozuvlarini, kerak bo'lmasa xosti bo'lmagan MX yozuvini e'lon qiling.",
   },

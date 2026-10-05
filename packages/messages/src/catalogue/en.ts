@@ -218,7 +218,7 @@ export const en: Catalogue = {
   "email.mx.records.fail.missing": {
     title: "The domain has neither MX records nor address records",
     explanation: "A sender has nowhere to deliver mail for this domain.",
-    impact: "Messages to addresses in this domain will not be delivered.",
+    impact: "The domain's records name no destination for mail to be directed to.",
     recommendation:
       "Publish MX records if the domain should receive mail, or an MX record with an empty host if it should not.",
   },
