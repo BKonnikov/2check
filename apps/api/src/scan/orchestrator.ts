@@ -7,6 +7,7 @@ import type {
 } from "@2check/contracts";
 import {
   addressEvidenceIsSufficient,
+  analyseDmarc,
   analyseMailServer,
   analyseSpf,
   buildCategoryResult,
@@ -16,7 +17,9 @@ import {
   buildSummary,
   collectAddressCandidates,
   DEFAULT_ISSUE_GROUPS,
+  dmarcPolicyName,
   dnsCacheTtlSeconds,
+  evaluateDmarcChecks,
   evaluateMailServerCheck,
   evaluateNameExistence,
   evaluateRegistryLookup,
@@ -46,6 +49,7 @@ import {
   DEFAULT_RESOLVER_SET_VERSION,
   queryResolverSet,
 } from "../dns/resolver-set.js";
+import { createDmarcLookup, type DmarcLookupPort } from "../email/dmarc-lookup.js";
 import {
   createMailHostLookup,
   MAX_MAIL_HOSTS,
@@ -65,6 +69,8 @@ import type { ScanRecord, ScanStore } from "./store.js";
 export type DnsQuery = (qname: string) => Promise<readonly DnsProviderResult[]>;
 /** 1.1 §3.2 — the policy and the names it leads to; injectable so tests run against fixtures. */
 export type SpfLookupFactory = () => SpfLookupPort;
+/** 1.1 §4.3 — the policy name and the names above it, walked once per scan. */
+export type DmarcLookupFactory = () => DmarcLookupPort;
 /** 1.1 §6.2 — the MX records and the addresses of the hosts they name. */
 export type MailHostFactory = () => MailHostPort;
 export type TlsProbe = (
@@ -78,6 +84,7 @@ export interface ScanDependencies {
   readonly registryLookup?: RegistryLookup;
   readonly tlsProbe?: TlsProbe;
   readonly spfLookup?: SpfLookupFactory;
+  readonly dmarcLookup?: DmarcLookupFactory;
   readonly mailHostLookup?: MailHostFactory;
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
@@ -338,11 +345,29 @@ export async function runScan(
           hosts,
         });
 
+        /**
+         * 1.1 §4.3 — the domain's own policy, and failing that the one it inherits. Whether the
+         * name exists in DNS decides between the `sp` and `np` tags of an inherited record, and
+         * the MX query above has already established it: any answer other than a missing name
+         * means the name is there.
+         */
+        const dmarcPort = (deps.dmarcLookup ?? createDmarcLookup)();
+        const dmarc = await analyseDmarc({
+          domain: qname,
+          answer: await dmarcPort.lookup(dmarcPolicyName(qname)),
+          lookup: dmarcPort.lookup,
+          ...(mx.outcome === "INDETERMINATE"
+            ? {}
+            : { domainExists: mx.outcome !== "NAME_NOT_FOUND" }),
+        });
+
+        // 1.1 §2.1 — the groups in the order the section lists them.
         const freshness = freshnessNow();
         categories.push(
           buildCategoryResult("email", [
-            evaluateMailServerCheck(mail, { domain: qname, freshness }),
             ...evaluateSpfChecks(spf, { domain: qname, freshness }),
+            ...evaluateDmarcChecks(dmarc, { domain: qname, freshness }),
+            evaluateMailServerCheck(mail, { domain: qname, freshness }),
           ]),
         );
       }

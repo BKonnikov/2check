@@ -372,6 +372,109 @@ export const en: Catalogue = {
   },
   "email.spf.deprecated.absent": { title: "The record uses no deprecated mechanism" },
   "email.spf.deprecated.blocked": { title: "The record's mechanisms were not checked" },
+  "email.dmarc.record.present": {
+    title: "A DMARC policy is published",
+    fact: "The domain has a record of its own",
+    explanation:
+      "DMARC is a DNS record in which the domain owner tells receivers what to do with a message that neither SPF nor DKIM confirmed.",
+  },
+  "email.dmarc.record.present.inherited": {
+    title: "The DMARC policy is inherited from {source}",
+    fact: "The domain publishes no record of its own",
+    explanation:
+      "RFC 9989 lets a receiver take the policy of a higher domain. For a subdomain this is the ordinary arrangement.",
+  },
+  "email.dmarc.record.present.suffix": {
+    title: "The DMARC policy comes from the suffix {source}",
+    fact: "The domain publishes no record of its own",
+    explanation:
+      "The record is published at the public suffix and applies to the domains beneath it.",
+  },
+  "email.dmarc.record.fail.absent": {
+    title: "No DMARC policy is published",
+    explanation:
+      "DMARC is a DNS record in which the domain owner tells receivers what to do with a message that neither SPF nor DKIM confirmed.",
+    impact:
+      "A receiver has nothing to apply to a message in the domain's name that failed the checks.",
+    recommendation:
+      "Publish a TXT record at the _dmarc name holding v=DMARC1; p=none; rua=mailto:dmarc@yourdomain, then move on to quarantine and reject.",
+  },
+  "email.dmarc.record.fail.multiple": {
+    title: "There is more than one DMARC record",
+    fact: "Records found: {count}",
+    explanation: "RFC 9989 allows a name only one DMARC record.",
+    impact: "A receiver does not pick one of them; it discards them all.",
+    recommendation: "Leave a single record at the _dmarc name.",
+  },
+  "email.dmarc.record.fail.unrecognised": {
+    title: "The DMARC record is not recognised",
+    explanation:
+      "The v tag holding DMARC1 has to come first in the record, and that value is written exactly so.",
+    impact: "A receiver does not apply such a record and acts as though there were no policy.",
+    recommendation: "Begin the record with v=DMARC1; and check the case of that value.",
+  },
+  "email.dmarc.record.unknown": {
+    title: "The DMARC record could not be retrieved",
+    explanation: "The TXT query gave no definite result. That does not mean there is no record.",
+  },
+  "email.dmarc.record.unknown.walk": {
+    title: "The walk up the name tree did not complete",
+    fact: "Queries made: {count}",
+    explanation:
+      "RFC 9989 finds a subdomain's policy by walking up the name tree. Some of the queries gave no definite result, so nothing can be said about a policy higher up.",
+  },
+  "email.dmarc.policy.pass.reject": {
+    title: "The record asks for unverified messages to be rejected",
+    fact: "The {tag} tag of {source}: reject",
+  },
+  "email.dmarc.policy.pass.quarantine": {
+    title: "The record asks for unverified messages to be quarantined",
+    fact: "The {tag} tag of {source}: quarantine",
+    explanation:
+      "Quarantine is a working mode for a domain that is still settling the list of its senders.",
+  },
+  "email.dmarc.policy.fail.none": {
+    title: "The record asks for nothing to be done with unverified messages",
+    fact: "The {tag} tag of {source}: none",
+    explanation:
+      "The value none is a monitoring mode: the domain owner collects reports but states no handling.",
+    impact:
+      "A receiver has nothing to apply to a message in the domain's name that failed the checks.",
+    recommendation:
+      "Once the reports are understood, change p=none to p=quarantine and then to p=reject.",
+  },
+  "email.dmarc.policy.fail.absent": {
+    title: "The record carries no policy tag",
+    fact: "The record of {source} holds neither p, nor sp, nor np",
+    explanation: "Without a policy tag the record reads the same as p=none.",
+    impact:
+      "A receiver has nothing to apply to a message in the domain's name that failed the checks.",
+    recommendation: "Add a p tag holding none, quarantine or reject.",
+  },
+  "email.dmarc.policy.blocked": { title: "The DMARC policy was not assessed" },
+  "email.dmarc.reports.present": {
+    title: "The record asks for aggregate reports",
+    fact: "The record carries an rua tag",
+    explanation:
+      "Aggregate reports show who sends messages in the domain's name and how those messages fare in the checks.",
+  },
+  "email.dmarc.reports.fail.absent": {
+    title: "The record asks for no aggregate reports",
+    explanation: "The rua tag names the address receivers send DMARC aggregate reports to.",
+    impact: "This mechanism yields nothing about who sends messages in the domain's name.",
+    recommendation: "Add an rua tag with an address such as mailto:dmarc@example.uz.",
+  },
+  "email.dmarc.reports.blocked": { title: "The request for reports was not checked" },
+  "email.dmarc.deprecated.absent": { title: "The record carries no superseded tags" },
+  "email.dmarc.deprecated.fail.pct": {
+    title: "The record uses the pct tag",
+    explanation:
+      "RFC 9989 removed the pct tag. A receiver following the new standard disregards it, while a receiver following RFC 7489 applies the policy to the share of messages the tag names.",
+    impact: "Receivers apply the domain's policy differently from one another.",
+    recommendation: "Remove the pct tag from the record.",
+  },
+  "email.dmarc.deprecated.blocked": { title: "The tags of the DMARC record were not checked" },
+
   "category.email": { title: "Mail" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domain" },

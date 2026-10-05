@@ -1,6 +1,9 @@
 import {
+  analyseDmarc,
   analyseMailServer,
   analyseSpf,
+  type DmarcLookupAnswer,
+  evaluateDmarcChecks,
   evaluateMailServerCheck,
   evaluateSpfChecks,
   type HostObservation,
@@ -8,7 +11,7 @@ import {
   SPF_CHECK_IDS,
   type SpfLookupAnswer,
 } from "@2check/domain";
-import { LANGUAGES, resolveMessage } from "@2check/messages";
+import { CATALOGUES, LANGUAGES, resolveMessage } from "@2check/messages";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -32,6 +35,20 @@ async function outcome(
 
 function answer(...records: string[]): SpfLookupAnswer {
   return { outcome: "ANSWER", records };
+}
+
+async function dmarcOutcome(
+  own: DmarcLookupAnswer,
+  zone: Readonly<Record<string, DmarcLookupAnswer>> = {},
+  domainExists?: boolean,
+) {
+  const analysis = await analyseDmarc({
+    domain: "example.uz",
+    answer: own,
+    lookup: async (name) => zone[name] ?? { outcome: "NAME_NOT_FOUND" },
+    ...(domainExists === undefined ? {} : { domainExists }),
+  });
+  return evaluateDmarcChecks(analysis, { domain: "example.uz", freshness: FRESHNESS });
 }
 
 function mailOutcome(overrides: Partial<MailServerInput>) {
@@ -115,11 +132,48 @@ async function everyOutcome() {
       hosts: [host("alias.uz", ["203.0.113.1"], true), host("dead.uz", [])],
     }),
     mailOutcome({ mx: { outcome: "INDETERMINATE" } }),
+    mailOutcome({
+      mx: {
+        outcome: "ANSWER",
+        records: [
+          { preference: 10, exchange: "mail.uz" },
+          { preference: 20, exchange: "203.0.113.9" },
+        ],
+      },
+      hosts: [host("mail.uz", ["203.0.113.1"])],
+    }),
+    mailOutcome({
+      mx: {
+        outcome: "ANSWER",
+        records: [
+          { preference: 10, exchange: "mail.uz" },
+          { preference: 20, exchange: "dead.uz" },
+        ],
+      },
+      hosts: [host("mail.uz", ["203.0.113.1"]), host("dead.uz", [])],
+    }),
   ];
-  return [...results, ...mail].flat();
+  const dmarc = await Promise.all([
+    dmarcOutcome(answer("v=DMARC1; p=reject; rua=mailto:d@example.uz")),
+    dmarcOutcome(answer("v=DMARC1; p=quarantine; pct=50")),
+    dmarcOutcome(answer("v=DMARC1; p=none")),
+    dmarcOutcome(answer("v=DMARC1; rua=")),
+    dmarcOutcome(answer("v=DMARC1; p=reject", "v=DMARC1; p=none")),
+    dmarcOutcome(answer("v=dmarc1; p=reject")),
+    dmarcOutcome({ outcome: "EMPTY" }),
+    dmarcOutcome({ outcome: "INDETERMINATE" }),
+    dmarcOutcome({ outcome: "EMPTY" }, { "_dmarc.uz": { outcome: "INDETERMINATE" } }),
+    dmarcOutcome({ outcome: "EMPTY" }, { "_dmarc.uz": answer("v=DMARC1; p=reject; sp=reject") }),
+    dmarcOutcome(
+      { outcome: "EMPTY" },
+      { "_dmarc.uz": answer("v=DMARC1; p=reject; sp=quarantine; psd=y") },
+      true,
+    ),
+  ]);
+  return [...results, ...mail, ...dmarc].flat();
 }
 
-describe("the SPF messages", () => {
+describe("the mail messages", () => {
   it("covers every outcome the module produces, in every mandatory language", async () => {
     const codes = new Set((await everyOutcome()).map((check) => check.message.titleCode));
     expect(codes.size).toBeGreaterThan(10);
@@ -129,6 +183,13 @@ describe("the SPF messages", () => {
         expect(resolved.title, `${code} in ${language}`).not.toBe("");
       }
     }
+  });
+
+  it("leaves no wording in the catalogue that no outcome can reach", async () => {
+    // The other direction of the same guard: a code nobody produces is wording nobody reads.
+    const produced = new Set((await everyOutcome()).map((check) => check.message.titleCode));
+    const written = Object.keys(CATALOGUES.ru).filter((code) => code.startsWith("email."));
+    expect(written.filter((code) => !produced.has(code))).toEqual([]);
   });
 
   it("leaves no placeholder unfilled in a rendered title or fact", async () => {

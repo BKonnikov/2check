@@ -12,8 +12,9 @@ const env: Env = loadEnv({
 });
 
 /**
- * 1.1 §3 and §6 — the mail category end to end, over a zone recorded in advance. Each port is
+ * 1.1 §3, §4 and §6 — the mail category end to end, over a zone recorded in advance. Each port is
  * fed from the same fixture, so one object describes everything a scan of this domain can see.
+ * SPF and DMARC read different names, so one TXT map serves both of their walks.
  */
 interface Fixture {
   readonly txt?: Readonly<Record<string, SpfLookupAnswer>>;
@@ -25,6 +26,10 @@ function app(fixture: Fixture) {
   return buildApp({
     env,
     spfLookup: () => ({
+      provider: "fixture",
+      lookup: async (name) => fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
+    }),
+    dmarcLookup: () => ({
       provider: "fixture",
       lookup: async (name) => fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
     }),
@@ -47,7 +52,10 @@ function host(hostname: string, ...addresses: string[]): HostObservation {
 
 /** A domain whose mail is in order, so a case can change one thing and keep the rest sound. */
 const SOUND: Fixture = {
-  txt: { "example.uz": answer("v=spf1 ip4:203.0.113.0/24 -all") },
+  txt: {
+    "example.uz": answer("v=spf1 ip4:203.0.113.0/24 -all"),
+    "_dmarc.example.uz": answer("v=DMARC1; p=reject; rua=mailto:dmarc@example.uz"),
+  },
   mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "mail.example.uz" }] },
   addresses: {
     "mail.example.uz": host("mail.example.uz", "203.0.113.1"),
@@ -90,12 +98,17 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
   it("is accepted and produces every check in the category", async () => {
     const body = await scan(SOUND);
     expect(body.executionState).toBe("COMPLETED");
+    // 1.1 §2.1 — the groups, in the order that section lists them.
     expect(category(body)?.checks.map((entry) => entry.checkId)).toEqual([
-      "email.mx.records",
       "email.spf.record",
       "email.spf.limits",
       "email.spf.policy",
       "email.spf.deprecated",
+      "email.dmarc.record",
+      "email.dmarc.policy",
+      "email.dmarc.reports",
+      "email.dmarc.deprecated",
+      "email.mx.records",
     ]);
     expect(category(body)?.status).toBe("PASS");
   });
@@ -117,7 +130,10 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
 
 describe("1.1 §3 — SPF through the whole stack", () => {
   it("reports a domain with no policy as a confirmed finding", async () => {
-    const body = await scan({ ...SOUND, txt: { "example.uz": { outcome: "EMPTY" } } });
+    const body = await scan({
+      ...SOUND,
+      txt: { ...SOUND.txt, "example.uz": { outcome: "EMPTY" } },
+    });
     expect(check(body, "email.spf.record")?.status).toBe("FAIL");
     expect(category(body)?.severity).toBe("warning");
   });
@@ -145,6 +161,58 @@ describe("1.1 §3 — SPF through the whole stack", () => {
     });
     expect(check(body, "email.spf.limits")?.status).toBe("UNKNOWN");
     expect(category(body)?.completeness).toBe("PARTIAL");
+  });
+});
+
+describe("1.1 §4 — DMARC through the whole stack", () => {
+  it("reports a domain with no policy anywhere as a confirmed finding", async () => {
+    const body = await scan({
+      ...SOUND,
+      txt: { ...SOUND.txt, "_dmarc.example.uz": { outcome: "EMPTY" } },
+    });
+    const record = check(body, "email.dmarc.record");
+    expect(record?.status).toBe("FAIL");
+    expect(record?.severity).toBe("warning");
+    for (const checkId of ["email.dmarc.policy", "email.dmarc.reports", "email.dmarc.deprecated"]) {
+      expect(check(body, checkId)?.status, checkId).toBe("NOT_APPLICABLE");
+      expect(check(body, checkId)?.blockedBy, checkId).toBe("email.dmarc.record");
+    }
+  });
+
+  it("names the higher domain a policy was inherited from", async () => {
+    const body = await scan({
+      ...SOUND,
+      txt: {
+        ...SOUND.txt,
+        "_dmarc.example.uz": { outcome: "EMPTY" },
+        "_dmarc.uz": answer("v=DMARC1; p=reject; sp=quarantine; psd=y"),
+      },
+    });
+    const record = check(body, "email.dmarc.record");
+    expect(record?.status).toBe("PASS");
+    expect(record?.message.params?.source).toBe("uz");
+    // The name exists — the MX query said so — so the subdomain policy is the one that applies.
+    expect(check(body, "email.dmarc.policy")?.message.params).toMatchObject({ tag: "sp" });
+  });
+
+  it("does not turn an unfinished walk into a domain without a policy", async () => {
+    const body = await scan({
+      ...SOUND,
+      txt: {
+        ...SOUND.txt,
+        "_dmarc.example.uz": { outcome: "EMPTY" },
+        "_dmarc.uz": { outcome: "INDETERMINATE" },
+      },
+    });
+    const record = check(body, "email.dmarc.record");
+    expect(record?.status).toBe("UNKNOWN");
+    expect(record?.reasonCode).toBe("dmarc_tree_walk_incomplete");
+  });
+
+  it("keeps the report addresses out of the answer, because they belong to the owner", async () => {
+    const body = await scan(SOUND);
+    expect(check(body, "email.dmarc.reports")?.status).toBe("PASS");
+    expect(JSON.stringify(body)).not.toContain("dmarc@example.uz");
   });
 });
 

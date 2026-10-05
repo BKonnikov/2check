@@ -367,6 +367,105 @@ export const ru: Catalogue = {
   },
   "email.spf.deprecated.absent": { title: "Устаревших механизмов в записи нет" },
   "email.spf.deprecated.blocked": { title: "Механизмы записи не проверялись" },
+  "email.dmarc.record.present": {
+    title: "Политика DMARC опубликована",
+    fact: "Запись есть у самого домена",
+    explanation:
+      "DMARC — запись в DNS, в которой владелец домена говорит получателям, что делать с письмом, не подтверждённым ни SPF, ни DKIM.",
+  },
+  "email.dmarc.record.present.inherited": {
+    title: "Политика DMARC наследуется от домена {source}",
+    fact: "Своей записи у домена нет",
+    explanation:
+      "RFC 9989 разрешает получателю взять политику вышестоящего домена. Для поддомена это обычный рабочий порядок.",
+  },
+  "email.dmarc.record.present.suffix": {
+    title: "Политика DMARC задана суффиксом {source}",
+    fact: "Своей записи у домена нет",
+    explanation:
+      "Запись опубликована на уровне публичного суффикса и применяется к доменам под ним.",
+  },
+  "email.dmarc.record.fail.absent": {
+    title: "Политика DMARC не опубликована",
+    explanation:
+      "DMARC — запись в DNS, в которой владелец домена говорит получателям, что делать с письмом, не подтверждённым ни SPF, ни DKIM.",
+    impact: "Получателю нечего применить к письму от имени домена, которое проверку не прошло.",
+    recommendation:
+      "Опубликуйте запись TXT в имени _dmarc со значением v=DMARC1; p=none; rua=mailto:dmarc@вашдомен, а затем переходите к карантину и отклонению.",
+  },
+  "email.dmarc.record.fail.multiple": {
+    title: "Записей DMARC несколько",
+    fact: "Найдено записей: {count}",
+    explanation: "RFC 9989 допускает у одного имени только одну запись DMARC.",
+    impact: "Получатель не выбирает одну из них, а отбрасывает все.",
+    recommendation: "Оставьте в имени _dmarc одну запись.",
+  },
+  "email.dmarc.record.fail.unrecognised": {
+    title: "Запись DMARC не признаётся",
+    explanation:
+      "Тег v со значением DMARC1 должен стоять в записи первым, и это значение пишется именно так.",
+    impact: "Получатель такую запись не применяет и действует так, как если бы политики не было.",
+    recommendation: "Начните запись с v=DMARC1; и проверьте регистр этого значения.",
+  },
+  "email.dmarc.record.unknown": {
+    title: "Не удалось получить запись DMARC",
+    explanation: "Запрос TXT не дал определённого результата. Это не значит, что записи нет.",
+  },
+  "email.dmarc.record.unknown.walk": {
+    title: "Обход дерева имён не завершён",
+    fact: "Сделано запросов: {count}",
+    explanation:
+      "Политику для поддомена RFC 9989 ищет, поднимаясь по дереву имён. Часть запросов не дала определённого результата, поэтому о политике выше судить нельзя.",
+  },
+  "email.dmarc.policy.pass.reject": {
+    title: "Запись просит отвергать непроверенные письма",
+    fact: "Тег {tag} домена {source}: reject",
+  },
+  "email.dmarc.policy.pass.quarantine": {
+    title: "Запись просит помещать непроверенные письма в карантин",
+    fact: "Тег {tag} домена {source}: quarantine",
+    explanation:
+      "Карантин — рабочий режим для домена, который ещё уточняет список своих отправителей.",
+  },
+  "email.dmarc.policy.fail.none": {
+    title: "Запись не просит ничего делать с непроверенными письмами",
+    fact: "Тег {tag} домена {source}: none",
+    explanation:
+      "Значение none — это режим наблюдения: владелец домена собирает отчёты, но обработку не задаёт.",
+    impact: "Получателю нечего применить к письму от имени домена, которое проверку не прошло.",
+    recommendation: "Разобрав отчёты, смените p=none на p=quarantine, а затем на p=reject.",
+  },
+  "email.dmarc.policy.fail.absent": {
+    title: "В записи нет тега политики",
+    fact: "В записи домена {source} нет ни p, ни sp, ни np",
+    explanation: "Без тега политики запись читается так же, как p=none.",
+    impact: "Получателю нечего применить к письму от имени домена, которое проверку не прошло.",
+    recommendation: "Добавьте тег p со значением none, quarantine или reject.",
+  },
+  "email.dmarc.policy.blocked": { title: "Политика DMARC не оценивалась" },
+  "email.dmarc.reports.present": {
+    title: "Запись запрашивает агрегированные отчёты",
+    fact: "В записи есть тег rua",
+    explanation:
+      "Агрегированные отчёты показывают, кто отправляет письма от имени домена и как эти письма проходят проверку.",
+  },
+  "email.dmarc.reports.fail.absent": {
+    title: "Запись не запрашивает агрегированные отчёты",
+    explanation: "Тег rua называет адрес, куда получатели присылают агрегированные отчёты DMARC.",
+    impact: "Сведений о том, кто отправляет письма от имени домена, этот механизм не даёт.",
+    recommendation: "Добавьте тег rua с адресом вида mailto:dmarc@example.uz.",
+  },
+  "email.dmarc.reports.blocked": { title: "Запрос отчётов не проверялся" },
+  "email.dmarc.deprecated.absent": { title: "Устаревших тегов в записи нет" },
+  "email.dmarc.deprecated.fail.pct": {
+    title: "В записи используется тег pct",
+    explanation:
+      "RFC 9989 тег pct удалил. Получатель по новому стандарту его не учитывает, а получатель по RFC 7489 применяет политику к указанной в теге доле писем.",
+    impact: "Получатели применяют политику домена по-разному.",
+    recommendation: "Уберите тег pct из записи.",
+  },
+  "email.dmarc.deprecated.blocked": { title: "Теги записи DMARC не проверялись" },
+
   "category.email": { title: "Почта" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Домен" },

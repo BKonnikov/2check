@@ -377,6 +377,110 @@ export const uz: Catalogue = {
   },
   "email.spf.deprecated.absent": { title: "Yozuvda eskirgan mexanizm yo'q" },
   "email.spf.deprecated.blocked": { title: "Yozuv mexanizmlari tekshirilmadi" },
+  "email.dmarc.record.present": {
+    title: "DMARC siyosati e'lon qilingan",
+    fact: "Domenning o'z yozuvi mavjud",
+    explanation:
+      "DMARC — domen egasi qabul qiluvchilarga SPF ham, DKIM ham tasdiqlamagan xat bilan nima qilish kerakligini aytadigan DNS yozuvi.",
+  },
+  "email.dmarc.record.present.inherited": {
+    title: "DMARC siyosati {source} domenidan olinadi",
+    fact: "Domenning o'z yozuvi yo'q",
+    explanation:
+      "RFC 9989 qabul qiluvchiga yuqoridagi domen siyosatini olishga ruxsat beradi. Subdomen uchun bu oddiy ish tartibi.",
+  },
+  "email.dmarc.record.present.suffix": {
+    title: "DMARC siyosatini {source} suffiksi belgilaydi",
+    fact: "Domenning o'z yozuvi yo'q",
+    explanation:
+      "Yozuv ommaviy suffiks darajasida e'lon qilingan va uning ostidagi domenlarga qo'llanadi.",
+  },
+  "email.dmarc.record.fail.absent": {
+    title: "DMARC siyosati e'lon qilinmagan",
+    explanation:
+      "DMARC — domen egasi qabul qiluvchilarga SPF ham, DKIM ham tasdiqlamagan xat bilan nima qilish kerakligini aytadigan DNS yozuvi.",
+    impact:
+      "Qabul qiluvchida domen nomidan kelgan, tekshiruvdan o'tmagan xatga qo'llaydigan narsa yo'q.",
+    recommendation:
+      "_dmarc nomida v=DMARC1; p=none; rua=mailto:dmarc@sizningdomen qiymatli TXT yozuvini e'lon qiling, keyin karantin va rad etishga o'ting.",
+  },
+  "email.dmarc.record.fail.multiple": {
+    title: "DMARC yozuvlari bir nechta",
+    fact: "Topilgan yozuvlar: {count}",
+    explanation: "RFC 9989 bitta nomga faqat bitta DMARC yozuviga ruxsat beradi.",
+    impact: "Qabul qiluvchi ulardan birini tanlamaydi, hammasini chetga suradi.",
+    recommendation: "_dmarc nomida bitta yozuv qoldiring.",
+  },
+  "email.dmarc.record.fail.unrecognised": {
+    title: "DMARC yozuvi tan olinmaydi",
+    explanation:
+      "DMARC1 qiymatli v tegi yozuvda birinchi turishi kerak va bu qiymat aynan shunday yoziladi.",
+    impact: "Qabul qiluvchi bunday yozuvni qo'llamaydi va siyosat yo'qdek ish ko'radi.",
+    recommendation: "Yozuvni v=DMARC1; bilan boshlang va bu qiymatning harf registrini tekshiring.",
+  },
+  "email.dmarc.record.unknown": {
+    title: "DMARC yozuvini olish imkoni bo'lmadi",
+    explanation: "TXT so'rovi aniq natija bermadi. Bu yozuv yo'q degani emas.",
+  },
+  "email.dmarc.record.unknown.walk": {
+    title: "Nomlar daraxti bo'ylab yurish tugamadi",
+    fact: "Bajarilgan so'rovlar: {count}",
+    explanation:
+      "RFC 9989 subdomen siyosatini nomlar daraxti bo'ylab yuqoriga ko'tarilib qidiradi. So'rovlarning bir qismi aniq natija bermadi, shuning uchun yuqoridagi siyosat haqida hukm chiqarib bo'lmaydi.",
+  },
+  "email.dmarc.policy.pass.reject": {
+    title: "Yozuv tekshirilmagan xatlarni rad etishni so'raydi",
+    fact: "{source} domenining {tag} tegi: reject",
+  },
+  "email.dmarc.policy.pass.quarantine": {
+    title: "Yozuv tekshirilmagan xatlarni karantinga joylashni so'raydi",
+    fact: "{source} domenining {tag} tegi: quarantine",
+    explanation:
+      "Karantin — o'z jo'natuvchilari ro'yxatini hali aniqlab olayotgan domen uchun ish tartibi.",
+  },
+  "email.dmarc.policy.fail.none": {
+    title: "Yozuv tekshirilmagan xatlar bilan hech narsa qilishni so'ramaydi",
+    fact: "{source} domenining {tag} tegi: none",
+    explanation:
+      "none qiymati — kuzatish tartibi: domen egasi hisobotlarni yig'adi, lekin ishlov berishni belgilamaydi.",
+    impact:
+      "Qabul qiluvchida domen nomidan kelgan, tekshiruvdan o'tmagan xatga qo'llaydigan narsa yo'q.",
+    recommendation:
+      "Hisobotlarni tahlil qilgach, p=none ni p=quarantine ga, so'ngra p=reject ga o'zgartiring.",
+  },
+  "email.dmarc.policy.fail.absent": {
+    title: "Yozuvda siyosat tegi yo'q",
+    fact: "{source} domenining yozuvida na p, na sp, na np bor",
+    explanation: "Siyosat tegisiz yozuv p=none bilan bir xil o'qiladi.",
+    impact:
+      "Qabul qiluvchida domen nomidan kelgan, tekshiruvdan o'tmagan xatga qo'llaydigan narsa yo'q.",
+    recommendation: "none, quarantine yoki reject qiymatli p tegini qo'shing.",
+  },
+  "email.dmarc.policy.blocked": { title: "DMARC siyosati baholanmadi" },
+  "email.dmarc.reports.present": {
+    title: "Yozuv jamlangan hisobotlarni so'raydi",
+    fact: "Yozuvda rua tegi mavjud",
+    explanation:
+      "Jamlangan hisobotlar domen nomidan kim xat jo'natayotganini va bu xatlar tekshiruvdan qanday o'tayotganini ko'rsatadi.",
+  },
+  "email.dmarc.reports.fail.absent": {
+    title: "Yozuv jamlangan hisobotlarni so'ramaydi",
+    explanation:
+      "rua tegi qabul qiluvchilar DMARC jamlangan hisobotlarini yuboradigan manzilni ataydi.",
+    impact: "Bu mexanizm domen nomidan kim xat jo'natayotgani haqida ma'lumot bermaydi.",
+    recommendation: "mailto:dmarc@example.uz turidagi manzil bilan rua tegini qo'shing.",
+  },
+  "email.dmarc.reports.blocked": { title: "Hisobot so'rovi tekshirilmadi" },
+  "email.dmarc.deprecated.absent": { title: "Yozuvda eskirgan teglar yo'q" },
+  "email.dmarc.deprecated.fail.pct": {
+    title: "Yozuvda pct tegi ishlatilgan",
+    explanation:
+      "RFC 9989 pct tegini olib tashladi. Yangi standartga amal qiluvchi qabul qiluvchi uni hisobga olmaydi, RFC 7489 ga amal qiluvchi esa siyosatni tegda ko'rsatilgan xatlar ulushiga qo'llaydi.",
+    impact: "Qabul qiluvchilar domen siyosatini bir-biridan farqli qo'llaydi.",
+    recommendation: "pct tegini yozuvdan olib tashlang.",
+  },
+  "email.dmarc.deprecated.blocked": { title: "DMARC yozuvining teglari tekshirilmadi" },
+
   "category.email": { title: "Pochta" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domen" },
