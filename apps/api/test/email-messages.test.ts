@@ -1,8 +1,10 @@
+import type { TlsCertificate } from "@2check/contracts";
 import {
   analyseDkim,
   analyseDmarc,
   analyseMailServer,
   analyseSpf,
+  analyseStarttls,
   type DkimLookupAnswer,
   type DkimSelector,
   type DmarcLookupAnswer,
@@ -10,10 +12,12 @@ import {
   evaluateDmarcChecks,
   evaluateMailServerCheck,
   evaluateSpfChecks,
+  evaluateStarttlsChecks,
   type HostObservation,
   type MailServerInput,
   SPF_CHECK_IDS,
   type SpfLookupAnswer,
+  type StarttlsOutcome,
 } from "@2check/domain";
 import { CATALOGUES, LANGUAGES, resolveMessage } from "@2check/messages";
 import { describe, expect, it } from "vitest";
@@ -95,6 +99,45 @@ function host(hostname: string, addresses: readonly string[], alias = false): Ho
     addresses,
     ...(alias ? { alias: true } : {}),
   };
+}
+
+function cert(overrides: Partial<TlsCertificate> = {}): TlsCertificate {
+  return {
+    subject: "mail.uz",
+    issuer: "R11 (Let's Encrypt)",
+    validFrom: "2026-01-01T00:00:00.000Z",
+    validTo: "2099-01-01T00:00:00.000Z",
+    subjectAltNames: ["DNS:mail.uz"],
+    fingerprint256: "ab:cd",
+    selfSigned: false,
+    chainVerification: "TRUSTED",
+    ...overrides,
+  };
+}
+
+function tlsOn(hostname: string, certificate = cert()): StarttlsOutcome {
+  return {
+    kind: "SECURED",
+    hostname,
+    address: "93.184.216.34",
+    protocol: "TLSv1.3",
+    certificate,
+    observedAt: FRESHNESS.checkedAt,
+  };
+}
+
+function tlsOff(hostname: string): StarttlsOutcome {
+  return {
+    kind: "NOT_OFFERED",
+    hostname,
+    address: "93.184.216.35",
+    observedAt: FRESHNESS.checkedAt,
+  };
+}
+
+function starttlsOutcome(probes: readonly StarttlsOutcome[], skipped: readonly string[] = []) {
+  const analysis = analyseStarttls({ domain: "example.uz", probes, skipped });
+  return evaluateStarttlsChecks(analysis, { domain: "example.uz", freshness: FRESHNESS });
 }
 
 /** One of every branch the modules can take. */
@@ -209,7 +252,35 @@ async function everyOutcome() {
     dkimOutcome([]),
     dkimOutcome(MINE, { [KEY]: { outcome: "INDETERMINATE" } }),
   ]);
-  return [...results, ...mail, ...dmarc, ...dkim].flat();
+  const starttls = [
+    starttlsOutcome([tlsOn("mail.uz")]),
+    starttlsOutcome([tlsOn("mail.uz")], ["spare.uz"]),
+    starttlsOutcome([tlsOn("mail.uz"), tlsOff("plain.uz")]),
+    starttlsOutcome([tlsOff("plain.uz")]),
+    starttlsOutcome([
+      {
+        kind: "UPGRADE_FAILED",
+        hostname: "mail.uz",
+        address: "93.184.216.34",
+        failureCode: "handshake_failed",
+        observedAt: FRESHNESS.checkedAt,
+      },
+    ]),
+    starttlsOutcome([{ kind: "UNAVAILABLE", hostname: "mail.uz" }]),
+    starttlsOutcome([
+      { kind: "BLOCKED", hostname: "mail.uz", reasonCode: "own_infrastructure_not_observed" },
+    ]),
+    starttlsOutcome([{ kind: "BLOCKED", hostname: "mail.uz", reasonCode: "ssrf_policy_block" }]),
+    starttlsOutcome([{ kind: "CONNECT_FAILED", hostname: "mail.uz" }]),
+    starttlsOutcome([{ kind: "SESSION_INCOMPLETE", hostname: "mail.uz" }]),
+    starttlsOutcome([]),
+    starttlsOutcome([tlsOn("mail.uz", cert({ validTo: "2026-01-02T00:00:00.000Z" }))]),
+    starttlsOutcome([tlsOn("mail.uz", cert({ validFrom: "2099-01-01T00:00:00.000Z" }))]),
+    starttlsOutcome([tlsOn("mail.uz", cert({ subjectAltNames: ["DNS:other.net"] }))]),
+    starttlsOutcome([tlsOn("mail.uz", cert({ chainVerification: "UNTRUSTED" }))]),
+    starttlsOutcome([tlsOn("mail.uz", cert({ chainVerification: "NOT_VERIFIED" }))]),
+  ];
+  return [...results, ...mail, ...dmarc, ...dkim, ...starttls].flat();
 }
 
 describe("the mail messages", () => {

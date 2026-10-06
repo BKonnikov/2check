@@ -208,3 +208,25 @@ SECURITY_INTERNAL_DENYLIST=91.216.37.0/24
 Affected targets receive `UNKNOWN` with `ssrf_policy_block`. Changing the list changes `securityPolicyVersion`. An invalid value blocks startup; an empty value adds no restrictions.
 
 The list records an observation limitation and does not repair the route. Hairpin NAT or routing changes are verified separately by the infrastructure team.
+
+## 15. Mail Encryption Probe
+
+The STARTTLS check opens a connection to port `25` of the domain's mail hosts. Many hosting providers close that port outbound, and a closed port looks from the inside exactly like a server that does not answer.
+
+The probe is therefore declared by configuration and is off by default:
+
+```dotenv
+EMAIL_SMTP_PROBE_ENABLED=false
+```
+
+While the value is `false`, the check returns `UNKNOWN` with `outbound_smtp_unavailable` and says plainly that this is a limitation of the service. It does not lower the domain's score.
+
+Before turning it on, confirm that the port is in fact open outbound:
+
+```bash
+docker compose -f docker-compose.prod.yml exec api timeout 5 node -e "require('net').createConnection({host:'aspmx.l.google.com',port:25}).on('connect',()=>{console.log('open');process.exit(0)}).on('error',e=>{console.log('closed:',e.code);process.exit(1)})"
+```
+
+A value other than `true` or `false` blocks startup, so that a typo is not read as a disabled probe.
+
+The probe issues no sender, recipient or data command under any circumstances: the session is a greeting, a request for extensions, the move to encryption and a close. The port is a constant and cannot be overridden by input or by the domain's records.

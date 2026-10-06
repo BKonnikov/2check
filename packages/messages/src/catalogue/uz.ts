@@ -558,6 +558,114 @@ export const uz: Catalogue = {
     explanation: "TXT so'rovi aniq natija bermadi. Bu kalit yo'q degani emas.",
   },
 
+  "email.starttls.encryption.pass": {
+    title: "Qabul qiluvchi serverlar shifrlashni taklif qiladi",
+    fact: "Shifrlash o'rnatilgan tugunlar: {hosts}",
+    explanation:
+      "STARTTLS — server sessiyani shifrlashga o'tkazishni taklif qiladigan SMTP kengaytmasi. Qabul qiluvchi serverga qadar bo'lgan qism shifrlanadi, xatning butun yo'li emas.",
+  },
+  "email.starttls.encryption.pass.partial": {
+    title: "So'rov yuborilgan barcha serverlar shifrlashni taklif qiladi",
+    fact: "So'rov yuborilgan tugunlar: {probed}, yuborilmagan: {skipped}",
+    explanation:
+      "Afzallik tartibidagi birinchi tugunlarga so'rov yuborildi; qolganlari bu safar tekshirilmadi va natija ularga taalluqli emas.",
+  },
+  "email.starttls.encryption.fail.some": {
+    title: "Serverlarning bir qismi shifrlashni taklif qilmaydi",
+    fact: "Shifrlashsiz: {hosts}",
+    explanation:
+      "STARTTLS — server sessiyani shifrlashga o'tkazishni taklif qiladigan SMTP kengaytmasi. Bunday tugunga tushgan jo'natuvchi xatni ochiq holda uzatadi.",
+    impact: "Bu tugunga qadar bo'lgan qism shifrlanmaydi.",
+    recommendation: "Sanab o'tilgan tugunlarda STARTTLS ni yoqing.",
+  },
+  "email.starttls.encryption.fail.none": {
+    title: "So'rov yuborilgan hech bir server shifrlashni taklif qilmaydi",
+    fact: "Shifrlashsiz: {hosts}",
+    explanation:
+      "STARTTLS — server sessiyani shifrlashga o'tkazishni taklif qiladigan SMTP kengaytmasi. So'rov yuborilgan tugunlarning hech biri uni e'lon qilmadi.",
+    impact: "Qabul qiluvchi serverga qadar bo'lgan qism shifrlanmaydi.",
+    recommendation: "Domenning qabul qiluvchi tugunlarida STARTTLS ni yoqing.",
+  },
+  "email.starttls.encryption.fail.upgrade": {
+    title: "Shifrlash taklif qilinadi, lekin o'rnatilmaydi",
+    fact: "Tugunlar: {hosts}",
+    explanation:
+      "Server STARTTLS ni e'lon qildi, lekin shifrlashga o'tish tugamadi: qo'l siqish amalga oshmadi.",
+    impact: "E'longa ishongan jo'natuvchi shifrlangan qismni olmaydi.",
+    recommendation: "Qabul qiluvchi tugunda sertifikat va TLS sozlamasini tekshiring.",
+  },
+  "email.starttls.encryption.unknown.unavailable": {
+    title: "2check bu o'rnatmada shifrlashni tekshirmaydi",
+    explanation:
+      "Bu yerda pochta portiga chiquvchi ulanishlar mavjud emas. Bu domen xususiyati emas, xizmat cheklovi va domen bahosini kamaytirmaydi.",
+  },
+  "email.starttls.encryption.unknown.own": {
+    title: "2check o'z serverlarini tekshirmaydi",
+    explanation:
+      "Tugun xizmatning o'z infratuzilmasiga tegishli. 2check o'zini tashqaridan kuzata olmaydi, shuning uchun natija yo'q. Bu domen xususiyati emas, xizmat cheklovi.",
+  },
+  "email.starttls.encryption.unknown.blocked": {
+    title: "Tugunga ulanishga xavfsizlik tekshiruvi ruxsat bermadi",
+    explanation:
+      "Tugun manzillari 2check har qanday chiquvchi ulanishdan oldin bajaradigan tekshiruvdan o'tmadi. Bu domen haqidagi xulosa emas, xizmat cheklovi.",
+  },
+  "email.starttls.encryption.unknown.connect": {
+    title: "Qabul qiluvchi serverga ulanish imkoni bo'lmadi",
+    fact: "So'rov yuborilgan tugunlar: {probed}, yuborilmagan: {skipped}",
+    explanation:
+      "Ulanish o'rnatilmadi, shuning uchun bu tugundagi shifrlash haqida hech narsa ma'lum emas. Bu shifrlash yo'q degani emas.",
+  },
+  "email.starttls.encryption.unknown.incomplete": {
+    title: "Sessiya shifrlash haqidagi javobdan oldin uzildi",
+    fact: "So'rov yuborilgan tugunlar: {probed}, yuborilmagan: {skipped}",
+    explanation:
+      "Server javob berdi, lekin sessiya STARTTLS haqida ma'lum bo'lishidan oldin tugadi. Bu shifrlash yo'q degani emas.",
+  },
+  "email.starttls.encryption.blocked": { title: "Shifrlash tekshirilmadi" },
+  "email.starttls.certificate.pass": {
+    title: "Qabul qiluvchi server sertifikati tartibda",
+    fact: "Tugun {host}, chiqargan: {issuer}",
+    explanation:
+      "Amal qilish muddati, tugun nomiga muvofiqligi va ishonch zanjiri tekshirildi. Sertifikat bo'yicha jo'natuvchi ulanishni qabul qiladimi — aniqlab bo'lmaydi.",
+  },
+  "email.starttls.certificate.fail.expired": {
+    title: "Qabul qiluvchi server sertifikati muddati tugagan",
+    fact: "Tugun {host}",
+    explanation: "Sertifikatning amal qilish muddati tugadi.",
+    impact: "Sertifikatni tekshiradigan jo'natuvchilar bunday ulanishni qabul qilmaydi.",
+    recommendation: "Bu tugunda sertifikatni qayta chiqaring.",
+  },
+  "email.starttls.certificate.fail.early": {
+    title: "Qabul qiluvchi server sertifikati hali amal qilmaydi",
+    fact: "Tugun {host}",
+    explanation: "Sertifikatning amal qilish muddati hali boshlanmagan.",
+    impact: "Sertifikatni tekshiradigan jo'natuvchilar bunday ulanishni qabul qilmaydi.",
+    recommendation: "Sertifikatning boshlanish sanasi va tugundagi soatni tekshiring.",
+  },
+  "email.starttls.certificate.fail.hostname": {
+    title: "Sertifikat bu tugun nomiga chiqarilmagan",
+    fact: "Tugun {host}",
+    explanation: "Sertifikat nomlari orasida tugun nomi yo'q.",
+    impact: "Nomni solishtiradigan jo'natuvchilar bunday ulanishni qabul qilmaydi.",
+    recommendation: "Tugun nomini sertifikatga qo'shing yoki shu nomga sertifikat chiqaring.",
+  },
+  "email.starttls.certificate.fail.untrusted": {
+    title: "Sertifikatning ishonch zanjiri qurilmaydi",
+    fact: "Tugun {host}",
+    explanation: "Sertifikat ishonchli ildizgacha ko'tarilmaydi.",
+    impact: "Zanjirni tekshiradigan jo'natuvchilar bunday ulanishni qabul qilmaydi.",
+    recommendation: "Tugunga chiqaruvchining oraliq sertifikatlarini o'rnating.",
+  },
+  "email.starttls.certificate.unknown": {
+    title: "Ishonch zanjiri tekshirilmadi",
+    fact: "Tugun {host}",
+    explanation:
+      "Tekshiruv zanjirgacha to'xtadi, shuning uchun ishonch haqida xulosa chiqmadi. Bu ishonchsiz sertifikat bilan bir xil emas.",
+  },
+  "email.starttls.certificate.blocked": {
+    title: "Qabul qiluvchi server sertifikati tekshirilmadi",
+  },
+
   "category.email": { title: "Pochta" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domen" },

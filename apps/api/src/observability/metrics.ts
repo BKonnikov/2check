@@ -17,6 +17,10 @@ export const METRIC_NAMES = [
   "scan_failed_total",
   "scan_rejected_total",
   "analytics_event_total",
+  // 1.1 §16.3 — the mail category's own counters. The probe's outcome is a label, never the host.
+  "email_smtp_probe_total",
+  "email_smtp_probe_blocked_total",
+  "email_dkim_selector_unknown_total",
 ] as const;
 export type MetricName = (typeof METRIC_NAMES)[number];
 

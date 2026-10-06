@@ -92,6 +92,7 @@ export function buildApp({
     admission,
     scanDeadlineMs: env.SCAN_DEADLINE_MS,
     internalInfrastructureDenylist: env.SECURITY_INTERNAL_DENYLIST,
+    smtpProbeEnabled: env.EMAIL_SMTP_PROBE_ENABLED,
     ...(canStoreResults === undefined ? {} : { canStoreResults }),
     // One cache and one single-flight registry per process, so reuse and coalescing actually span
     // scans rather than being private to each one.

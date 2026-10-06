@@ -11,6 +11,7 @@ import {
   analyseDmarc,
   analyseMailServer,
   analyseSpf,
+  analyseStarttls,
   buildCategoryResult,
   buildDeadlineChecks,
   buildDnsCacheKey,
@@ -29,13 +30,17 @@ import {
   evaluateResolveCheck,
   evaluateResolverConsistency,
   evaluateSpfChecks,
+  evaluateStarttlsChecks,
   evaluateTlsBlockedChecks,
   evaluateTlsChecks,
+  type MailServerAnalysis,
   markServedFromCache,
   mayReadCache,
   mayWriteCache,
   registrationCacheTtlSeconds,
   resolveRegistryLookup,
+  STARTTLS_MAX_HOSTS,
+  type StarttlsOutcome,
   selectRepresentativeAddress,
   singleFlightKey,
   type TlsProbeOutcome,
@@ -59,7 +64,9 @@ import {
   MAX_MAIL_HOSTS,
   type MailHostPort,
 } from "../email/mail-host-lookup.js";
+import { probeMailHost } from "../email/smtp-prober.js";
 import { createSpfLookup, type SpfLookupPort } from "../email/spf-lookup.js";
+import type { Metrics } from "../observability/metrics.js";
 import {
   isSupportedZone,
   lookupRegistration,
@@ -79,6 +86,8 @@ export type DmarcLookupFactory = () => DmarcLookupPort;
 export type DkimLookupFactory = () => DkimLookupPort;
 /** 1.1 §6.2 — the MX records and the addresses of the hosts they name. */
 export type MailHostFactory = () => MailHostPort;
+/** 1.1 §7.2 — one SMTP session against one validated, pinned address. */
+export type SmtpProbe = (address: string, hostname: string) => Promise<StarttlsOutcome>;
 export type TlsProbe = (
   address: string,
   hostname: string,
@@ -93,6 +102,11 @@ export interface ScanDependencies {
   readonly dmarcLookup?: DmarcLookupFactory;
   readonly dkimLookup?: DkimLookupFactory;
   readonly mailHostLookup?: MailHostFactory;
+  readonly smtpProbe?: SmtpProbe;
+  /** 1.1 §7.6 — whether this deployment can open outbound SMTP at all. */
+  readonly smtpProbeEnabled?: boolean;
+  /** 1.1 §16.3 — the category's counters. The outcome is a label; the host never is. */
+  readonly metrics?: Pick<Metrics, "increment">;
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
   readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
@@ -169,6 +183,72 @@ async function sealAddressCandidates(
       : { internalInfrastructureDenylist: deps.internalInfrastructureDenylist }),
   });
   return sealed;
+}
+
+/**
+ * 1.1 §7.3 and §13.2 — the hosts to probe, each one taken through 1.0 §15 before it is touched.
+ *
+ * The security sequence is the one the TLS category already follows, applied to a mail host: the
+ * host's whole address set is validated without truncation, and a single forbidden address blocks
+ * the host rather than being dropped so the rest can be used. What the probe then connects to is
+ * the validated address itself, so the name is never resolved a second time.
+ *
+ * Only the first four hosts are probed. The rest are reported as not probed, because the scan
+ * budget is one for every category — §13.6 — and a host waiting for time that will not come is
+ * worse than a result that says plainly which hosts it covers.
+ */
+async function probeMailHosts(
+  record: ScanRecord,
+  mail: MailServerAnalysis,
+  deps: ScanDependencies,
+): Promise<{ domain: string; probes: readonly StarttlsOutcome[]; skipped: readonly string[] }> {
+  const domain = record.canonicalDomain.asciiHostname;
+  const usable = mail.hosts.filter((host) => host.addresses.length > 0);
+  const chosen = usable.slice(0, STARTTLS_MAX_HOSTS);
+  const skipped = usable.slice(STARTTLS_MAX_HOSTS).map((host) => host.hostname);
+  if (chosen.length === 0) {
+    return { domain, probes: [], skipped };
+  }
+  if (deps.smtpProbeEnabled !== true) {
+    // §7.6 — a limit of the deployment, said once for every host rather than discovered per host.
+    return {
+      domain,
+      probes: chosen.map((host) => ({ kind: "UNAVAILABLE" as const, hostname: host.hostname })),
+      skipped,
+    };
+  }
+
+  const probe = deps.smtpProbe ?? probeMailHost;
+  const policy = {
+    policyVersion: record.executionContext.securityPolicyVersion,
+    ...(deps.internalInfrastructureDenylist === undefined
+      ? {}
+      : { internalInfrastructureDenylist: deps.internalInfrastructureDenylist }),
+  };
+  const probes: StarttlsOutcome[] = [];
+  for (const host of chosen) {
+    const validation = validateTarget(host.addresses, policy);
+    if (validation.decision !== "ALLOW") {
+      deps.metrics?.increment("email_smtp_probe_blocked_total", {
+        decision: validation.decision,
+      });
+      probes.push({
+        kind: "BLOCKED",
+        hostname: host.hostname,
+        reasonCode: validation.reasonCode ?? "security_validation_incomplete",
+      });
+      continue;
+    }
+    const address = [...host.addresses].sort()[0];
+    if (address === undefined) {
+      probes.push({ kind: "CONNECT_FAILED", hostname: host.hostname });
+      continue;
+    }
+    const outcome = await probe(address, host.hostname);
+    deps.metrics?.increment("email_smtp_probe_total", { outcome: outcome.kind });
+    probes.push(outcome);
+  }
+  return { domain, probes, skipped };
 }
 
 /**
@@ -392,6 +472,13 @@ export async function runScan(
           }),
           lookup: dkimPort.lookup,
         });
+        if (dkim.state === "NOT_FOUND" || dkim.state === "NOTHING_TO_ASK") {
+          // 1.1 §16.3 — read against the total number of checks, it measures how well the
+          // selector table covers the providers this market actually uses.
+          deps.metrics?.increment("email_dkim_selector_unknown_total");
+        }
+
+        const starttls = analyseStarttls(await probeMailHosts(record, mail, deps));
 
         // 1.1 §2.1 — the groups in the order the section lists them.
         const freshness = freshnessNow();
@@ -401,6 +488,7 @@ export async function runScan(
             ...evaluateDmarcChecks(dmarc, { domain: qname, freshness }),
             evaluateDkimCheck(dkim, { domain: qname, freshness }),
             evaluateMailServerCheck(mail, { domain: qname, freshness }),
+            ...evaluateStarttlsChecks(starttls, { domain: qname, freshness }),
           ]),
         );
       }

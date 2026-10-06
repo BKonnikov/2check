@@ -551,6 +551,114 @@ export const en: Catalogue = {
     explanation: "The TXT query gave no definite result. That does not mean there is no key.",
   },
 
+  "email.starttls.encryption.pass": {
+    title: "The receiving servers offer encryption",
+    fact: "Encryption established on: {hosts}",
+    explanation:
+      "STARTTLS is the SMTP extension a server offers to move a session to encryption. What is encrypted is the leg to the receiving server, not the message's whole path.",
+  },
+  "email.starttls.encryption.pass.partial": {
+    title: "Every server probed offers encryption",
+    fact: "Hosts probed: {probed}, not probed: {skipped}",
+    explanation:
+      "The first hosts in preference order were probed; the rest were not, and the result says nothing about them.",
+  },
+  "email.starttls.encryption.fail.some": {
+    title: "Some of the servers offer no encryption",
+    fact: "Without encryption: {hosts}",
+    explanation:
+      "STARTTLS is the SMTP extension a server offers to move a session to encryption. A sender that reaches such a host hands the message over in the clear.",
+    impact: "The leg to that host gets no encryption.",
+    recommendation: "Turn STARTTLS on at the hosts listed.",
+  },
+  "email.starttls.encryption.fail.none": {
+    title: "None of the servers probed offers encryption",
+    fact: "Without encryption: {hosts}",
+    explanation:
+      "STARTTLS is the SMTP extension a server offers to move a session to encryption. None of the hosts probed announced it.",
+    impact: "The leg to the receiving server gets no encryption.",
+    recommendation: "Turn STARTTLS on at the domain's receiving hosts.",
+  },
+  "email.starttls.encryption.fail.upgrade": {
+    title: "Encryption is offered but does not come up",
+    fact: "Hosts: {hosts}",
+    explanation:
+      "The server announced STARTTLS, but the move to encryption did not complete: the handshake failed.",
+    impact: "A sender that trusted the announcement gets no encrypted leg.",
+    recommendation: "Check the certificate and the TLS configuration on the receiving host.",
+  },
+  "email.starttls.encryption.unknown.unavailable": {
+    title: "2check does not check encryption in this deployment",
+    explanation:
+      "Outbound connections to the mail port are not available here. This is a limitation of the service rather than a property of the domain, and it does not lower the domain's score.",
+  },
+  "email.starttls.encryption.unknown.own": {
+    title: "2check does not check its own servers",
+    explanation:
+      "The host belongs to the service's own infrastructure. 2check cannot observe itself from outside, so there is no result. This is a limitation of the service rather than a property of the domain.",
+  },
+  "email.starttls.encryption.unknown.blocked": {
+    title: "The connection to the host was not permitted by the security check",
+    explanation:
+      "The host's addresses did not pass the check 2check runs before any outbound connection. This is a limitation of the service rather than a conclusion about the domain.",
+  },
+  "email.starttls.encryption.unknown.connect": {
+    title: "The receiving server could not be reached",
+    fact: "Hosts probed: {probed}, not probed: {skipped}",
+    explanation:
+      "The connection did not come up, so nothing is known about encryption at this host. That does not mean there is none.",
+  },
+  "email.starttls.encryption.unknown.incomplete": {
+    title: "The session ended before it answered about encryption",
+    fact: "Hosts probed: {probed}, not probed: {skipped}",
+    explanation:
+      "The server answered, but the session ended before STARTTLS was known either way. That does not mean there is none.",
+  },
+  "email.starttls.encryption.blocked": { title: "Encryption was not checked" },
+  "email.starttls.certificate.pass": {
+    title: "The receiving server's certificate is in order",
+    fact: "Host {host}, issued by: {issuer}",
+    explanation:
+      "Validity, the host name and the chain of trust were checked. A certificate cannot establish whether a sender will accept the connection.",
+  },
+  "email.starttls.certificate.fail.expired": {
+    title: "The receiving server's certificate has expired",
+    fact: "Host {host}",
+    explanation: "The certificate's validity period has ended.",
+    impact: "Senders that check the certificate do not accept such a connection.",
+    recommendation: "Reissue the certificate on this host.",
+  },
+  "email.starttls.certificate.fail.early": {
+    title: "The receiving server's certificate is not valid yet",
+    fact: "Host {host}",
+    explanation: "The certificate's validity period has not begun.",
+    impact: "Senders that check the certificate do not accept such a connection.",
+    recommendation: "Check the certificate's start date and the clock on the host.",
+  },
+  "email.starttls.certificate.fail.hostname": {
+    title: "The certificate was not issued for this host's name",
+    fact: "Host {host}",
+    explanation: "The host's name is not among the names in the certificate.",
+    impact: "Senders that match the name do not accept such a connection.",
+    recommendation: "Add the host's name to the certificate, or issue one for that name.",
+  },
+  "email.starttls.certificate.fail.untrusted": {
+    title: "The certificate's chain of trust does not build",
+    fact: "Host {host}",
+    explanation: "The certificate does not lead up to a trusted root.",
+    impact: "Senders that verify the chain do not accept such a connection.",
+    recommendation: "Install the issuer's intermediate certificates on the host.",
+  },
+  "email.starttls.certificate.unknown": {
+    title: "The chain of trust was not verified",
+    fact: "Host {host}",
+    explanation:
+      "Verification stopped before the chain, so no verdict on trust was formed. That is not the same as an untrusted certificate.",
+  },
+  "email.starttls.certificate.blocked": {
+    title: "The receiving server's certificate was not checked",
+  },
+
   "category.email": { title: "Mail" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domain" },

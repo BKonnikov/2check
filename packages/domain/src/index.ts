@@ -10,5 +10,6 @@ export * from "./registry.js";
 export * from "./security-validation.js";
 export * from "./services.js";
 export * from "./spf.js";
+export * from "./starttls.js";
 export * from "./summary.js";
 export * from "./tls.js";

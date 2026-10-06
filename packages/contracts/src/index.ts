@@ -367,7 +367,21 @@ export interface DnsRecordSource {
   readonly voidLookups?: number;
 }
 
-export type EmailCheckSource = DnsRecordSource;
+/**
+ * 1.1 §9.3 — the hosts an SMTP probe reached and the hosts it did not.
+ *
+ * Both counts are carried, because their difference is the only thing that says whether the
+ * result covers the domain's mail servers or only some of them. Neither count alone decides it:
+ * §7.3 caps the probe at four hosts, so a domain with five has a result that is true of what was
+ * probed and silent about the rest.
+ */
+export interface SmtpProbeSource {
+  readonly kind: "SMTP_PROBE";
+  readonly hostsProbed: number;
+  readonly hostsSkipped: number;
+}
+
+export type EmailCheckSource = DnsRecordSource | SmtpProbeSource;
 
 export type ModuleCheckTarget =
   | DnsCheckTarget

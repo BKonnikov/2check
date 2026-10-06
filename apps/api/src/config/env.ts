@@ -26,6 +26,19 @@ const schema = z.object({
    * from a view nobody else shares. Empty by default, and a malformed entry stops startup rather
    * than silently widening what gets probed.
    */
+  /**
+   * 1.1 §7.6 — whether this deployment can open outbound SMTP at all.
+   *
+   * Port 25 is blocked outbound by many hosts, and a blocked port looks from inside exactly like
+   * a server that will not answer. Stating it as configuration is what lets the STARTTLS check
+   * report a limit of the service instead of a fault of somebody's mail server, so the default
+   * is off: a deployment that can probe says so, rather than one that cannot discovering it one
+   * timeout at a time.
+   */
+  EMAIL_SMTP_PROBE_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
   SECURITY_INTERNAL_DENYLIST: z
     .string()
     .default("")

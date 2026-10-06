@@ -4,6 +4,8 @@ import type {
   HostObservation,
   MxObservation,
   SpfLookupAnswer,
+  StarttlsOutcome,
+  TlsCertificate,
 } from "@2check/domain";
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -25,6 +27,9 @@ interface Fixture {
   readonly txt?: Readonly<Record<string, SpfLookupAnswer>>;
   readonly mx?: MxObservation;
   readonly addresses?: Readonly<Record<string, HostObservation>>;
+  /** 1.1 §7 — what one SMTP session against each host came back with. */
+  readonly smtp?: Readonly<Record<string, StarttlsOutcome>>;
+  readonly smtpEnabled?: boolean;
 }
 
 function app(fixture: Fixture) {
@@ -43,6 +48,9 @@ function app(fixture: Fixture) {
       lookup: async (name): Promise<DkimLookupAnswer> =>
         fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
     }),
+    smtpProbeEnabled: fixture.smtpEnabled ?? true,
+    smtpProbe: async (_address, hostname) =>
+      fixture.smtp?.[hostname] ?? { kind: "CONNECT_FAILED", hostname },
     mailHostLookup: () => ({
       provider: "fixture",
       mx: async () => fixture.mx ?? { outcome: "EMPTY" },
@@ -64,6 +72,32 @@ function host(hostname: string, ...addresses: string[]): HostObservation {
   return { hostname, outcome: addresses.length > 0 ? "ANSWER" : "EMPTY", addresses };
 }
 
+function certificate(overrides: Partial<TlsCertificate> = {}): TlsCertificate {
+  return {
+    subject: "mail.example.uz",
+    issuer: "R11 (Let's Encrypt)",
+    validFrom: "2020-01-01T00:00:00.000Z",
+    // Far enough out that the fixture does not expire while the product is still being built.
+    validTo: "2099-01-01T00:00:00.000Z",
+    subjectAltNames: ["DNS:mail.example.uz"],
+    fingerprint256: "ab:cd",
+    selfSigned: false,
+    chainVerification: "TRUSTED",
+    ...overrides,
+  };
+}
+
+function encrypted(hostname: string, cert = certificate()): StarttlsOutcome {
+  return {
+    kind: "SECURED",
+    hostname,
+    address: "93.184.216.34",
+    protocol: "TLSv1.3",
+    certificate: cert,
+    observedAt: "2026-10-06T11:00:00.000Z",
+  };
+}
+
 /** A domain whose mail is in order, so a case can change one thing and keep the rest sound. */
 const SOUND: Fixture = {
   txt: {
@@ -73,9 +107,12 @@ const SOUND: Fixture = {
   },
   mx: { outcome: "ANSWER", records: [{ preference: 10, exchange: "mail.example.uz" }] },
   addresses: {
-    "mail.example.uz": host("mail.example.uz", "203.0.113.1"),
-    "example.uz": host("example.uz", "203.0.113.5"),
+    // A public address, because 1.0 §15 is applied to a mail host exactly as to any other and a
+    // documentation range would be refused before the probe ran.
+    "mail.example.uz": host("mail.example.uz", "93.184.216.34"),
+    "example.uz": host("example.uz", "93.184.216.35"),
   },
+  smtp: { "mail.example.uz": encrypted("mail.example.uz") },
 };
 
 async function scan(fixture: Fixture, dkimSelector?: string) {
@@ -130,6 +167,8 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
       "email.dmarc.deprecated",
       "email.dkim.key",
       "email.mx.records",
+      "email.starttls.encryption",
+      "email.starttls.certificate",
     ]);
     expect(category(body)?.status).toBe("PASS");
   });
@@ -312,6 +351,86 @@ describe("1.1 §5 and §14.2 — DKIM through the whole stack", () => {
       expect(response.json<{ field?: string }>().field).toBe("dkimSelector");
     },
   );
+});
+
+describe("1.1 §7 and §13 — STARTTLS through the whole stack", () => {
+  it("reports encryption and the certificate presented over it", async () => {
+    const body = await scan(SOUND, "mine");
+    expect(check(body, "email.starttls.encryption")?.status).toBe("PASS");
+    expect(check(body, "email.starttls.certificate")?.status).toBe("PASS");
+  });
+
+  it("counts the hosts it probed and the hosts it left alone", async () => {
+    const hosts = ["m1", "m2", "m3", "m4", "m5", "m6"].map((name) => `${name}.example.uz`);
+    const body = await scan({
+      ...SOUND,
+      mx: {
+        outcome: "ANSWER",
+        records: hosts.map((exchange, index) => ({ preference: (index + 1) * 10, exchange })),
+      },
+      addresses: Object.fromEntries(
+        hosts.map((name, index) => [name, host(name, `93.184.216.${index + 1}`)]),
+      ),
+      smtp: Object.fromEntries(hosts.map((name) => [name, encrypted(name)])),
+    });
+    /**
+     * 1.1 §7.3 — four of the six are probed, and the message says so rather than implying more.
+     * The counts also travel as SmtpProbeSource, which 6.4 keeps in the Technical view; here the
+     * assertion is on what the reader of the public result is actually told.
+     */
+    const encryption = check(body, "email.starttls.encryption");
+    expect(encryption?.message.titleCode).toBe("email.starttls.encryption.pass.partial");
+    expect(encryption?.message.params).toMatchObject({ probed: 4, skipped: 2 });
+  });
+
+  it("blocks a host whose address the security check refuses, and says it is our limit", async () => {
+    // AC-13.1 and AC-13.2 — a forbidden address blocks the host; it is not dropped so the rest
+    // of the set can be used.
+    const body = await scan({
+      ...SOUND,
+      addresses: {
+        ...SOUND.addresses,
+        "mail.example.uz": host("mail.example.uz", "93.184.216.34", "127.0.0.1"),
+      },
+    });
+    const encryption = check(body, "email.starttls.encryption");
+    expect(encryption?.status).toBe("UNKNOWN");
+    expect(encryption?.reasonCode).toBe("ssrf_policy_block");
+  });
+
+  it("reports a deployment that cannot open outbound mail as a limit of the service", async () => {
+    const body = await scan({ ...SOUND, smtpEnabled: false });
+    const encryption = check(body, "email.starttls.encryption");
+    expect(encryption?.status).toBe("UNKNOWN");
+    expect(encryption?.reasonCode).toBe("outbound_smtp_unavailable");
+    expect(encryption?.severity).toBe("none");
+  });
+
+  it("warns about a certificate that does not match the host", async () => {
+    const body = await scan({
+      ...SOUND,
+      smtp: {
+        "mail.example.uz": encrypted(
+          "mail.example.uz",
+          certificate({ subjectAltNames: ["DNS:other.example.net"] }),
+        ),
+      },
+    });
+    const cert = check(body, "email.starttls.certificate");
+    expect(cert?.status).toBe("FAIL");
+    expect(cert?.severity).toBe("warning");
+  });
+
+  it("has nothing to probe when the domain accepts no mail", async () => {
+    const body = await scan({
+      ...SOUND,
+      mx: { outcome: "ANSWER", records: [{ preference: 0, exchange: "." }] },
+      addresses: {},
+    });
+    const encryption = check(body, "email.starttls.encryption");
+    expect(encryption?.status).toBe("NOT_APPLICABLE");
+    expect(encryption?.blockedBy).toBe("email.mx.records");
+  });
 });
 
 describe("1.1 §6 — the receiving server through the whole stack", () => {
