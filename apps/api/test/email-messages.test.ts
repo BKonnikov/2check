@@ -380,9 +380,123 @@ describe("the mail messages", () => {
     }
   });
 
-  it("says nothing about the fate of a message", async () => {
-    // 1.1 §11.2 — the forbidden claims all share one shape, and spam is where it shows up.
-    const forbidden = /спам|spam|не дойд|не доставл|not be delivered|will land/i;
+  /**
+   * AC-17.4 — 1.1 §11.2's list of claims this category may not make, checked automatically.
+   *
+   * The list is a release condition, so it is read over every message of the category rather
+   * than over the ones a particular branch happens to produce: wording nobody reaches today is
+   * wording somebody reaches after the next change. Each entry is the claim in the section's own
+   * words, with the shapes it would take in the three languages.
+   */
+  /**
+   * The Cyrillic stems are spelled with an explicit class: JavaScript's \w is ASCII-only, so
+   * `подделк\w*` would stop at the stem and never reach the word after it.
+   */
+  const FORBIDDEN_CLAIMS: readonly {
+    readonly claim: string;
+    readonly pattern: RegExp;
+    /** The codes that could make this claim, where the claim is about a particular outcome. */
+    readonly appliesTo?: RegExp;
+  }[] = [
+    {
+      claim: "no policy means the domain's mail goes to spam",
+      pattern: /спам|spam/i,
+    },
+    {
+      claim: "a published policy means nobody can write in the domain's name",
+      pattern:
+        /нельзя (?:написать|отправить|подписать)|невозможно (?:написать|отправить)|cannot send as|nobody can send|yozib bo'lmaydi|jo'natib bo'lmaydi/i,
+    },
+    {
+      claim: "p=reject means forgery is impossible",
+      pattern:
+        /подделк[а-яё]*(?:\s+\S+){0,3}\s+(?:невозможн|исключен)|forgery(?:\s+\S+){0,3}\s+impossible|cannot be forged|spoofing(?:\s+\S+){0,3}\s+impossible|qalbakilashtirish(?:\s+\S+){0,3}\s+imkonsiz/i,
+    },
+    {
+      claim: "a key that was not found means the domain's mail is unsigned",
+      /**
+       * This claim is a connection between two things: a key that was not found, and mail that
+       * is unsigned. So it is read over the codes that report a key as not found. The wording of
+       * t=y says a receiver should act as though a message were unsigned, which is what RFC 6376
+       * asks for and is not this claim at all.
+       */
+      appliesTo: /^email\.dkim\.key\.(?:fail\.absent|unknown)/,
+      pattern: /не подписаны|not signed|\bunsigned\b|\bimzolanmagan\b/i,
+    },
+    {
+      claim: "a missing reverse name means trouble sending",
+      pattern:
+        /трудност|проблем[а-яё]*\s+(?:с |при )?отправк|delivery (?:problems|trouble)|will struggle|jo'natishda muammo/i,
+    },
+    {
+      claim: "~all means weak or incomplete protection",
+      pattern:
+        /слаб[а-яё]*\s+защит|неполн[а-яё]*\s+защит|weak protection|incomplete protection|zaif himoya/i,
+    },
+    {
+      claim: "the fate of a particular message",
+      pattern: /не дойд|не доставл|not be delivered|will land|yetib bormaydi/i,
+    },
+  ];
+
+  it("has a pattern that would in fact catch each claim it stands for", () => {
+    /**
+     * A guard that matches nothing reads as coverage while providing none, so each pattern is
+     * shown against the sentence it exists to refuse. These are not wordings from the catalogue:
+     * they are the claims §11.2 names, written the way somebody would write them by accident.
+     */
+    const wouldBeCaught: readonly (readonly [string, string])[] = [
+      ["no policy means the domain's mail goes to spam", "Письма домена будут попадать в спам."],
+      [
+        "a published policy means nobody can write in the domain's name",
+        "С такой записью от имени домена нельзя написать.",
+      ],
+      ["p=reject means forgery is impossible", "При p=reject подделка писем невозможна."],
+      [
+        "a key that was not found means the domain's mail is unsigned",
+        "Письма домена не подписаны.",
+      ],
+      [
+        "a missing reverse name means trouble sending",
+        "Без обратного имени будут проблемы с отправкой.",
+      ],
+      ["~all means weak or incomplete protection", "Механизм ~all даёт слабую защиту."],
+      ["the fate of a particular message", "Такое письмо не дойдёт до получателя."],
+    ];
+    for (const [claim, sentence] of wouldBeCaught) {
+      const entry = FORBIDDEN_CLAIMS.find((candidate) => candidate.claim === claim);
+      expect(entry, claim).toBeDefined();
+      expect(sentence, claim).toMatch(entry?.pattern ?? /$^/);
+    }
+    expect(wouldBeCaught).toHaveLength(FORBIDDEN_CLAIMS.length);
+  });
+
+  it("makes none of the claims §11.2 rules out, in any language", () => {
+    for (const language of LANGUAGES) {
+      for (const [code, entry] of Object.entries(CATALOGUES[language])) {
+        if (!code.startsWith("email.")) {
+          continue;
+        }
+        const text = [
+          entry.title,
+          entry.fact,
+          entry.explanation,
+          entry.impact,
+          entry.recommendation,
+        ]
+          .filter((part): part is string => part !== undefined)
+          .join(" ");
+        for (const { claim, pattern, appliesTo } of FORBIDDEN_CLAIMS) {
+          if (appliesTo !== undefined && !appliesTo.test(code)) {
+            continue;
+          }
+          expect(text, `${code} in ${language} claims: ${claim}`).not.toMatch(pattern);
+        }
+      }
+    }
+  });
+
+  it("holds every message a branch actually produces to the same list", async () => {
     for (const check of await everyOutcome()) {
       for (const language of LANGUAGES) {
         const resolved = resolveMessage(check.message, language);
@@ -395,7 +509,12 @@ describe("the mail messages", () => {
         ]
           .filter((part): part is string => part !== undefined)
           .join(" ");
-        expect(text, check.message.titleCode).not.toMatch(forbidden);
+        for (const { claim, pattern, appliesTo } of FORBIDDEN_CLAIMS) {
+          if (appliesTo !== undefined && !appliesTo.test(check.message.titleCode)) {
+            continue;
+          }
+          expect(text, `${check.message.titleCode} claims: ${claim}`).not.toMatch(pattern);
+        }
       }
     }
   });
