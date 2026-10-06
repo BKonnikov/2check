@@ -3,6 +3,7 @@ import type {
   DnsAnswer,
   DnsProviderResult,
   DnsQType,
+  DnsQueryableType,
   DnsRcode,
   DnsTransportStatus,
 } from "@2check/contracts";
@@ -62,7 +63,7 @@ export function classifyError(error: unknown): {
 async function queryAnswers(
   resolver: Resolver,
   qname: string,
-  qtype: DnsQType,
+  qtype: DnsQueryableType,
 ): Promise<DnsAnswer[]> {
   switch (qtype) {
     case "A":
@@ -91,6 +92,9 @@ async function queryAnswers(
       return (await resolver.resolveNs(qname)).map((value) => ({ type: qtype, value }));
     case "CNAME":
       return (await resolver.resolveCname(qname)).map((value) => ({ type: qtype, value }));
+    case "PTR":
+      // 1.1 §8.1 — the names an address answers with, asked in the reverse zone.
+      return (await resolver.resolvePtr(qname)).map((value) => ({ type: qtype, value }));
     case "SOA": {
       const soa = await resolver.resolveSoa(qname);
       return [
@@ -112,7 +116,7 @@ export async function queryProvider(
   provider: string,
   address: string,
   qname: string,
-  qtype: DnsQType,
+  qtype: DnsQueryableType,
   options: QueryOptions = {},
 ): Promise<DnsProviderResult> {
   const resolver = new Resolver({ timeout: options.timeoutMs ?? 3000, tries: 1 });

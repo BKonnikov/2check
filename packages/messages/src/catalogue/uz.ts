@@ -666,6 +666,53 @@ export const uz: Catalogue = {
     title: "Qabul qiluvchi server sertifikati tekshirilmadi",
   },
 
+  "email.ptr.present": {
+    title: "{ipFamily} teskari nomi tasdiqlangan",
+    fact: "Nomlar: {names}",
+    explanation:
+      "Teskari nom — «bu manzilning nomi qanday» degan savolga javob beradigan PTR yozuvi. U o'sha nom aynan shu manzilga qaytib hal bo'lganda tasdiqlangan hisoblanadi: to'g'ri va teskari yozuvlar muvofiqligi RFC 1912 da tavsiflangan.",
+  },
+  "email.ptr.fail.unconfirmed": {
+    title: "{ipFamily} teskari nomi tasdiqlanmaydi",
+    fact: "Nomlar: {names}, tugunlar: {hosts}",
+    explanation:
+      "Manzil bo'yicha olingan nom shu manzilga qaytib hal bo'lmaydi. Bu to'g'ri va teskari yozuvlar orasidagi muvofiqsizlik, yomon niyat belgisi emas, va u nom yoki manzil kimga tegishli ekanini aniqlamaydi.",
+    impact: "Tekshiruvchi tomon to'g'ri va teskari yozuvning kelishuvini olmaydi.",
+    recommendation: "Nom yozuvini tugun manzili bilan muvofiqlashtiring yoki aksincha.",
+  },
+  "email.ptr.fail.absent": {
+    title: "{ipFamily} teskari nomi yo'q",
+    fact: "Tugunlar: {hosts}",
+    explanation:
+      "Teskari nom — «bu manzilning nomi qanday» degan savolga javob beradigan PTR yozuvi. Bu tugunlarning manzillarida u yo'q.",
+    impact: "Tekshiruvchi tomonda qabul qiluvchi tugun manzili bilan solishtiradigan nom yo'q.",
+    recommendation:
+      "Manzil uchun PTR yozuvini manzil blokining egasidan — odatda hosting yoki aloqa operatoridan — so'rang.",
+  },
+  "email.ptr.fail.alias": {
+    title: "{ipFamily} teskari nomi taxallusga ishora qiladi",
+    fact: "Nomlar: {names}, tugunlar: {hosts}",
+    explanation: "RFC 1912 PTR yozuvini CNAME taxallusiga yo'naltirishni tavsiya qilmaydi.",
+    impact: "Ba'zi tekshiruvchi tomonlar bunday yozuvni boshqalardan farqli ishlaydi.",
+    recommendation: "PTR yozuvini taxallusga emas, manzil yozuvi bor nomga yo'naltiring.",
+  },
+  "email.ptr.unknown.confirmation": {
+    title: "{ipFamily} teskari nomini tasdiqlash imkoni bo'lmadi",
+    fact: "Nomlar: {names}",
+    explanation:
+      "Nom bo'yicha to'g'ri so'rov aniq natija bermadi, shuning uchun nom tasdiqlanganmi yoki yo'qmi — ma'lum emas. Shu asosda u tasdiqlanmagan ham hisoblanmaydi.",
+  },
+  "email.ptr.unknown.lookup": {
+    title: "{ipFamily} teskari nomini olish imkoni bo'lmadi",
+    explanation: "Teskari so'rov aniq natija bermadi. Bu nom yo'q degani emas.",
+  },
+  "email.ptr.not_applicable": {
+    title: "Qabul qiluvchi tugunlarda {ipFamily} manzili yo'q",
+    explanation:
+      "Teskari nom manzildan so'raladi, domen tugunlarida esa bu turkumdagi manzil topilmadi. Boshqa turkumning natijasi bunga o'tmaydi.",
+  },
+  "email.ptr.blocked": { title: "{ipFamily} teskari nomi tekshirilmadi" },
+
   "category.email": { title: "Pochta" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domen" },

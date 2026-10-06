@@ -49,6 +49,28 @@ export function buildDeadlineChecks(
       },
     ];
   }
+  if (category === "email") {
+    /**
+     * 1.1 §2.1 — the mail category has no single root: the sending policies are read from the
+     * domain's own records and the receiving checks from the hosts its MX names, and neither
+     * group waits on the other. So the deadline is reported once per independent group rather
+     * than against one check that would stand for work the other group never started.
+     */
+    return [
+      {
+        ...shared,
+        checkId: "email.spf.record",
+        target: { kind: "EMAIL_POLICY", policy: "SPF", queriedName: options.hostname },
+        message: { titleCode: "email.spf.record.unknown" },
+      },
+      {
+        ...shared,
+        checkId: "email.mx.records",
+        target: { kind: "MAIL_HOST", hostname: options.hostname },
+        message: { titleCode: "email.mx.records.unknown" },
+      },
+    ];
+  }
   return [
     {
       ...shared,

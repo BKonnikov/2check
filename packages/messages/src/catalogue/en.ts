@@ -659,6 +659,55 @@ export const en: Catalogue = {
     title: "The receiving server's certificate was not checked",
   },
 
+  "email.ptr.present": {
+    title: "The {ipFamily} reverse name is confirmed",
+    fact: "Names: {names}",
+    explanation:
+      "A reverse name is a PTR record, which answers the question of what name an address has. It counts as confirmed when that name resolves back to the same address: the forward and reverse agreement RFC 1912 describes.",
+  },
+  "email.ptr.fail.unconfirmed": {
+    title: "The {ipFamily} reverse name is not confirmed",
+    fact: "Names: {names}, hosts: {hosts}",
+    explanation:
+      "The name found at the address does not resolve back to it. That is an inconsistency between forward and reverse records rather than a sign of bad intent, and it establishes nothing about who owns the name or the address.",
+    impact: "A verifier gets no agreement between the forward and the reverse record.",
+    recommendation:
+      "Bring the name's record into line with the host's address, or the other way round.",
+  },
+  "email.ptr.fail.absent": {
+    title: "There is no {ipFamily} reverse name",
+    fact: "Hosts: {hosts}",
+    explanation:
+      "A reverse name is a PTR record, which answers the question of what name an address has. The addresses of these hosts have none.",
+    impact: "A verifier has nothing to match against the receiving host's address.",
+    recommendation:
+      "Ask for a PTR record from whoever holds the address block — usually the hosting provider or the network operator.",
+  },
+  "email.ptr.fail.alias": {
+    title: "The {ipFamily} reverse name points at an alias",
+    fact: "Names: {names}, hosts: {hosts}",
+    explanation: "RFC 1912 advises against pointing a PTR record at a CNAME alias.",
+    impact: "Some verifiers handle such a record differently from the others.",
+    recommendation:
+      "Point the PTR record at a name with an address record rather than at an alias.",
+  },
+  "email.ptr.unknown.confirmation": {
+    title: "The {ipFamily} reverse name could not be confirmed",
+    fact: "Names: {names}",
+    explanation:
+      "The forward query for the name gave no definite result, so whether the name is confirmed is not known. It does not count as unconfirmed on that account.",
+  },
+  "email.ptr.unknown.lookup": {
+    title: "The {ipFamily} reverse name could not be retrieved",
+    explanation: "The reverse query gave no definite result. That does not mean there is no name.",
+  },
+  "email.ptr.not_applicable": {
+    title: "The receiving hosts have no {ipFamily} address",
+    explanation:
+      "A reverse name is asked of an address, and the domain's hosts have none of this family. The other family's result does not carry over to this one.",
+  },
+  "email.ptr.blocked": { title: "The {ipFamily} reverse name was not checked" },
+
   "category.email": { title: "Mail" },
   "category.dns": { title: "DNS" },
   "category.registry": { title: "Domain" },

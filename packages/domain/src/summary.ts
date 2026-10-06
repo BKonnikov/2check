@@ -30,6 +30,13 @@ export interface IssueGroup {
   readonly category: ScanCategory;
   readonly primaryCheckId: string;
   readonly checkIds: readonly string[];
+  /**
+   * 1.1 §10.3 — when present, a failing check joins the group only if its message is one of
+   * these. A check can fail for several unrelated reasons, and one root defect is one Issue: two
+   * policies that are both absent are one defect, while two policies each broken in their own
+   * way are two. Without this the group would collect whichever failure happened to occur.
+   */
+  readonly titleCodes?: readonly string[];
 }
 
 /**
@@ -48,6 +55,23 @@ export const DEFAULT_ISSUE_GROUPS: readonly IssueGroup[] = [
     category: "tls",
     primaryCheckId: "tls.connection.ipv4",
     checkIds: ["tls.connection.ipv4", "tls.connection.ipv6"],
+  },
+  /**
+   * 1.1 §10.3 — a domain that declared no sending policy at all. Publishing neither SPF nor
+   * DMARC is one decision rather than two faults, so it costs one penalty. This is a scoring
+   * rule of 2check and not a claim that the two mechanisms do the same work.
+   *
+   * The section's other two rows need no group. A policy that is published but unusable —
+   * several records, a record that is not recognised, one that does not parse — is already one
+   * Issue, because those are the failure modes of a single check. And the results blocked by a
+   * missing receiving server are NOT_APPLICABLE, which never becomes an Issue at all (AC-10.5).
+   */
+  {
+    issueId: "email.policy.absent",
+    category: "email",
+    primaryCheckId: "email.spf.record",
+    checkIds: ["email.spf.record", "email.dmarc.record"],
+    titleCodes: ["email.spf.record.fail.absent", "email.dmarc.record.fail.absent"],
   },
   {
     issueId: "dns.record.consistency",
@@ -69,6 +93,10 @@ export function validateIssueGroups(groups: readonly IssueGroup[]): void {
   for (const group of groups) {
     if (!group.checkIds.includes(group.primaryCheckId)) {
       throw new Error(`Issue group ${group.issueId} does not contain its primary check`);
+    }
+    if (group.titleCodes !== undefined && group.titleCodes.length === 0) {
+      // An empty list would quietly collect nothing, which is not the same as having no list.
+      throw new Error(`Issue group ${group.issueId} lists no message it applies to`);
     }
   }
   /**
@@ -129,7 +157,11 @@ export function buildIssues(
       if (group.category !== category.category) {
         continue;
       }
-      const members = failed.filter((check) => group.checkIds.includes(check.checkId));
+      const members = failed.filter(
+        (check) =>
+          group.checkIds.includes(check.checkId) &&
+          (group.titleCodes === undefined || group.titleCodes.includes(check.message.titleCode)),
+      );
       if (members.length === 0) {
         continue;
       }

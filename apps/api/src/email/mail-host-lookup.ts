@@ -1,5 +1,12 @@
-import type { DnsProviderResult, DnsQType } from "@2check/contracts";
-import type { HostObservation, MailLookupOutcome, MxObservation, MxRecord } from "@2check/domain";
+import type { DnsProviderResult, DnsQueryableType } from "@2check/contracts";
+import type {
+  HostObservation,
+  MailLookupOutcome,
+  MxObservation,
+  MxRecord,
+  PtrOutcome,
+} from "@2check/domain";
+import { reverseName } from "@2check/domain";
 import { DEFAULT_RESOLVERS, queryProvider } from "../dns/resolver-set.js";
 
 /**
@@ -42,16 +49,26 @@ export function parseMxValue(value: string): MxRecord | undefined {
   return { preference, exchange: match[2] ?? "" };
 }
 
+export interface ReverseObservation {
+  readonly outcome: PtrOutcome;
+  readonly names?: readonly string[];
+}
+
 export interface MailHostPort {
   readonly provider: string;
   mx(domain: string): Promise<MxObservation>;
   addresses(name: string): Promise<HostObservation>;
+  /** 1.1 §8.1 — the name an address answers with, asked in the reverse zone. */
+  reverse(address: string): Promise<ReverseObservation>;
 }
 
 export function createMailHostLookup(): MailHostPort {
   const resolver = DEFAULT_RESOLVERS[0];
   const provider = resolver?.provider ?? "unknown";
-  const ask = async (name: string, qtype: DnsQType): Promise<DnsProviderResult | undefined> => {
+  const ask = async (
+    name: string,
+    qtype: DnsQueryableType,
+  ): Promise<DnsProviderResult | undefined> => {
     if (resolver === undefined) {
       return undefined;
     }
@@ -76,6 +93,25 @@ export function createMailHostLookup(): MailHostPort {
         .filter((record): record is MxRecord => record !== undefined);
       // An answer we could not read is not an answer that said nothing.
       return records.length === 0 ? { outcome: "INDETERMINATE" } : { outcome: "ANSWER", records };
+    },
+    async reverse(address) {
+      const name = reverseName(address);
+      if (name === undefined) {
+        // Not an address we can build a reverse name from, so there is nothing to ask.
+        return { outcome: "INDETERMINATE" };
+      }
+      const result = await ask(name, "PTR");
+      if (result === undefined) {
+        return { outcome: "INDETERMINATE" };
+      }
+      const outcome = toOutcome(result);
+      if (outcome !== "ANSWER") {
+        return { outcome };
+      }
+      const names = result.answers
+        .map((answer) => answer.value.trim().replace(/\.$/, ""))
+        .filter((value) => value !== "");
+      return names.length === 0 ? { outcome: "EMPTY" } : { outcome: "ANSWER", names };
     },
     async addresses(name) {
       const [v4, v6, alias] = await Promise.all([

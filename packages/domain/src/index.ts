@@ -6,6 +6,7 @@ export * from "./dkim.js";
 export * from "./dmarc.js";
 export * from "./dns.js";
 export * from "./mail-host.js";
+export * from "./ptr.js";
 export * from "./registry.js";
 export * from "./security-validation.js";
 export * from "./services.js";

@@ -155,6 +155,17 @@ export type DependencyMode = (typeof DEPENDENCY_MODES)[number];
 export const DNS_QTYPES = ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "SOA"] as const;
 export type DnsQType = (typeof DNS_QTYPES)[number];
 
+/**
+ * A type the resolver layer can be asked for, which is not the same list.
+ *
+ * `DNS_QTYPES` is PRD 8.2's set: the types the DNS category asks of every resolver, and the set
+ * the DNS cache key is built from. 1.1 §8 needs PTR, which belongs to neither of those — it is
+ * asked of one resolver, about an address rather than the domain. Widening PRD 8.2's list would
+ * have changed what every scan asks for and what its cache key covers.
+ */
+export const DNS_QUERYABLE_TYPES = [...DNS_QTYPES, "PTR"] as const;
+export type DnsQueryableType = (typeof DNS_QUERYABLE_TYPES)[number];
+
 /** PRD 8.3 */
 export const DNS_TRANSPORT_STATUSES = [
   "SUCCESS",
@@ -184,7 +195,7 @@ export const DNS_RECORD_STATES = ["PRESENT", "ABSENT", "NAME_NOT_FOUND", "INDETE
 export type DnsRecordState = (typeof DNS_RECORD_STATES)[number];
 
 export interface DnsAnswer {
-  readonly type: DnsQType;
+  readonly type: DnsQueryableType;
   readonly value: string;
   /** PRD 8.3 — TTL is shown per provider and never participates in RRset equality. */
   readonly ttl?: number;
@@ -194,7 +205,7 @@ export interface DnsAnswer {
 export interface DnsProviderResult {
   readonly provider: string;
   readonly qname: string;
-  readonly qtype: DnsQType;
+  readonly qtype: DnsQueryableType;
   readonly transportStatus: DnsTransportStatus;
   readonly rcode?: DnsRcode;
   readonly outcome?: DnsOutcome;

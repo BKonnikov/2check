@@ -163,7 +163,7 @@ describe("PRD 16.7 — the overall scan deadline", () => {
     // Not FAILED: the scan produced a trustworthy result for everything it managed to check.
     expect(body?.executionState).toBe("COMPLETED");
     expect(body?.completionReason).toBe("DEADLINE_TERMINALIZED");
-    expect(body?.categories.length).toBe(3);
+    expect(body?.categories.length).toBe(4);
     const checks = body?.categories.flatMap((category) => category.checks) ?? [];
     expect(checks.some((check) => check.reasonCode === "scan_deadline_exceeded")).toBe(true);
     // AC-23.4 — nothing the deadline interrupted is reported as a confirmed problem.

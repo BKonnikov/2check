@@ -44,11 +44,12 @@ const STALE_MARGIN_MS = 10_000;
 const IMPLEMENTED_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls", "email"];
 
 /**
- * 1.1 §1.1 — the mail category belongs in a full scan too, and joins this list once its checks
- * are all built. Until then it is reachable as a PARTIAL scan, because half a category in every
- * full scan would report a domain's mail on the strength of one of its six checks.
+ * 1.1 §1.1 — the mail category belongs in a full scan, and now that its six checks are built it
+ * takes part in one. The list stayed shorter than IMPLEMENTED_CATEGORIES while the category was
+ * half-written, because a full scan would otherwise have reported a domain's mail on the
+ * strength of whichever checks existed that week.
  */
-const FULL_SCAN_CATEGORIES: readonly ScanCategory[] = ["dns", "registry", "tls"];
+const FULL_SCAN_CATEGORIES: readonly ScanCategory[] = [...SCAN_CATEGORIES];
 
 function apiError(
   reply: FastifyReply,

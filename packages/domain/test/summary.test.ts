@@ -275,3 +275,134 @@ describe("PRD 11.3 — the summary", () => {
     expect(summary.generatedAt).toBe("2026-09-15T00:00:00.000Z");
   });
 });
+
+/**
+ * 1.1 §10.3 and §10.4 — how the mail category enters the score.
+ *
+ * The checks here carry their real message codes, because the grouping of this category turns on
+ * them: a check that can fail for several unrelated reasons must not have all of them collected
+ * into one Issue.
+ */
+describe("1.1 §10 — the mail category in the summary", () => {
+  function mail(checkId: string, titleCode: string, severity: Severity = "warning"): CheckResult {
+    return {
+      checkId,
+      category: "email",
+      status: "FAIL",
+      severity,
+      target: { kind: "EMAIL_POLICY", policy: "SPF", queriedName: "example.uz" },
+      message: { titleCode },
+      freshness: { checkedAt: "2026-10-06T00:00:00.000Z", cached: false, cacheAge: 0 },
+    };
+  }
+
+  it("AC-10.4 — counts a domain with neither policy as one defect, not two", () => {
+    const issues = buildIssues(
+      [
+        category("email", [
+          mail("email.spf.record", "email.spf.record.fail.absent"),
+          mail("email.dmarc.record", "email.dmarc.record.fail.absent"),
+        ]),
+      ],
+      DEFAULT_ISSUE_GROUPS,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.issueId).toBe("email.policy.absent");
+    expect(issues[0]?.primaryCheckId).toBe("email.spf.record");
+    expect(issues[0]?.relatedCheckIds).toEqual(["email.dmarc.record"]);
+    expect(calculateScore(issues, DEFAULT_ISSUE_PENALTIES).finalScore).toBe(
+      100 - DEFAULT_ISSUE_PENALTIES.warning,
+    );
+  });
+
+  it("keeps two policies broken in their own ways apart", () => {
+    // §10.3 — errors of different published policies are grouped only on an established common
+    // cause, and two records at one name has nothing to do with another policy being absent.
+    const issues = buildIssues(
+      [
+        category("email", [
+          mail("email.spf.record", "email.spf.record.fail.absent"),
+          mail("email.dmarc.record", "email.dmarc.record.fail.multiple", "critical"),
+        ]),
+      ],
+      DEFAULT_ISSUE_GROUPS,
+    );
+    expect(issues).toHaveLength(2);
+    expect(issues.map((issue) => issue.issueId).sort()).toEqual([
+      "email.dmarc.record",
+      "email.policy.absent",
+    ]);
+  });
+
+  it("AC-10.5 — a check blocked by a missing receiving server adds no issue of its own", () => {
+    const blocked: CheckResult = {
+      checkId: "email.starttls.encryption",
+      category: "email",
+      status: "NOT_APPLICABLE",
+      severity: "none",
+      target: { kind: "MAIL_HOST", hostname: "example.uz" },
+      message: { titleCode: "email.starttls.encryption.blocked" },
+      blockedBy: "email.mx.records",
+      freshness: { checkedAt: "2026-10-06T00:00:00.000Z", cached: false, cacheAge: 0 },
+    };
+    const issues = buildIssues(
+      [
+        category("email", [
+          mail("email.mx.records", "email.mx.records.fail.missing", "critical"),
+          blocked,
+        ]),
+      ],
+      DEFAULT_ISSUE_GROUPS,
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.primaryCheckId).toBe("email.mx.records");
+  });
+
+  it("AC-10.6 — refuses a group that reaches across categories", () => {
+    expect(() =>
+      validateIssueGroups([
+        {
+          issueId: "email.and.dns",
+          category: "email",
+          primaryCheckId: "email.spf.record",
+          checkIds: ["email.spf.record", "dns.txt.resolve"],
+        },
+      ]),
+    ).toThrow(/claims dns.txt.resolve/);
+  });
+
+  it("refuses a group that lists no message it applies to", () => {
+    expect(() =>
+      validateIssueGroups([
+        {
+          issueId: "email.nothing",
+          category: "email",
+          primaryCheckId: "email.spf.record",
+          checkIds: ["email.spf.record"],
+          titleCodes: [],
+        },
+      ]),
+    ).toThrow(/lists no message/);
+  });
+
+  it("AC-10.7 — an unknown selector leaves the category short of a confirmed verdict", () => {
+    const unknown: CheckResult = {
+      checkId: "email.dkim.key",
+      category: "email",
+      status: "UNKNOWN",
+      severity: "none",
+      reasonCode: "dkim_selector_unknown",
+      target: { kind: "EMAIL_POLICY", policy: "DKIM", queriedName: "_domainkey.example.uz" },
+      message: { titleCode: "email.dkim.key.unknown.selector" },
+      freshness: { checkedAt: "2026-10-06T00:00:00.000Z", cached: false, cacheAge: 0 },
+    };
+    const summary = buildSummary([category("email", [unknown], "PARTIAL")], {
+      mode: "FULL",
+      state: "FINAL",
+      groups: DEFAULT_ISSUE_GROUPS,
+    });
+    expect(summary.issues).toEqual([]);
+    expect(summary.confidence.level).toBe("REDUCED");
+    expect(summary.verdictCode).toBe("NO_CONFIRMED_ISSUES_INCOMPLETE");
+  });
+});

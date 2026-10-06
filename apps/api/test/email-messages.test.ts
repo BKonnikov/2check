@@ -3,6 +3,7 @@ import {
   analyseDkim,
   analyseDmarc,
   analyseMailServer,
+  analysePtr,
   analyseSpf,
   analyseStarttls,
   type DkimLookupAnswer,
@@ -11,6 +12,7 @@ import {
   evaluateDkimCheck,
   evaluateDmarcChecks,
   evaluateMailServerCheck,
+  evaluatePtrChecks,
   evaluateSpfChecks,
   evaluateStarttlsChecks,
   type HostObservation,
@@ -138,6 +140,26 @@ function tlsOff(hostname: string): StarttlsOutcome {
 function starttlsOutcome(probes: readonly StarttlsOutcome[], skipped: readonly string[] = []) {
   const analysis = analyseStarttls({ domain: "example.uz", probes, skipped });
   return evaluateStarttlsChecks(analysis, { domain: "example.uz", freshness: FRESHNESS });
+}
+
+function ptrOutcome(
+  reverse: readonly {
+    address: string;
+    hostname: string;
+    outcome: "ANSWER" | "EMPTY" | "INDETERMINATE";
+    names?: readonly string[];
+  }[],
+  forward: readonly {
+    name: string;
+    outcome: "ANSWER" | "EMPTY" | "INDETERMINATE";
+    addresses?: readonly string[];
+    alias?: boolean;
+  }[] = [],
+) {
+  return evaluatePtrChecks(analysePtr({ reverse, forward }), {
+    domain: "example.uz",
+    freshness: FRESHNESS,
+  });
 }
 
 /** One of every branch the modules can take. */
@@ -280,7 +302,28 @@ async function everyOutcome() {
     starttlsOutcome([tlsOn("mail.uz", cert({ chainVerification: "UNTRUSTED" }))]),
     starttlsOutcome([tlsOn("mail.uz", cert({ chainVerification: "NOT_VERIFIED" }))]),
   ];
-  return [...results, ...mail, ...dmarc, ...dkim, ...starttls].flat();
+  const named = (names: readonly string[]) => [
+    { address: "203.0.113.5", hostname: "mail.uz", outcome: "ANSWER" as const, names },
+  ];
+  const ptr = [
+    ptrOutcome(named(["mail.uz"]), [
+      { name: "mail.uz", outcome: "ANSWER", addresses: ["203.0.113.5"] },
+    ]),
+    ptrOutcome(named(["elsewhere.uz"]), [
+      { name: "elsewhere.uz", outcome: "ANSWER", addresses: ["198.51.100.9"] },
+    ]),
+    ptrOutcome(named(["alias.uz"]), [
+      { name: "alias.uz", outcome: "ANSWER", addresses: ["203.0.113.5"], alias: true },
+    ]),
+    ptrOutcome([
+      { address: "203.0.113.5", hostname: "mail.uz", outcome: "EMPTY" },
+      { address: "2001:db8::1", hostname: "mail.uz", outcome: "EMPTY" },
+    ]),
+    ptrOutcome(named(["mail.uz"]), [{ name: "mail.uz", outcome: "INDETERMINATE" }]),
+    ptrOutcome([{ address: "203.0.113.5", hostname: "mail.uz", outcome: "INDETERMINATE" }]),
+    ptrOutcome([]),
+  ];
+  return [...results, ...mail, ...dmarc, ...dkim, ...starttls, ...ptr].flat();
 }
 
 describe("the mail messages", () => {

@@ -322,7 +322,7 @@ describe("PRD 10 and 16 — the TLS category through the API", () => {
     throw new Error("scan did not terminate");
   }
 
-  it("runs all three categories on a FULL scan", async () => {
+  it("runs every category on a FULL scan", async () => {
     const instance = app();
     const body = await complete(instance, { input: "example.uz", mode: "FULL" });
     expect(body.executionState).toBe("COMPLETED");
@@ -330,6 +330,7 @@ describe("PRD 10 and 16 — the TLS category through the API", () => {
       "dns",
       "registry",
       "tls",
+      "email",
     ]);
     const tls = body.categories.find((category) => category.category === "tls");
     expect(tls?.status).toBe("PASS");

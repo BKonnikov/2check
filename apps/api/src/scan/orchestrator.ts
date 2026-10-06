@@ -10,6 +10,7 @@ import {
   analyseDkim,
   analyseDmarc,
   analyseMailServer,
+  analysePtr,
   analyseSpf,
   analyseStarttls,
   buildCategoryResult,
@@ -26,6 +27,7 @@ import {
   evaluateDmarcChecks,
   evaluateMailServerCheck,
   evaluateNameExistence,
+  evaluatePtrChecks,
   evaluateRegistryLookup,
   evaluateResolveCheck,
   evaluateResolverConsistency,
@@ -33,10 +35,14 @@ import {
   evaluateStarttlsChecks,
   evaluateTlsBlockedChecks,
   evaluateTlsChecks,
+  ipFamilyOf,
   type MailServerAnalysis,
   markServedFromCache,
   mayReadCache,
   mayWriteCache,
+  PTR_MAX_ADDRESSES_PER_FAMILY,
+  type PtrForwardObservation,
+  type PtrObservation,
   registrationCacheTtlSeconds,
   resolveRegistryLookup,
   STARTTLS_MAX_HOSTS,
@@ -249,6 +255,59 @@ async function probeMailHosts(
     probes.push(outcome);
   }
   return { domain, probes, skipped };
+}
+
+/**
+ * 1.1 §8.1 — the reverse names of the addresses the receiving hosts answer at.
+ *
+ * Only the hosts' own addresses are asked about, and only a couple per family: §8.3 wants both
+ * families looked at, so the bound is per family rather than shared, and each address costs a
+ * reverse query plus a forward one to confirm it against the shared scan budget.
+ *
+ * A reverse name is confirmed by resolving it forward, which is the same question the MX check
+ * already asks of a host name, so it goes through the same port. A name that several addresses
+ * share is asked about once.
+ */
+async function reverseNames(
+  mail: MailServerAnalysis,
+  port: MailHostPort,
+): Promise<{ reverse: readonly PtrObservation[]; forward: readonly PtrForwardObservation[] }> {
+  const budget: Record<string, number> = { IPV4: 0, IPV6: 0 };
+  const chosen: { address: string; hostname: string }[] = [];
+  for (const host of mail.hosts) {
+    for (const address of host.addresses) {
+      const family = ipFamilyOf(address);
+      if ((budget[family] ?? 0) >= PTR_MAX_ADDRESSES_PER_FAMILY) {
+        continue;
+      }
+      budget[family] = (budget[family] ?? 0) + 1;
+      chosen.push({ address, hostname: host.hostname });
+    }
+  }
+  if (chosen.length === 0) {
+    return { reverse: [], forward: [] };
+  }
+
+  const answers = await Promise.all(chosen.map((entry) => port.reverse(entry.address)));
+  const reverse: PtrObservation[] = chosen.map((entry, index) => ({
+    address: entry.address,
+    hostname: entry.hostname,
+    outcome: answers[index]?.outcome ?? "INDETERMINATE",
+    ...(answers[index]?.names === undefined ? {} : { names: answers[index]?.names }),
+  }));
+
+  const names = [...new Set(reverse.flatMap((entry) => entry.names ?? []))];
+  const resolved = await Promise.all(names.map((name) => port.addresses(name)));
+  const forward: PtrForwardObservation[] = names.map((name, index) => {
+    const observation = resolved[index];
+    return {
+      name,
+      outcome: observation?.outcome ?? "INDETERMINATE",
+      ...(observation?.addresses === undefined ? {} : { addresses: observation.addresses }),
+      ...(observation?.alias === true ? { alias: true } : {}),
+    };
+  });
+  return { reverse, forward };
 }
 
 /**
@@ -479,6 +538,7 @@ export async function runScan(
         }
 
         const starttls = analyseStarttls(await probeMailHosts(record, mail, deps));
+        const ptr = analysePtr(await reverseNames(mail, mailPort));
 
         // 1.1 §2.1 — the groups in the order the section lists them.
         const freshness = freshnessNow();
@@ -489,6 +549,7 @@ export async function runScan(
             evaluateDkimCheck(dkim, { domain: qname, freshness }),
             evaluateMailServerCheck(mail, { domain: qname, freshness }),
             ...evaluateStarttlsChecks(starttls, { domain: qname, freshness }),
+            ...evaluatePtrChecks(ptr, { domain: qname, freshness }),
           ]),
         );
       }

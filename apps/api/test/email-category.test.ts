@@ -30,6 +30,8 @@ interface Fixture {
   /** 1.1 §7 — what one SMTP session against each host came back with. */
   readonly smtp?: Readonly<Record<string, StarttlsOutcome>>;
   readonly smtpEnabled?: boolean;
+  /** 1.1 §8 — the reverse zone, keyed by address. */
+  readonly ptr?: Readonly<Record<string, readonly string[]>>;
 }
 
 function app(fixture: Fixture) {
@@ -56,6 +58,10 @@ function app(fixture: Fixture) {
       mx: async () => fixture.mx ?? { outcome: "EMPTY" },
       addresses: async (name) =>
         fixture.addresses?.[name] ?? { hostname: name, outcome: "EMPTY", addresses: [] },
+      reverse: async (address) => {
+        const names = fixture.ptr?.[address];
+        return names === undefined ? { outcome: "NAME_NOT_FOUND" } : { outcome: "ANSWER", names };
+      },
     }),
   });
 }
@@ -113,6 +119,7 @@ const SOUND: Fixture = {
     "example.uz": host("example.uz", "93.184.216.35"),
   },
   smtp: { "mail.example.uz": encrypted("mail.example.uz") },
+  ptr: { "93.184.216.34": ["mail.example.uz"] },
 };
 
 async function scan(fixture: Fixture, dkimSelector?: string) {
@@ -169,6 +176,8 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
       "email.mx.records",
       "email.starttls.encryption",
       "email.starttls.certificate",
+      "email.ptr.ipv4",
+      "email.ptr.ipv6",
     ]);
     expect(category(body)?.status).toBe("PASS");
   });
@@ -430,6 +439,91 @@ describe("1.1 §7 and §13 — STARTTLS through the whole stack", () => {
     const encryption = check(body, "email.starttls.encryption");
     expect(encryption?.status).toBe("NOT_APPLICABLE");
     expect(encryption?.blockedBy).toBe("email.mx.records");
+  });
+});
+
+describe("1.1 §8 — the reverse names through the whole stack", () => {
+  it("confirms a reverse name by resolving it back to the same address", async () => {
+    const body = await scan(SOUND, "mine");
+    const v4 = check(body, "email.ptr.ipv4");
+    expect(v4?.status).toBe("PASS");
+    expect(v4?.message.params?.names).toBe("mail.example.uz");
+  });
+
+  it("reports a reverse name that resolves somewhere else as unconfirmed", async () => {
+    const body = await scan({
+      ...SOUND,
+      ptr: { "93.184.216.34": ["elsewhere.example.net"] },
+      addresses: {
+        ...SOUND.addresses,
+        "elsewhere.example.net": host("elsewhere.example.net", "198.51.100.9"),
+      },
+    });
+    const v4 = check(body, "email.ptr.ipv4");
+    expect(v4?.status).toBe("FAIL");
+    expect(v4?.severity).toBe("warning");
+  });
+
+  it("weighs a missing name by family", async () => {
+    const body = await scan({
+      ...SOUND,
+      ptr: {},
+      addresses: {
+        ...SOUND.addresses,
+        "mail.example.uz": host("mail.example.uz", "93.184.216.34", "2606:2800:220:1::1"),
+      },
+    });
+    expect(check(body, "email.ptr.ipv4")?.severity).toBe("warning");
+    expect(check(body, "email.ptr.ipv6")?.severity).toBe("informational");
+  });
+
+  it("asks only about the addresses of the hosts the MX records name", async () => {
+    // AC-8.1 — the domain's own address is not a receiving host here, so it is not asked about.
+    const asked: string[] = [];
+    const instance = buildApp({
+      env,
+      spfLookup: () => ({ provider: "fixture", lookup: async () => ({ outcome: "EMPTY" }) }),
+      dmarcLookup: () => ({ provider: "fixture", lookup: async () => ({ outcome: "EMPTY" }) }),
+      dkimLookup: () => ({ provider: "fixture", lookup: async () => ({ outcome: "EMPTY" }) }),
+      smtpProbeEnabled: false,
+      mailHostLookup: () => ({
+        provider: "fixture",
+        mx: async () => SOUND.mx ?? { outcome: "EMPTY" },
+        addresses: async (name) =>
+          SOUND.addresses?.[name] ?? { hostname: name, outcome: "EMPTY", addresses: [] },
+        reverse: async (address) => {
+          asked.push(address);
+          return { outcome: "NAME_NOT_FOUND" };
+        },
+      }),
+    });
+    const created = await instance.inject({
+      method: "POST",
+      url: "/api/web/v1/scans",
+      payload: { input: "example.uz", mode: "PARTIAL", selectedCategories: ["email"] },
+    });
+    const { scanId } = created.json<{ scanId: string }>();
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const response = await instance.inject({ method: "GET", url: `/api/web/v1/scans/${scanId}` });
+      if (response.json<WebScanResponse>().executionState !== "RUNNING") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    await instance.close();
+    expect(asked).toEqual(["93.184.216.34"]);
+  });
+
+  it("has no reverse name to check when the domain accepts no mail", async () => {
+    const body = await scan({
+      ...SOUND,
+      mx: { outcome: "ANSWER", records: [{ preference: 0, exchange: "." }] },
+      addresses: {},
+    });
+    for (const checkId of ["email.ptr.ipv4", "email.ptr.ipv6"]) {
+      expect(check(body, checkId)?.status, checkId).toBe("NOT_APPLICABLE");
+      expect(check(body, checkId)?.blockedBy, checkId).toBe("email.mx.records");
+    }
   });
 });
 
