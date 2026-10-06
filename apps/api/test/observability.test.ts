@@ -76,6 +76,22 @@ describe("AC-21.3 — logs exclude sensitive values", () => {
     expect(serialized).toEqual({ method: "GET", route: "/api/web/v1/scans/:scanId" });
     expect(JSON.stringify(serialized)).not.toContain("?");
   });
+
+  it("AC-16.4 — carries nothing of the request body, so a DKIM selector cannot reach a log", () => {
+    /**
+     * 1.1 §16.4 — the selector the caller typed is theirs, and a log entry naming it alongside
+     * the domain would be a connection the product has no reason to keep. It holds because the
+     * serializer takes two named fields rather than redacting a list it has to stay ahead of.
+     */
+    const serialized = requestSerializer({
+      method: "POST",
+      routeOptions: { url: "/api/web/v1/scans" },
+      ...({ body: { input: "example.uz", dkimSelector: "mine" } } as Record<string, unknown>),
+    });
+    expect(Object.keys(serialized).sort()).toEqual(["method", "route"]);
+    expect(JSON.stringify(serialized)).not.toContain("mine");
+    expect(JSON.stringify(serialized)).not.toContain("example.uz");
+  });
 });
 
 describe("AC-21.5 and AC-21.6 — readiness distinguishes required from degrading", () => {
