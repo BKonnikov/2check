@@ -6,6 +6,8 @@ import type {
   TlsIpFamily,
 } from "@2check/contracts";
 import ipaddr from "ipaddr.js";
+import type { MailServerState } from "./mail-host.js";
+import { blockedReason } from "./starttls.js";
 
 type MessageParams = NonNullable<MessageDescriptor["params"]>;
 
@@ -250,6 +252,8 @@ export const PTR_CHECK_IDS = {
 export interface PtrCheckOptions {
   readonly domain: string;
   readonly freshness: CheckResult["freshness"];
+  /** 1.1 §2.3 and §15.5 — why there is no address to ask about, when there is none. */
+  readonly receivingServer?: MailServerState;
 }
 
 const FAMILY_LABEL: Readonly<Record<TlsIpFamily, string>> = { IPV4: "IPv4", IPV6: "IPv6" };
@@ -330,10 +334,14 @@ export function evaluatePtrCheck(
       return check(analysis, "NOT_APPLICABLE", "none", "email.ptr.not_applicable", options);
     default:
       // §2.3 — with no receiving host there is no address to ask about.
-      return check(analysis, "NOT_APPLICABLE", "none", "email.ptr.blocked", options, {
-        dependsOn: ["email.mx.records"],
-        blockedBy: "email.mx.records",
-      });
+      return check(
+        analysis,
+        "NOT_APPLICABLE",
+        "none",
+        `email.ptr.blocked.${blockedReason(options.receivingServer)}`,
+        options,
+        { dependsOn: ["email.mx.records"], blockedBy: "email.mx.records" },
+      );
   }
 }
 

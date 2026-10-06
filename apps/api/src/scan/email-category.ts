@@ -474,13 +474,20 @@ export async function runEmailCategory(
     ...evaluateDmarcChecks(dmarc, { domain, freshness: dmarcFresh }),
     evaluateDkimCheck(dkim, { domain, freshness: dkimFresh }),
     evaluateMailServerCheck(mail, { domain, freshness: mailFresh }),
+    /**
+     * 1.1 §2.3 and §15.5 — the receiving-server state travels with these two, because what
+     * blocked them is in `blockedBy` while *why* has to be in the message: a domain that refuses
+     * mail and one whose records name no server read alike otherwise.
+     */
     ...evaluateStarttlsChecks(starttls, {
       domain,
       freshness: freshnessOf([...mailParts, ...probed.parts], now),
+      receivingServer: mail.state,
     }),
     ...evaluatePtrChecks(ptr, {
       domain,
       freshness: freshnessOf([...mailParts, ...reversed.parts], now),
+      receivingServer: mail.state,
     }),
   ]);
 }

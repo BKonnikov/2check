@@ -614,7 +614,6 @@ export const en: Catalogue = {
     explanation:
       "The server answered, but the session ended before STARTTLS was known either way. That does not mean there is none.",
   },
-  "email.starttls.encryption.blocked": { title: "Encryption was not checked" },
   "email.starttls.certificate.pass": {
     title: "The receiving server's certificate is in order",
     fact: "Host {host}, issued by: {issuer}",
@@ -706,7 +705,36 @@ export const en: Catalogue = {
     explanation:
       "A reverse name is asked of an address, and the domain's hosts have none of this family. The other family's result does not carry over to this one.",
   },
-  "email.ptr.blocked": { title: "The {ipFamily} reverse name was not checked" },
+
+  "email.starttls.encryption.blocked.refused": {
+    title: "Encryption was not checked: the domain accepts no mail",
+    explanation:
+      "The domain declares under RFC 7505 that it accepts no mail. There is no receiving server, so there is nothing to check encryption on. That is the owner's declaration, not an omission.",
+  },
+  "email.starttls.encryption.blocked.missing": {
+    title: "Encryption was not checked: no receiving server was found",
+    explanation: "The domain's records name no host with an address to connect to.",
+  },
+  "email.starttls.encryption.blocked.unknown": {
+    title: "Encryption was not checked: the receiving server was not established",
+    explanation:
+      "The query for the records gave no definite result, so there was no host to check. That does not mean there is no server.",
+  },
+  "email.ptr.blocked.refused": {
+    title: "The {ipFamily} reverse name was not checked: the domain accepts no mail",
+    explanation:
+      "The domain declares under RFC 7505 that it accepts no mail. There is no receiving server, and so no address to ask a reverse question about.",
+  },
+  "email.ptr.blocked.missing": {
+    title: "The {ipFamily} reverse name was not checked: no receiving server was found",
+    explanation:
+      "The domain's records name no host with an address to ask a reverse question about.",
+  },
+  "email.ptr.blocked.unknown": {
+    title: "The {ipFamily} reverse name was not checked: the receiving server was not established",
+    explanation:
+      "The query for the records gave no definite result, so there was no address for a reverse query.",
+  },
 
   "category.email": { title: "Mail" },
   "category.dns": { title: "DNS" },

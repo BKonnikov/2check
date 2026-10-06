@@ -195,3 +195,39 @@ describe("PRD 24.1 — the neutral entry point negotiates a language", () => {
     expect(negotiateLocale("en;q=0,uz;q=0.5")).toBe("uz");
   });
 });
+
+/** 1.1 §15 — the mail tool page, and the selector field beside the domain. */
+describe("1.1 §15 — the mail page", () => {
+  it("AC-15.2 — is one of the indexable pages", () => {
+    expect(INDEXABLE_PATHS).toContain("/email-check");
+  });
+
+  it("carries a title, a description and a body in every language", () => {
+    for (const locale of LOCALES) {
+      const chrome = CHROME[locale];
+      expect(chrome.toolTitles.email.trim(), locale).not.toBe("");
+      expect(chrome.toolDescriptions.email.trim(), locale).not.toBe("");
+      expect(chrome.toolBody.email.length, locale).toBeGreaterThan(0);
+    }
+  });
+
+  it("AC-15.5 — explains that a key which was not found is not a key that is absent", () => {
+    for (const locale of LOCALES) {
+      const ui = CHROME[locale].ui;
+      for (const value of [ui.selectorLabel, ui.selectorPlaceholder, ui.selectorReveal]) {
+        expect(value.trim(), locale).not.toBe("");
+      }
+      // The hint has to say both things: that the field is optional, and what absence means.
+      expect(ui.selectorHint.length, locale).toBeGreaterThan(60);
+    }
+  });
+
+  it("AC-15.1 — uses the industry names for the checks, untranslated", () => {
+    // The category is named by the catalogue; the check names inside it are not translated, so
+    // the page body may use them as they are.
+    for (const locale of LOCALES) {
+      expect(CHROME[locale].toolBody.email.join(" ")).toContain("SPF");
+      expect(CHROME[locale].toolBody.email.join(" ")).toContain("DKIM");
+    }
+  });
+});

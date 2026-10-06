@@ -187,6 +187,41 @@ describe("AC-7.7 and §13.7 — a limit of the service is not a fault of the dom
   });
 });
 
+describe("AC-15.7 — the reason for not applying stays readable", () => {
+  function blocked(receivingServer: "NULL_MX" | "MISSING" | "INDETERMINATE" | undefined) {
+    const analysis = analyseStarttls({ domain: "example.uz", probes: [], skipped: [] });
+    return evaluateStarttlsChecks(analysis, {
+      domain: "example.uz",
+      freshness: FRESHNESS,
+      ...(receivingServer === undefined ? {} : { receivingServer }),
+    })[0];
+  }
+
+  it("tells a domain that refuses mail apart from one whose records name no server", () => {
+    /**
+     * 1.1 §15.5 — collapsed, the two look identical and mean entirely different things: one is
+     * the owner's own declaration under RFC 7505, the other is an absence of records.
+     */
+    expect(blocked("NULL_MX")?.message.titleCode).toBe("email.starttls.encryption.blocked.refused");
+    expect(blocked("MISSING")?.message.titleCode).toBe("email.starttls.encryption.blocked.missing");
+  });
+
+  it("does not present a lookup that failed as a server that is not there", () => {
+    expect(blocked("INDETERMINATE")?.message.titleCode).toBe(
+      "email.starttls.encryption.blocked.unknown",
+    );
+    expect(blocked(undefined)?.message.titleCode).toBe("email.starttls.encryption.blocked.unknown");
+  });
+
+  it("stays NOT_APPLICABLE whichever the reason, and still names the MX check", () => {
+    for (const state of ["NULL_MX", "MISSING", "INDETERMINATE"] as const) {
+      expect(blocked(state)?.status, state).toBe("NOT_APPLICABLE");
+      expect(blocked(state)?.blockedBy, state).toBe("email.mx.records");
+      expect(blocked(state)?.reasonCode, state).toBeUndefined();
+    }
+  });
+});
+
 describe("§2.3 — with no receiving server there is nothing to probe", () => {
   it("blocks the check on the MX check rather than inventing a reason", () => {
     const { encryption, certificate: cert } = run([]);

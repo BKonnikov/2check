@@ -6,6 +6,7 @@ import type {
   SmtpProbeSource,
   TlsCertificate,
 } from "@2check/contracts";
+import type { MailServerState } from "./mail-host.js";
 import { certificateCoversHostname } from "./tls.js";
 
 type MessageParams = NonNullable<MessageDescriptor["params"]>;
@@ -189,6 +190,15 @@ export interface StarttlsCheckOptions {
   readonly domain: string;
   readonly freshness: CheckResult["freshness"];
   readonly now?: Date;
+  /**
+   * 1.1 §2.3 and §15.5 — why there is no host to probe, when there is none.
+   *
+   * `blockedBy` names the check that blocked this one, as the 1.0 §7 contract requires, so the
+   * reason has to travel in the message instead. It matters: a domain that declares it accepts no
+   * mail and a domain whose records name no server look identical in a collapsed card and mean
+   * entirely different things.
+   */
+  readonly receivingServer?: MailServerState;
 }
 
 function source(analysis: StarttlsAnalysis): SmtpProbeSource {
@@ -228,6 +238,19 @@ function check(
         : { ...options.freshness, checkedAt: analysis.observedAt },
     ...rest,
   };
+}
+
+/**
+ * 1.1 §2.3 — which of the states that leave nothing to probe this is. A refusal is the owner's
+ * own declaration under RFC 7505 and not an omission, so it never reads as a server not found.
+ */
+export function blockedReason(
+  state: MailServerState | undefined,
+): "refused" | "missing" | "unknown" {
+  if (state === "NULL_MX") {
+    return "refused";
+  }
+  return state === undefined || state === "INDETERMINATE" ? "unknown" : "missing";
 }
 
 /** The hosts a message may name, which 1.1 §9.4 keeps in the Public view. */
@@ -311,7 +334,7 @@ function encryptionCheck(analysis: StarttlsAnalysis, options: StarttlsCheckOptio
         STARTTLS_CHECK_IDS.encryption,
         "NOT_APPLICABLE",
         "none",
-        "email.starttls.encryption.blocked",
+        `email.starttls.encryption.blocked.${blockedReason(options.receivingServer)}`,
         analysis,
         options,
         { dependsOn: ["email.mx.records"], blockedBy: "email.mx.records" },

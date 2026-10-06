@@ -621,7 +621,6 @@ export const uz: Catalogue = {
     explanation:
       "Server javob berdi, lekin sessiya STARTTLS haqida ma'lum bo'lishidan oldin tugadi. Bu shifrlash yo'q degani emas.",
   },
-  "email.starttls.encryption.blocked": { title: "Shifrlash tekshirilmadi" },
   "email.starttls.certificate.pass": {
     title: "Qabul qiluvchi server sertifikati tartibda",
     fact: "Tugun {host}, chiqargan: {issuer}",
@@ -711,7 +710,36 @@ export const uz: Catalogue = {
     explanation:
       "Teskari nom manzildan so'raladi, domen tugunlarida esa bu turkumdagi manzil topilmadi. Boshqa turkumning natijasi bunga o'tmaydi.",
   },
-  "email.ptr.blocked": { title: "{ipFamily} teskari nomi tekshirilmadi" },
+
+  "email.starttls.encryption.blocked.refused": {
+    title: "Shifrlash tekshirilmadi: domen pochta qabul qilmaydi",
+    explanation:
+      "Domen RFC 7505 bo'yicha pochta qabul qilmasligini e'lon qilgan. Qabul qiluvchi server yo'q, shuning uchun shifrlashni tekshiradigan narsa ham yo'q. Bu egasining e'loni, e'tiborsizlik emas.",
+  },
+  "email.starttls.encryption.blocked.missing": {
+    title: "Shifrlash tekshirilmadi: qabul qiluvchi server topilmadi",
+    explanation: "Domen yozuvlari ulanish mumkin bo'lgan manzilli birorta tugunni atamaydi.",
+  },
+  "email.starttls.encryption.blocked.unknown": {
+    title: "Shifrlash tekshirilmadi: qabul qiluvchi server aniqlanmadi",
+    explanation:
+      "Yozuvlar so'rovi aniq natija bermadi, shuning uchun tekshiradigan tugun yo'q. Bu server yo'q degani emas.",
+  },
+  "email.ptr.blocked.refused": {
+    title: "{ipFamily} teskari nomi tekshirilmadi: domen pochta qabul qilmaydi",
+    explanation:
+      "Domen RFC 7505 bo'yicha pochta qabul qilmasligini e'lon qilgan. Qabul qiluvchi server yo'q, demak teskari nom so'raydigan manzil ham yo'q.",
+  },
+  "email.ptr.blocked.missing": {
+    title: "{ipFamily} teskari nomi tekshirilmadi: qabul qiluvchi server topilmadi",
+    explanation:
+      "Domen yozuvlari teskari nom so'rash mumkin bo'lgan manzilli birorta tugunni atamaydi.",
+  },
+  "email.ptr.blocked.unknown": {
+    title: "{ipFamily} teskari nomi tekshirilmadi: qabul qiluvchi server aniqlanmadi",
+    explanation:
+      "Yozuvlar so'rovi aniq natija bermadi, shuning uchun teskari so'rov uchun manzil yo'q.",
+  },
 
   "category.email": { title: "Pochta" },
   "category.dns": { title: "DNS" },

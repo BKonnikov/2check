@@ -17,6 +17,7 @@ import {
   evaluateStarttlsChecks,
   type HostObservation,
   type MailServerInput,
+  type MailServerState,
   SPF_CHECK_IDS,
   type SpfLookupAnswer,
   type StarttlsOutcome,
@@ -137,9 +138,17 @@ function tlsOff(hostname: string): StarttlsOutcome {
   };
 }
 
-function starttlsOutcome(probes: readonly StarttlsOutcome[], skipped: readonly string[] = []) {
+function starttlsOutcome(
+  probes: readonly StarttlsOutcome[],
+  skipped: readonly string[] = [],
+  receivingServer?: MailServerState,
+) {
   const analysis = analyseStarttls({ domain: "example.uz", probes, skipped });
-  return evaluateStarttlsChecks(analysis, { domain: "example.uz", freshness: FRESHNESS });
+  return evaluateStarttlsChecks(analysis, {
+    domain: "example.uz",
+    freshness: FRESHNESS,
+    ...(receivingServer === undefined ? {} : { receivingServer }),
+  });
 }
 
 function ptrOutcome(
@@ -155,10 +164,12 @@ function ptrOutcome(
     addresses?: readonly string[];
     alias?: boolean;
   }[] = [],
+  receivingServer?: MailServerState,
 ) {
   return evaluatePtrChecks(analysePtr({ reverse, forward }), {
     domain: "example.uz",
     freshness: FRESHNESS,
+    ...(receivingServer === undefined ? {} : { receivingServer }),
   });
 }
 
@@ -296,6 +307,8 @@ async function everyOutcome() {
     starttlsOutcome([{ kind: "CONNECT_FAILED", hostname: "mail.uz" }]),
     starttlsOutcome([{ kind: "SESSION_INCOMPLETE", hostname: "mail.uz" }]),
     starttlsOutcome([]),
+    starttlsOutcome([], [], "NULL_MX"),
+    starttlsOutcome([], [], "MISSING"),
     starttlsOutcome([tlsOn("mail.uz", cert({ validTo: "2026-01-02T00:00:00.000Z" }))]),
     starttlsOutcome([tlsOn("mail.uz", cert({ validFrom: "2099-01-01T00:00:00.000Z" }))]),
     starttlsOutcome([tlsOn("mail.uz", cert({ subjectAltNames: ["DNS:other.net"] }))]),
@@ -322,6 +335,8 @@ async function everyOutcome() {
     ptrOutcome(named(["mail.uz"]), [{ name: "mail.uz", outcome: "INDETERMINATE" }]),
     ptrOutcome([{ address: "203.0.113.5", hostname: "mail.uz", outcome: "INDETERMINATE" }]),
     ptrOutcome([]),
+    ptrOutcome([], [], "NULL_MX"),
+    ptrOutcome([], [], "MISSING"),
   ];
   return [...results, ...mail, ...dmarc, ...dkim, ...starttls, ...ptr].flat();
 }

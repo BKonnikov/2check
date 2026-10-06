@@ -17,6 +17,9 @@ export const SITE_ORIGIN = process.env.SITE_ORIGIN ?? "https://2check.uz";
  * Keeping it a typed record means a missing translation is a type error, not a silent fallback
  * to Russian on a page served in Uzbek.
  */
+/** PRD 24.2 and 1.1 §15.2 — one key per indexable tool page. */
+export type ToolKey = "dns" | "whois" | "ssl" | "email";
+
 export interface Ui {
   readonly skipToContent: string;
   readonly navHome: string;
@@ -28,6 +31,11 @@ export interface Ui {
   readonly inputLabel: string;
   readonly inputPlaceholder: string;
   readonly inputHint: string;
+  /** 1.1 §15.3 — the optional DKIM selector beside the domain. */
+  readonly selectorLabel: string;
+  readonly selectorPlaceholder: string;
+  readonly selectorHint: string;
+  readonly selectorReveal: string;
   readonly submit: string;
   readonly submitBusy: string;
   readonly runningHeading: string;
@@ -88,10 +96,10 @@ interface Chrome {
   readonly tagline: string;
   readonly homeTitle: string;
   readonly homeDescription: string;
-  readonly toolTitles: Readonly<Record<"dns" | "whois" | "ssl", string>>;
-  readonly toolDescriptions: Readonly<Record<"dns" | "whois" | "ssl", string>>;
+  readonly toolTitles: Readonly<Record<ToolKey, string>>;
+  readonly toolDescriptions: Readonly<Record<ToolKey, string>>;
   /** PRD 24.5 — the body copy states only what the product actually does. */
-  readonly toolBody: Readonly<Record<"dns" | "whois" | "ssl", readonly string[]>>;
+  readonly toolBody: Readonly<Record<ToolKey, readonly string[]>>;
   readonly scanTitle: string;
   readonly scanMissing: string;
   readonly ui: Ui;
@@ -112,11 +120,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       dns: "Проверка DNS",
       whois: "Проверка регистрации домена",
       ssl: "Проверка сертификата SSL/TLS",
+      email: "Проверка почты домена",
     },
     toolDescriptions: {
       dns: "Сравнение ответов четырёх публичных резолверов: существование имени, записи и расхождения.",
       whois: "Данные о регистрации домена в зоне .uz по RDAP с резервным запросом WHOIS.",
       ssl: "Срок действия сертификата, соответствие имени хоста и доверие цепочки по адресам IPv4 и IPv6.",
+      email:
+        "SPF, DMARC, DKIM, записи MX, шифрование соединения и обратные имена принимающих серверов.",
     },
     toolBody: {
       dns: [
@@ -134,6 +145,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         "Проверяются срок действия, соответствие имени хоста по SAN и доверие цепочки. Оценка наборов шифров, HSTS, OCSP и проверки HTTP в эту версию не входят.",
         "Содержимое страниц не загружается: выполняется только TLS-рукопожатие.",
       ],
+      email: [
+        "2check читает политики отправки домена — SPF, DMARC и DKIM — из записей TXT и разбирает их по действующим стандартам: RFC 7208, RFC 9989 и RFC 8301.",
+        "Затем находит принимающие серверы по записям MX, проверяет, предлагают ли они шифрование STARTTLS, и спрашивает у их адресов обратные имена. Соединение открывается только на порт 25 и только чтобы перейти на шифрование: команды передачи письма не выдаются ни при каких условиях.",
+        "Ключ DKIM публикуется под именем, которое выбирает владелец домена, и перечислить такие имена через DNS нельзя. Если ключ по известным селекторам не найден, 2check говорит, какие имена опробовал, а не что ключа нет.",
+      ],
     },
     ui: {
       skipToContent: "К содержимому",
@@ -146,6 +162,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       inputLabel: "Домен",
       inputPlaceholder: "example.uz",
       inputHint: "Можно вставить ссылку целиком — 2check возьмёт из неё имя домена.",
+      selectorLabel: "Селектор DKIM",
+      selectorPlaceholder: "например, google",
+      selectorHint:
+        "Необязательно. Без селектора ключ ищется по известным селекторам почтового провайдера, а ненайденный ключ не означает, что ключа нет.",
+      selectorReveal: "Указать селектор DKIM",
       submit: "Проверить",
       submitBusy: "Проверяю…",
       runningHeading: "Выполняется",
@@ -308,11 +329,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       dns: "DNS check",
       whois: "Domain registration check",
       ssl: "SSL/TLS certificate check",
+      email: "Domain mail check",
     },
     toolDescriptions: {
       dns: "Compares the answers of four public resolvers: name existence, records and disagreements.",
       whois: "Registration data for the .uz zone over RDAP, with a WHOIS fallback.",
       ssl: "Certificate validity, hostname match and chain trust over IPv4 and IPv6.",
+      email:
+        "SPF, DMARC, DKIM, the MX records, connection encryption and the reverse names of the receiving servers.",
     },
     toolBody: {
       dns: [
@@ -330,6 +354,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         "It checks validity dates, the hostname against the subject alternative names, and chain trust. Cipher grading, HSTS, OCSP and HTTP checks are not part of this version.",
         "No page content is fetched: only the TLS handshake is performed.",
       ],
+      email: [
+        "2check reads the domain's sending policies — SPF, DMARC and DKIM — from its TXT records and judges them by the standards in force: RFC 7208, RFC 9989 and RFC 8301.",
+        "It then finds the receiving servers from the MX records, checks whether they offer STARTTLS encryption, and asks their addresses for their reverse names. A connection is opened to port 25 only, and only far enough to move to encryption: no command that hands over a message is ever issued.",
+        "A DKIM key is published under a name the domain owner chooses, and DNS cannot be asked which such names exist. Where no key is found under the selectors we know, 2check says which names it tried rather than that there is no key.",
+      ],
     },
     ui: {
       skipToContent: "Skip to content",
@@ -342,6 +371,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       inputLabel: "Domain",
       inputPlaceholder: "example.uz",
       inputHint: "You can paste a whole link — 2check takes the domain name out of it.",
+      selectorLabel: "DKIM selector",
+      selectorPlaceholder: "for example, google",
+      selectorHint:
+        "Optional. Without one the key is looked for under the selectors the mail provider is known to use, and a key that is not found does not mean there is none.",
+      selectorReveal: "Name a DKIM selector",
       submit: "Check",
       submitBusy: "Checking…",
       runningHeading: "Running",
@@ -511,12 +545,15 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       dns: "DNS tekshiruvi",
       whois: "Domen ro'yxatdan o'tishini tekshirish",
       ssl: "SSL/TLS sertifikatini tekshirish",
+      email: "Domen pochtasini tekshirish",
     },
     toolDescriptions: {
       dns: "To'rtta ommaviy rezolver javobini solishtirish: nom mavjudligi, yozuvlar va nomuvofiqliklar.",
       whois:
         ".uz zonasidagi ro'yxatdan o'tish ma'lumotlari RDAP orqali, zaxira sifatida WHOIS so'rovi.",
       ssl: "Sertifikat muddati, host nomiga mosligi va zanjir ishonchi — IPv4 va IPv6 manzillari bo'yicha.",
+      email:
+        "SPF, DMARC, DKIM, MX yozuvlari, ulanish shifrlashi va qabul qiluvchi serverlarning teskari nomlari.",
     },
     toolBody: {
       dns: [
@@ -534,6 +571,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
         "Amal qilish muddati, SAN bo'yicha host nomiga mosligi va zanjir ishonchi tekshiriladi. Shifrlar to'plamini baholash, HSTS, OCSP va HTTP tekshiruvlari bu versiyaga kirmaydi.",
         "Sahifa mazmuni yuklanmaydi: faqat TLS qo'l siqishi bajariladi.",
       ],
+      email: [
+        "2check domenning jo'natish siyosatlarini — SPF, DMARC va DKIM — TXT yozuvlaridan o'qiydi va ularni amaldagi standartlar bo'yicha tahlil qiladi: RFC 7208, RFC 9989 va RFC 8301.",
+        "So'ngra MX yozuvlari bo'yicha qabul qiluvchi serverlarni topadi, ular STARTTLS shifrlashni taklif qiladimi — tekshiradi va manzillaridan teskari nomlarni so'raydi. Ulanish faqat 25-portga va faqat shifrlashga o'tish uchun ochiladi: xat uzatish buyruqlari hech qanday holatda berilmaydi.",
+        "DKIM kaliti domen egasi tanlagan nom ostida e'lon qilinadi va DNS dan bunday nomlarni sanab berishni so'rab bo'lmaydi. Agar kalit bizga ma'lum selektorlar ostida topilmasa, 2check kalit yo'q demaydi, balki qaysi nomlarni sinab ko'rganini aytadi.",
+      ],
     },
     scanTitle: "Tekshiruv natijasi",
     scanMissing: "Bunday tekshiruv topilmadi yoki uning saqlash muddati tugagan.",
@@ -548,6 +590,11 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       inputLabel: "Domen",
       inputPlaceholder: "example.uz",
       inputHint: "To'liq havolani ham qo'yish mumkin — 2check undan domen nomini ajratib oladi.",
+      selectorLabel: "DKIM selektori",
+      selectorPlaceholder: "masalan, google",
+      selectorHint:
+        "Majburiy emas. Selektorsiz kalit pochta provayderining ma'lum selektorlari ostida qidiriladi, topilmagan kalit esa kalit yo'q degani emas.",
+      selectorReveal: "DKIM selektorini ko'rsatish",
       submit: "Tekshirish",
       submitBusy: "Tekshirilmoqda…",
       runningHeading: "Bajarilmoqda",
@@ -702,7 +749,14 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
 };
 
 /** PRD 24.1 — the pages that may be indexed. Scan routes are never among them. */
-export const INDEXABLE_PATHS = ["", "/dns-check", "/whois", "/ssl-check"] as const;
+export const INDEXABLE_PATHS = [
+  "",
+  "/dns-check",
+  "/whois",
+  "/ssl-check",
+  // 1.1 §15.2
+  "/email-check",
+] as const;
 
 /** PRD 24.3 — each language page is its own canonical and links to the others by hreflang. */
 export function alternates(path: string) {

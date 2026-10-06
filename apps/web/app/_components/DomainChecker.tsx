@@ -497,6 +497,14 @@ export interface DomainCheckerProps {
   readonly categories?: readonly ScanCategory[];
   /** PRD 24.6 and AC-24.6 — a scan already read from the server; nothing is started on load. */
   readonly initialScan?: ScanView | null;
+  /**
+   * 1.1 §15.3 — whether the DKIM selector field is shown at once.
+   *
+   * The mail tool page sets it, because somebody who came to check mail has a reason to name a
+   * selector. A full check leaves it behind an extra action: the field means nothing to a reader
+   * who came to check a domain, and an empty one never stops a scan.
+   */
+  readonly selectorVisible?: boolean;
 }
 
 export default function DomainChecker({
@@ -505,12 +513,20 @@ export default function DomainChecker({
   tool,
   categories,
   initialScan = null,
+  selectorVisible = false,
 }: DomainCheckerProps) {
   // PRD 23.8 — re-running a scan read from its own page needs the domain it was run for.
   const [input, setInput] = useState(initialScan?.canonicalDomain.unicodeHostname ?? "");
   const [scan, setScan] = useState<ScanView | null>(initialScan);
   const [error, setError] = useState<ErrorView | null>(null);
   const [running, setRunning] = useState(false);
+  const [selector, setSelector] = useState("");
+  const [selectorOpen, setSelectorOpen] = useState(selectorVisible);
+  /**
+   * 1.1 §14.2 — the field is accepted only where the mail category is in scope, and the API
+   * refuses it otherwise. So it is offered exactly where it can be acted on.
+   */
+  const mailInScope = categories === undefined || categories.includes("email");
 
   const scope: AnalyticsScope =
     categories === undefined || categories.length === 0 ? "all" : (categories[0] ?? "all");
@@ -531,6 +547,7 @@ export default function DomainChecker({
   }, []);
 
   async function start(value: string, cacheMode?: "FORCE_REFRESH"): Promise<void> {
+    const named = mailInScope ? selector.trim() : "";
     track(cacheMode === undefined ? "scan_submitted" : "refresh_clicked", dimensions);
     setError(null);
     setScan(null);
@@ -547,6 +564,7 @@ export default function DomainChecker({
             ? { mode: "FULL" }
             : { mode: "PARTIAL", selectedCategories: categories }),
           ...(cacheMode === undefined ? {} : { cacheMode }),
+          ...(named === "" ? {} : { dkimSelector: named }),
         }),
       });
       const acceptance = await created.json();
@@ -624,6 +642,32 @@ export default function DomainChecker({
         </button>
       </form>
       <p className="hint">{ui.inputHint}</p>
+
+      {/* AC-15.4 and AC-15.5 — optional, hidden by default in a full check, and explained. */}
+      {mailInScope && !selectorOpen && (
+        <p className="hint">
+          <button type="button" className="link" onClick={() => setSelectorOpen(true)}>
+            {ui.selectorReveal}
+          </button>
+        </p>
+      )}
+      {mailInScope && selectorOpen && (
+        <div className="selector">
+          <label htmlFor="dkim-selector">{ui.selectorLabel}</label>
+          <input
+            id="dkim-selector"
+            value={selector}
+            onChange={(event) => setSelector(event.target.value)}
+            placeholder={ui.selectorPlaceholder}
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="dkim-selector-hint"
+          />
+          <p className="hint" id="dkim-selector-hint">
+            {ui.selectorHint}
+          </p>
+        </div>
+      )}
 
       {error !== null && (
         <div className="section sheet" role="alert">

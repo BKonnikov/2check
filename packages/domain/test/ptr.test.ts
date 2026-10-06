@@ -248,6 +248,22 @@ describe("§2.3 — with no receiving host there is no address to ask about", ()
     }
   });
 
+  it("AC-15.7 — says which of the two reasons left nothing to ask about", () => {
+    const empty = analysePtr({ reverse: [], forward: [] });
+    const refused = evaluatePtrChecks(empty, {
+      domain: "example.uz",
+      freshness: FRESHNESS,
+      receivingServer: "NULL_MX",
+    });
+    const missing = evaluatePtrChecks(empty, {
+      domain: "example.uz",
+      freshness: FRESHNESS,
+      receivingServer: "MISSING",
+    });
+    expect(refused[0]?.message.titleCode).toBe("email.ptr.blocked.refused");
+    expect(missing[0]?.message.titleCode).toBe("email.ptr.blocked.missing");
+  });
+
   it("does not blame the MX check for a family the hosts simply do not answer on", () => {
     const { v4, v6 } = run({
       reverse: [at("203.0.113.5", ["mail.example.uz"])],

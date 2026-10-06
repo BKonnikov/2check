@@ -72,6 +72,7 @@ export default async function LocaleLayout({
             { href: `/${key}/dns-check`, label: categoryName("dns", key) },
             { href: `/${key}/whois`, label: categoryName("registry", key) },
             { href: `/${key}/ssl-check`, label: categoryName("tls", key) },
+            { href: `/${key}/email-check`, label: categoryName("email", key) },
           ]}
         />
         <main id="content">{children}</main>
