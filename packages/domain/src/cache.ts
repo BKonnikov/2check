@@ -1,4 +1,4 @@
-import type { CacheMode, CheckFreshness } from "@2check/contracts";
+import type { CacheMode, CheckFreshness, EmailPolicyKind, TlsIpFamily } from "@2check/contracts";
 
 /**
  * PRD 14.5 — technical cache keys.
@@ -28,6 +28,44 @@ export interface TlsCacheKeyParts {
   readonly trustStoreVersion: string;
   readonly cacheContractVersion: string;
 }
+
+/**
+ * 1.1 §12.1 — a published policy of one domain.
+ *
+ * The selector is part of the key and is required for DKIM, because without it one selector's
+ * answer would be reused for another and a reader would be shown somebody else's key as their
+ * own. It also keeps AC-12.3 true by construction: a request that named a selector and one that
+ * did not are different keys, so the first can never answer the second.
+ */
+export interface EmailPolicyCacheKeyParts {
+  readonly asciiHostname: string;
+  readonly policy: EmailPolicyKind;
+  readonly selector?: string;
+  readonly resolverSetVersion: string;
+  readonly emailModuleConfigVersion: string;
+  readonly cacheContractVersion: string;
+}
+
+/**
+ * 1.1 §12.1 — one receiving host, which several domains may share.
+ *
+ * Keyed by the host rather than by the domain that named it: a zone pointing its MX at a large
+ * provider is the common case, and the host's addresses and encryption are facts about the host.
+ */
+export interface MailHostCacheKeyParts {
+  readonly mailHost: string;
+  readonly ipFamily?: TlsIpFamily;
+  /**
+   * Which observation about the host this is. §12.1 names the parts a key must carry; what kind
+   * of observation it is has to be among them too, or a host's addresses and its reverse names
+   * would answer each other.
+   */
+  readonly observation: MailHostObservationKind;
+  readonly emailModuleConfigVersion: string;
+  readonly cacheContractVersion: string;
+}
+
+export type MailHostObservationKind = "mx" | "addresses" | "reverse" | "starttls";
 
 function joinKey(namespace: string, parts: readonly (string | number)[]): string {
   return [namespace, ...parts.map((part) => String(part))].join("|");
@@ -60,6 +98,41 @@ export function buildTlsCacheKey(parts: TlsCacheKeyParts): string {
     parts.cacheContractVersion,
   ]);
 }
+
+export function buildEmailPolicyCacheKey(parts: EmailPolicyCacheKeyParts): string {
+  return joinKey("email.policy", [
+    parts.asciiHostname,
+    parts.policy,
+    parts.selector ?? "",
+    parts.resolverSetVersion,
+    parts.emailModuleConfigVersion,
+    parts.cacheContractVersion,
+  ]);
+}
+
+export function buildMailHostCacheKey(parts: MailHostCacheKeyParts): string {
+  return joinKey("email.host", [
+    parts.mailHost,
+    parts.ipFamily ?? "",
+    parts.observation,
+    parts.emailModuleConfigVersion,
+    parts.cacheContractVersion,
+  ]);
+}
+
+/**
+ * 1.1 §12.2 — hours for everything the mail category observes, and longer for the SMTP probe.
+ *
+ * The probe costs a TCP connection and a TLS handshake against somebody else's mail server,
+ * which is the most expensive observation in the product and the least likely to change hour to
+ * hour: a host that offers encryption today offers it tomorrow. The exact values are
+ * configuration — 1.0 §20.
+ */
+export const EMAIL_CACHE_TTL_SECONDS = {
+  policy: 3600,
+  mailHost: 3600,
+  smtpProbe: 10_800,
+} as const;
 
 /**
  * PRD 14.6 and AC-14.7 — the dependency fingerprint is compatibility metadata stored beside the

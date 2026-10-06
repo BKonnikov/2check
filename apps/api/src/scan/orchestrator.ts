@@ -7,12 +7,6 @@ import type {
 } from "@2check/contracts";
 import {
   addressEvidenceIsSufficient,
-  analyseDkim,
-  analyseDmarc,
-  analyseMailServer,
-  analysePtr,
-  analyseSpf,
-  analyseStarttls,
   buildCategoryResult,
   buildDeadlineChecks,
   buildDnsCacheKey,
@@ -20,33 +14,18 @@ import {
   buildSummary,
   collectAddressCandidates,
   DEFAULT_ISSUE_GROUPS,
-  dkimSelectors,
-  dmarcPolicyName,
   dnsCacheTtlSeconds,
-  evaluateDkimCheck,
-  evaluateDmarcChecks,
-  evaluateMailServerCheck,
   evaluateNameExistence,
-  evaluatePtrChecks,
   evaluateRegistryLookup,
   evaluateResolveCheck,
   evaluateResolverConsistency,
-  evaluateSpfChecks,
-  evaluateStarttlsChecks,
   evaluateTlsBlockedChecks,
   evaluateTlsChecks,
-  ipFamilyOf,
-  type MailServerAnalysis,
   markServedFromCache,
   mayReadCache,
   mayWriteCache,
-  PTR_MAX_ADDRESSES_PER_FAMILY,
-  type PtrForwardObservation,
-  type PtrObservation,
   registrationCacheTtlSeconds,
   resolveRegistryLookup,
-  STARTTLS_MAX_HOSTS,
-  type StarttlsOutcome,
   selectRepresentativeAddress,
   singleFlightKey,
   type TlsProbeOutcome,
@@ -63,16 +42,6 @@ import {
   DEFAULT_RESOLVER_SET_VERSION,
   queryResolverSet,
 } from "../dns/resolver-set.js";
-import { createDkimLookup, type DkimLookupPort } from "../email/dkim-lookup.js";
-import { createDmarcLookup, type DmarcLookupPort } from "../email/dmarc-lookup.js";
-import {
-  createMailHostLookup,
-  MAX_MAIL_HOSTS,
-  type MailHostPort,
-} from "../email/mail-host-lookup.js";
-import { probeMailHost } from "../email/smtp-prober.js";
-import { createSpfLookup, type SpfLookupPort } from "../email/spf-lookup.js";
-import type { Metrics } from "../observability/metrics.js";
 import {
   isSupportedZone,
   lookupRegistration,
@@ -80,39 +49,29 @@ import {
   type RegistryLookup,
 } from "../registry/uz-provider.js";
 import { probeEndpoint } from "../tls/prober.js";
+import {
+  type EmailCategoryDependencies,
+  type EmailCategoryInputs,
+  runEmailCategory,
+} from "./email-category.js";
 import type { ScanRecord, ScanStore } from "./store.js";
 
 /** Injectable so tests run against golden fixtures rather than the public internet (AC-26.2). */
 export type DnsQuery = (qname: string) => Promise<readonly DnsProviderResult[]>;
-/** 1.1 §3.2 — the policy and the names it leads to; injectable so tests run against fixtures. */
-export type SpfLookupFactory = () => SpfLookupPort;
-/** 1.1 §4.3 — the policy name and the names above it, walked once per scan. */
-export type DmarcLookupFactory = () => DmarcLookupPort;
-/** 1.1 §5.2 — one name per selector, from the request and from the recognised service. */
-export type DkimLookupFactory = () => DkimLookupPort;
-/** 1.1 §6.2 — the MX records and the addresses of the hosts they name. */
-export type MailHostFactory = () => MailHostPort;
-/** 1.1 §7.2 — one SMTP session against one validated, pinned address. */
-export type SmtpProbe = (address: string, hostname: string) => Promise<StarttlsOutcome>;
 export type TlsProbe = (
   address: string,
   hostname: string,
   family: "IPV4" | "IPV6",
 ) => Promise<TlsProbeOutcome>;
 
-export interface ScanDependencies {
+/**
+ * 1.1 §12 — the mail category's own ports and switches live with the category; this interface
+ * extends them so one dependency object still reaches every category.
+ */
+export interface ScanDependencies extends EmailCategoryDependencies {
   readonly dnsQuery?: DnsQuery;
   readonly registryLookup?: RegistryLookup;
   readonly tlsProbe?: TlsProbe;
-  readonly spfLookup?: SpfLookupFactory;
-  readonly dmarcLookup?: DmarcLookupFactory;
-  readonly dkimLookup?: DkimLookupFactory;
-  readonly mailHostLookup?: MailHostFactory;
-  readonly smtpProbe?: SmtpProbe;
-  /** 1.1 §7.6 — whether this deployment can open outbound SMTP at all. */
-  readonly smtpProbeEnabled?: boolean;
-  /** 1.1 §16.3 — the category's counters. The outcome is a label; the host never is. */
-  readonly metrics?: Pick<Metrics, "increment">;
   /** PRD 14.1 — the reusable result cache. Absent means a private in-process cache. */
   readonly cache?: ReusableCache;
   readonly singleFlight?: <TValue>(key: string, retrieve: () => Promise<TValue>) => Promise<TValue>;
@@ -157,6 +116,8 @@ export function buildExecutionContext(denylist: readonly string[] = []): Executi
     dnsModuleConfigVersion: "slice-1",
     registryModuleConfigVersion: "slice-1",
     tlsModuleConfigVersion: "slice-1",
+    // 1.1 §12.1 — the selector table, the recognised services and this category's own rules.
+    emailModuleConfigVersion: "slice-1",
     trustStoreVersion: "system-1",
   };
 }
@@ -192,132 +153,11 @@ async function sealAddressCandidates(
 }
 
 /**
- * 1.1 §7.3 and §13.2 — the hosts to probe, each one taken through 1.0 §15 before it is touched.
- *
- * The security sequence is the one the TLS category already follows, applied to a mail host: the
- * host's whole address set is validated without truncation, and a single forbidden address blocks
- * the host rather than being dropped so the rest can be used. What the probe then connects to is
- * the validated address itself, so the name is never resolved a second time.
- *
- * Only the first four hosts are probed. The rest are reported as not probed, because the scan
- * budget is one for every category — §13.6 — and a host waiting for time that will not come is
- * worse than a result that says plainly which hosts it covers.
- */
-async function probeMailHosts(
-  record: ScanRecord,
-  mail: MailServerAnalysis,
-  deps: ScanDependencies,
-): Promise<{ domain: string; probes: readonly StarttlsOutcome[]; skipped: readonly string[] }> {
-  const domain = record.canonicalDomain.asciiHostname;
-  const usable = mail.hosts.filter((host) => host.addresses.length > 0);
-  const chosen = usable.slice(0, STARTTLS_MAX_HOSTS);
-  const skipped = usable.slice(STARTTLS_MAX_HOSTS).map((host) => host.hostname);
-  if (chosen.length === 0) {
-    return { domain, probes: [], skipped };
-  }
-  if (deps.smtpProbeEnabled !== true) {
-    // §7.6 — a limit of the deployment, said once for every host rather than discovered per host.
-    return {
-      domain,
-      probes: chosen.map((host) => ({ kind: "UNAVAILABLE" as const, hostname: host.hostname })),
-      skipped,
-    };
-  }
-
-  const probe = deps.smtpProbe ?? probeMailHost;
-  const policy = {
-    policyVersion: record.executionContext.securityPolicyVersion,
-    ...(deps.internalInfrastructureDenylist === undefined
-      ? {}
-      : { internalInfrastructureDenylist: deps.internalInfrastructureDenylist }),
-  };
-  const probes: StarttlsOutcome[] = [];
-  for (const host of chosen) {
-    const validation = validateTarget(host.addresses, policy);
-    if (validation.decision !== "ALLOW") {
-      deps.metrics?.increment("email_smtp_probe_blocked_total", {
-        decision: validation.decision,
-      });
-      probes.push({
-        kind: "BLOCKED",
-        hostname: host.hostname,
-        reasonCode: validation.reasonCode ?? "security_validation_incomplete",
-      });
-      continue;
-    }
-    const address = [...host.addresses].sort()[0];
-    if (address === undefined) {
-      probes.push({ kind: "CONNECT_FAILED", hostname: host.hostname });
-      continue;
-    }
-    const outcome = await probe(address, host.hostname);
-    deps.metrics?.increment("email_smtp_probe_total", { outcome: outcome.kind });
-    probes.push(outcome);
-  }
-  return { domain, probes, skipped };
-}
-
-/**
- * 1.1 §8.1 — the reverse names of the addresses the receiving hosts answer at.
- *
- * Only the hosts' own addresses are asked about, and only a couple per family: §8.3 wants both
- * families looked at, so the bound is per family rather than shared, and each address costs a
- * reverse query plus a forward one to confirm it against the shared scan budget.
- *
- * A reverse name is confirmed by resolving it forward, which is the same question the MX check
- * already asks of a host name, so it goes through the same port. A name that several addresses
- * share is asked about once.
- */
-async function reverseNames(
-  mail: MailServerAnalysis,
-  port: MailHostPort,
-): Promise<{ reverse: readonly PtrObservation[]; forward: readonly PtrForwardObservation[] }> {
-  const budget: Record<string, number> = { IPV4: 0, IPV6: 0 };
-  const chosen: { address: string; hostname: string }[] = [];
-  for (const host of mail.hosts) {
-    for (const address of host.addresses) {
-      const family = ipFamilyOf(address);
-      if ((budget[family] ?? 0) >= PTR_MAX_ADDRESSES_PER_FAMILY) {
-        continue;
-      }
-      budget[family] = (budget[family] ?? 0) + 1;
-      chosen.push({ address, hostname: host.hostname });
-    }
-  }
-  if (chosen.length === 0) {
-    return { reverse: [], forward: [] };
-  }
-
-  const answers = await Promise.all(chosen.map((entry) => port.reverse(entry.address)));
-  const reverse: PtrObservation[] = chosen.map((entry, index) => ({
-    address: entry.address,
-    hostname: entry.hostname,
-    outcome: answers[index]?.outcome ?? "INDETERMINATE",
-    ...(answers[index]?.names === undefined ? {} : { names: answers[index]?.names }),
-  }));
-
-  const names = [...new Set(reverse.flatMap((entry) => entry.names ?? []))];
-  const resolved = await Promise.all(names.map((name) => port.addresses(name)));
-  const forward: PtrForwardObservation[] = names.map((name, index) => {
-    const observation = resolved[index];
-    return {
-      name,
-      outcome: observation?.outcome ?? "INDETERMINATE",
-      ...(observation?.addresses === undefined ? {} : { addresses: observation.addresses }),
-      ...(observation?.alias === true ? { alias: true } : {}),
-    };
-  });
-  return { reverse, forward };
-}
-
-/**
  * 1.1 §14.2 — what the caller asked for on this request, as opposed to what the deployment
  * provides. The DKIM selector belongs here and not on the stored record: it is a property of the
  * request, so it never reaches the store, a log or analytics — 1.1 §12.3 and §16.4.
  */
-export interface ScanInputs {
-  readonly dkimSelector?: string;
-}
+export type ScanInputs = EmailCategoryInputs;
 
 export async function runScan(
   record: ScanRecord,
@@ -470,88 +310,8 @@ export async function runScan(
       }
 
       if (category === "email") {
-        /**
-         * 1.1 §3 — the policy is read from the domain's own TXT, and the walk goes on from there.
-         * The record comes through the same port as the nested names so that a scan reading a
-         * fixture reads the whole walk from it, the root record included.
-         */
-        const port = (deps.spfLookup ?? createSpfLookup)();
-        const answer = await port.lookup(qname);
-        const spf = await analyseSpf({ domain: qname, answer, lookup: port.lookup });
-
-        /**
-         * 1.1 §6 — the MX records, then the addresses of the hosts they name. The host lookups
-         * run together because they are independent of each other, and their number is bounded:
-         * the list is somebody else's to write.
-         */
-        const mailPort = (deps.mailHostLookup ?? createMailHostLookup)();
-        const mx = await mailPort.mx(qname);
-        const named = (mx.records ?? [])
-          .filter((record) => record.exchange.trim() !== "" && record.exchange.trim() !== ".")
-          .slice(0, MAX_MAIL_HOSTS)
-          .map((record) => record.exchange);
-        const [domainAddresses, ...hosts] = await Promise.all([
-          mailPort.addresses(qname),
-          ...named.map((name) => mailPort.addresses(name)),
-        ]);
-        const mail = analyseMailServer({
-          domain: qname,
-          mx,
-          domainAddresses: domainAddresses ?? { hostname: qname, outcome: "INDETERMINATE" },
-          hosts,
-        });
-
-        /**
-         * 1.1 §4.3 — the domain's own policy, and failing that the one it inherits. Whether the
-         * name exists in DNS decides between the `sp` and `np` tags of an inherited record, and
-         * the MX query above has already established it: any answer other than a missing name
-         * means the name is there.
-         */
-        const dmarcPort = (deps.dmarcLookup ?? createDmarcLookup)();
-        const dmarc = await analyseDmarc({
-          domain: qname,
-          answer: await dmarcPort.lookup(dmarcPolicyName(qname)),
-          lookup: dmarcPort.lookup,
-          ...(mx.outcome === "INDETERMINATE"
-            ? {}
-            : { domainExists: mx.outcome !== "NAME_NOT_FOUND" }),
-        });
-
-        /**
-         * 1.1 §5.2 — the selector the caller gave, then the ones the service recognised from the
-         * MX records is documented to publish keys under. Recognising the receiving service is a
-         * hint about where to look, not a claim that the outgoing mail goes through the same one.
-         */
-        const dkimPort = (deps.dkimLookup ?? createDkimLookup)();
-        const dkim = await analyseDkim({
-          domain: qname,
-          selectors: dkimSelectors({
-            provided: inputs.dkimSelector,
-            service: mail.recognisedService?.dkimSelectors,
-          }),
-          lookup: dkimPort.lookup,
-        });
-        if (dkim.state === "NOT_FOUND" || dkim.state === "NOTHING_TO_ASK") {
-          // 1.1 §16.3 — read against the total number of checks, it measures how well the
-          // selector table covers the providers this market actually uses.
-          deps.metrics?.increment("email_dkim_selector_unknown_total");
-        }
-
-        const starttls = analyseStarttls(await probeMailHosts(record, mail, deps));
-        const ptr = analysePtr(await reverseNames(mail, mailPort));
-
-        // 1.1 §2.1 — the groups in the order the section lists them.
-        const freshness = freshnessNow();
-        categories.push(
-          buildCategoryResult("email", [
-            ...evaluateSpfChecks(spf, { domain: qname, freshness }),
-            ...evaluateDmarcChecks(dmarc, { domain: qname, freshness }),
-            evaluateDkimCheck(dkim, { domain: qname, freshness }),
-            evaluateMailServerCheck(mail, { domain: qname, freshness }),
-            ...evaluateStarttlsChecks(starttls, { domain: qname, freshness }),
-            ...evaluatePtrChecks(ptr, { domain: qname, freshness }),
-          ]),
-        );
+        // 1.1 §12 — the category reads its own observations through its own cache; see the module.
+        categories.push(await runEmailCategory(record, deps, inputs, cache));
       }
 
       if (category === "tls") {

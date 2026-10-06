@@ -353,9 +353,12 @@ export interface TlsExecutionMetadata {
  * `queriedName` is part of the subject rather than a detail: for DMARC it may belong to a parent
  * domain and for DKIM it carries a selector, so a result cannot be read without it.
  */
+export const EMAIL_POLICY_KINDS = ["SPF", "DMARC", "DKIM"] as const;
+export type EmailPolicyKind = (typeof EMAIL_POLICY_KINDS)[number];
+
 export interface EmailPolicyTarget {
   readonly kind: "EMAIL_POLICY";
-  readonly policy: "SPF" | "DMARC" | "DKIM";
+  readonly policy: EmailPolicyKind;
   readonly queriedName: string;
 }
 
@@ -567,6 +570,15 @@ export interface ExecutionContext {
   readonly dnsModuleConfigVersion: string;
   readonly registryModuleConfigVersion: string;
   readonly tlsModuleConfigVersion: string;
+  /**
+   * 1.1 §12.1 — the mail category's own configuration: the selector table, the recognised
+   * services, and the rules the mail checks are scored by. It is in every mail cache key, so a
+   * change to any of those cannot quietly reuse a result that meant something else.
+   *
+   * Optional only so that a scan stored before this release still reads back; a scan created now
+   * always carries it.
+   */
+  readonly emailModuleConfigVersion?: string;
   readonly trustStoreVersion: string;
 }
 
