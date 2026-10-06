@@ -1,5 +1,6 @@
 import type {
   CheckResult,
+  DnsRecordSource,
   EmailPolicyTarget,
   MessageDescriptor,
   Severity,
@@ -394,6 +395,43 @@ function target(analysis: DkimAnalysis, domain: string): EmailPolicyTarget {
   };
 }
 
+/**
+ * 1.1 §9.3 and §9.4 — the names that were actually queried, which the Technical view carries.
+ *
+ * The message names the selectors, because §5.5 requires a reader to be told what was tried; the
+ * full names under `_domainkey` are the same fact spelled out, and belong here.
+ */
+function source(analysis: DkimAnalysis): DnsRecordSource {
+  return {
+    kind: "DNS_RECORD",
+    ...(analysis.triedNames.length === 0 ? {} : { traversedNames: analysis.triedNames }),
+  };
+}
+
+/**
+ * 1.1 §9.4 — the record as published, minus the key itself.
+ *
+ * The key is four hundred characters of base64 and the one part of the record a reader can do
+ * nothing with; what the check is about — the key's type and its length — is reported instead.
+ * This is narrower than the section's "raw record text", deliberately: withholding something
+ * that is published in DNS costs a reader nothing, and printing it costs them the row.
+ */
+function keyDetails(key: DkimKey | undefined): Record<string, unknown> | undefined {
+  if (key === undefined) {
+    return undefined;
+  }
+  const tags = [...key.tags.entries()]
+    .filter(([name]) => name !== "p")
+    .map(([name, value]) => `${name}=${value}`)
+    .join("; ");
+  // The key's type is already in the record text as its `k` tag, so it is not repeated as a
+  // field of our own naming.
+  return {
+    ...(key.bits === undefined ? {} : { keyBits: key.bits }),
+    ...(tags === "" ? {} : { recordText: tags }),
+  };
+}
+
 function check(
   analysis: DkimAnalysis,
   status: CheckResult["status"],
@@ -403,6 +441,10 @@ function check(
   extra: Partial<CheckResult> & { readonly params?: MessageParams } = {},
 ): CheckResult {
   const { params, ...rest } = extra;
+  const details = {
+    ...(analysis.triedNames.length === 0 ? {} : { triedNames: analysis.triedNames }),
+    ...keyDetails(analysis.key),
+  };
   return {
     checkId: DKIM_CHECK_IDS.key,
     category: "email",
@@ -410,7 +452,9 @@ function check(
     severity,
     target: target(analysis, options.domain),
     message: { titleCode, ...(params === undefined ? {} : { params }) },
+    source: source(analysis),
     freshness: options.freshness,
+    ...(Object.keys(details).length === 0 ? {} : { details }),
     ...rest,
   };
 }

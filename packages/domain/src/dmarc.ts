@@ -1,5 +1,6 @@
 import type {
   CheckResult,
+  DnsRecordSource,
   EmailPolicyTarget,
   MessageDescriptor,
   Severity,
@@ -299,8 +300,10 @@ export interface DmarcAnalysis {
   readonly effectivePolicy?: DmarcPolicy;
   readonly policyTag?: DmarcPolicyTag;
   readonly requestsAggregateReports: boolean;
-  /** 1.1 §9.4 — the domains the reports are addressed to, never the addresses themselves. */
+  /** 1.1 §9.4 — the domains the reports are addressed to, which the Public view may name. */
   readonly reportDomains: readonly string[];
+  /** 1.1 §9.4 — the addresses themselves, which only the Technical view may name. */
+  readonly reportAddresses: readonly string[];
   readonly usesDeprecatedPct: boolean;
   readonly queries: number;
   readonly visitedNames: readonly string[];
@@ -323,6 +326,7 @@ export async function analyseDmarc(input: DmarcAnalysisInput): Promise<DmarcAnal
     fromPublicSuffix: false,
     requestsAggregateReports: false,
     reportDomains: [],
+    reportAddresses: [],
     usesDeprecatedPct: false,
     queries: 1,
     visitedNames: [domain],
@@ -350,6 +354,7 @@ export async function analyseDmarc(input: DmarcAnalysisInput): Promise<DmarcAnal
       ...(tag === undefined ? {} : { policyTag: tag }),
       requestsAggregateReports: uris.length > 0,
       reportDomains: reportDomains(uris),
+      reportAddresses: uris,
       usesDeprecatedPct: record.tags.has("pct"),
       queries: walk?.queries ?? 1,
       visitedNames: [domain, ...(walk?.nodes ?? []).map((node) => node.name)],
@@ -408,6 +413,18 @@ interface DmarcCheckOptions {
 
 function target(domain: string): EmailPolicyTarget {
   return { kind: "EMAIL_POLICY", policy: "DMARC", queriedName: dmarcPolicyName(domain) };
+}
+
+/**
+ * 1.1 §9.3 — the names the walk read on its way up. For this check they are the substance of the
+ * result: the policy that applies may have been found several labels above the domain, and the
+ * path is how a reader confirms the source rather than taking our word for it.
+ */
+function source(analysis: DmarcAnalysis): DnsRecordSource {
+  return {
+    kind: "DNS_RECORD",
+    ...(analysis.visitedNames.length === 0 ? {} : { traversedNames: analysis.visitedNames }),
+  };
 }
 
 function check(
@@ -556,14 +573,19 @@ export function evaluateDmarcChecks(
   analysis: DmarcAnalysis,
   options: DmarcCheckOptions,
 ): readonly CheckResult[] {
-  const record = recordCheck(analysis, options);
+  // 1.1 §9.4 — the record as published, which a reader compares the findings against.
+  const text = analysis.record?.text;
+  const record =
+    text === undefined
+      ? recordCheck(analysis, options)
+      : { ...recordCheck(analysis, options), details: { recordText: text } };
   if (analysis.recordState !== "OWN" && analysis.recordState !== "INHERITED") {
     return [
       record,
       blocked(DMARC_CHECK_IDS.policy, "email.dmarc.policy.blocked", options),
       blocked(DMARC_CHECK_IDS.reports, "email.dmarc.reports.blocked", options),
       blocked(DMARC_CHECK_IDS.deprecated, "email.dmarc.deprecated.blocked", options),
-    ];
+    ].map((result) => ({ ...result, source: source(analysis) }));
   }
   return [
     record,
@@ -577,9 +599,14 @@ export function evaluateDmarcChecks(
             ? "email.dmarc.reports.present.at"
             : "email.dmarc.reports.present",
           options,
-          analysis.reportDomains.length > 0
-            ? { params: { domains: analysis.reportDomains.join(", ") } }
-            : {},
+          {
+            // 1.1 §9.4 — the full addresses, which the Public view withholds and this one shows
+            // only on an explicit request for the technical view.
+            details: { reportAddresses: analysis.reportAddresses },
+            ...(analysis.reportDomains.length > 0
+              ? { params: { domains: analysis.reportDomains.join(", ") } }
+              : {}),
+          },
         )
       : check(
           DMARC_CHECK_IDS.reports,
@@ -597,5 +624,5 @@ export function evaluateDmarcChecks(
           options,
         )
       : check(DMARC_CHECK_IDS.deprecated, "PASS", "none", "email.dmarc.deprecated.absent", options),
-  ];
+  ].map((result) => ({ ...result, source: source(analysis) }));
 }

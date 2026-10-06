@@ -1,5 +1,6 @@
 import type {
   CheckResult,
+  DnsRecordSource,
   EmailPolicyTarget,
   MessageDescriptor,
   Severity,
@@ -352,6 +353,19 @@ interface SpfCheckOptions {
   readonly freshness: CheckResult["freshness"];
 }
 
+/**
+ * 1.1 §9.3 — where the result came from: the names the walk read, and how many of them answered
+ * with nothing. Both are what a reader needs in order to repeat the count themselves, and 1.1
+ * §9.4 keeps them in the Technical view.
+ */
+function source(analysis: SpfAnalysis): DnsRecordSource {
+  return {
+    kind: "DNS_RECORD",
+    ...(analysis.traversedNames.length === 0 ? {} : { traversedNames: analysis.traversedNames }),
+    voidLookups: analysis.voidLookups,
+  };
+}
+
 function target(domain: string): EmailPolicyTarget {
   return { kind: "EMAIL_POLICY", policy: "SPF", queriedName: domain };
 }
@@ -375,6 +389,10 @@ function check(
     freshness: options.freshness,
     ...rest,
   };
+}
+
+function withSource(result: CheckResult, analysis: SpfAnalysis): CheckResult {
+  return { ...result, source: source(analysis) };
 }
 
 function blocked(checkId: string, titleCode: string, options: SpfCheckOptions): CheckResult {
@@ -492,14 +510,20 @@ export function evaluateSpfChecks(
   analysis: SpfAnalysis,
   options: SpfCheckOptions,
 ): readonly CheckResult[] {
-  const record = recordCheck(analysis, options);
+  // 1.1 §9.4 — the record as published, which is the one thing a reader cannot reconstruct from
+  // the findings and the first thing they will want to compare them against.
+  const text = analysis.record?.text;
+  const record =
+    text === undefined
+      ? recordCheck(analysis, options)
+      : { ...recordCheck(analysis, options), details: { recordText: text } };
   if (analysis.recordState !== "SINGLE") {
     return [
       record,
       blocked(SPF_CHECK_IDS.limits, "email.spf.limits.blocked", options),
       blocked(SPF_CHECK_IDS.policy, "email.spf.policy.blocked", options),
       blocked(SPF_CHECK_IDS.deprecated, "email.spf.deprecated.blocked", options),
-    ];
+    ].map((result) => withSource(result, analysis));
   }
   return [
     record,
@@ -508,5 +532,5 @@ export function evaluateSpfChecks(
     analysis.usesPtr
       ? check(SPF_CHECK_IDS.deprecated, "FAIL", "warning", "email.spf.deprecated.fail.ptr", options)
       : check(SPF_CHECK_IDS.deprecated, "PASS", "none", "email.spf.deprecated.absent", options),
-  ];
+  ].map((result) => withSource(result, analysis));
 }

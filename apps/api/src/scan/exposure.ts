@@ -79,12 +79,32 @@ const PERMITTED_DETAIL_FIELDS: Readonly<Record<ScanCategory, readonly string[]>>
     "chainErrorCode",
   ],
   /**
-   * 1.1 §9.4 — the email category publishes no detail fields yet: SPF reports what it found in
-   * the message's own fact line, and the record's original text is Technical, which this list
-   * governs. A field named here is a field that leaves the service, so it is added when a check
-   * actually produces one.
+   * 1.1 §9.4 — what the mail category shows on an explicit request for the technical view.
+   *
+   * The section's table decides this list, and the line it draws is between what a reader needs
+   * in order to act and what they need in order to check us: the policy's own values and the
+   * hosts it names are Public, while the addresses those hosts resolved to, the records as
+   * published, the names actually queried and the full report addresses are here.
+   *
+   * The certificate fields carry the names the TLS category already uses, because §7.5 reads a
+   * mail host's certificate by the rules of 1.0 §10 and a reader should meet one vocabulary.
    */
-  email: [],
+  email: [
+    "recordText",
+    "triedNames",
+    "keyBits",
+    "reportAddresses",
+    "hosts",
+    "addresses",
+    "address",
+    "protocol",
+    "hostsNotProbed",
+    "validFrom",
+    "validTo",
+    "issuer",
+    "subjectAltNames",
+    "chainErrorCode",
+  ],
 };
 
 const REGISTRANT_FIELDS = ["name", "email", "phone", "address"] as const;

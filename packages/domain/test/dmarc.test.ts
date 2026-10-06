@@ -324,12 +324,22 @@ describe("AC-4.9 — aggregate reports", () => {
     );
   });
 
-  it("keeps the addresses out of the result, because they belong to the owner", async () => {
-    const { results } = await checks(
+  it("keeps the addresses out of every message, and only in the technical detail", async () => {
+    /**
+     * 1.1 §9.4 — the domain a report goes to answers the question a reader has, so it is Public;
+     * the address itself is available on an explicit request and never in a message, which is
+     * what the public projection serves.
+     */
+    const { results, by } = await checks(
       "example.uz",
       answer("v=DMARC1; p=reject; rua=mailto:dmarc@example.uz; ruf=mailto:f@example.uz"),
     );
-    expect(JSON.stringify(results)).not.toContain("dmarc@example.uz");
+    for (const result of results) {
+      expect(JSON.stringify(result.message)).not.toContain("dmarc@example.uz");
+    }
+    expect(by(DMARC_CHECK_IDS.reports)?.details).toEqual({
+      reportAddresses: ["mailto:dmarc@example.uz"],
+    });
   });
 });
 

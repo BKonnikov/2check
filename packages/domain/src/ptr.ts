@@ -1,5 +1,6 @@
 import type {
   CheckResult,
+  DnsRecordSource,
   MailHostTarget,
   MessageDescriptor,
   Severity,
@@ -258,6 +259,34 @@ export interface PtrCheckOptions {
 
 const FAMILY_LABEL: Readonly<Record<TlsIpFamily, string>> = { IPV4: "IPv4", IPV6: "IPv6" };
 
+/**
+ * 1.1 §9.3 and §9.4 — the reverse names that were queried, and what each address answered with.
+ * The addresses are Technical, and so is the pairing: a list of names without the addresses they
+ * belong to cannot be checked against anything.
+ */
+function source(analysis: PtrFamilyAnalysis): DnsRecordSource {
+  const queried = analysis.addresses
+    .map((entry) => reverseName(entry.address))
+    .filter((name): name is string => name !== undefined);
+  return {
+    kind: "DNS_RECORD",
+    ...(queried.length === 0 ? {} : { traversedNames: queried }),
+  };
+}
+
+function addressDetails(analysis: PtrFamilyAnalysis): Record<string, unknown> | undefined {
+  if (analysis.addresses.length === 0) {
+    return undefined;
+  }
+  return {
+    // The host is already the check's subject, so each row is the address and what it answered.
+    addresses: analysis.addresses.map((entry) => ({
+      address: entry.address,
+      names: entry.names,
+    })),
+  };
+}
+
 function check(
   analysis: PtrFamilyAnalysis,
   status: CheckResult["status"],
@@ -273,6 +302,7 @@ function check(
     hostname,
     ipFamily: analysis.family,
   };
+  const details = addressDetails(analysis);
   return {
     checkId: PTR_CHECK_IDS[analysis.family],
     category: "email",
@@ -283,7 +313,9 @@ function check(
       titleCode,
       params: { ipFamily: FAMILY_LABEL[analysis.family], ...params },
     },
+    source: source(analysis),
     freshness: options.freshness,
+    ...(details === undefined ? {} : { details }),
     ...rest,
   };
 }

@@ -242,6 +242,12 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       },
       detailHints: {
         hostname: "Имя, которое мы отправили серверу в запросе и для которого сверяли сертификат.",
+        triedNames:
+          "Имена, которые мы запросили. Селектор DKIM выбирает владелец домена, и перечислить селекторы через DNS нельзя — поэтому список ограничен тем, что нам было известно спросить.",
+        reportAddresses:
+          "Адреса из тегов rua и ruf записи DMARC. Они опубликованы в DNS их владельцем; здесь они показаны по вашему запросу и в публичную сводку не входят.",
+        hostsNotProbed:
+          "Узлы, до которых проба в этот раз не дошла: за одну проверку опрашивается не более четырёх. Результат проверки шифрования к ним не относится.",
         subjectAltNames:
           "Имена, для которых сертификат действителен. Звёздочка заменяет ровно одну часть имени: *.example.uz покрывает www.example.uz, но не a.b.example.uz и не сам example.uz — поэтому голое имя обычно перечисляют отдельно.",
         issuer:
@@ -452,6 +458,12 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       detailHints: {
         hostname:
           "The name we sent to the server, and the name the certificate was checked against.",
+        triedNames:
+          "The names we queried. A DKIM selector is the domain owner's to choose, and DNS cannot be asked which selectors exist — so the list is bounded by what we knew to ask for.",
+        reportAddresses:
+          "The addresses in the DMARC record's rua and ruf tags. Their owner published them in DNS; they are shown here because you asked, and are not part of the public summary.",
+        hostsNotProbed:
+          "Hosts this probe did not reach: at most four are probed in one check. The encryption result says nothing about these.",
         subjectAltNames:
           "The names this certificate is valid for. An asterisk stands for exactly one label: *.example.uz covers www.example.uz, but neither a.b.example.uz nor example.uz itself — which is why the bare name is usually listed separately.",
         issuer:
@@ -670,6 +682,12 @@ export const CHROME: Readonly<Record<Locale, Chrome>> = {
       },
       detailHints: {
         hostname: "Serverga so'rovda yuborilgan va sertifikat solishtirilgan nom.",
+        triedNames:
+          "Biz so'ragan nomlar. DKIM selektorini domen egasi tanlaydi va DNS dan qaysi selektorlar borligini so'rab bo'lmaydi — shuning uchun ro'yxat biz so'rashni bilgan narsalar bilan cheklangan.",
+        reportAddresses:
+          "DMARC yozuvining rua va ruf teglaridagi manzillar. Ularni egasi DNS da e'lon qilgan; bu yerda ular sizning so'rovingiz bo'yicha ko'rsatilgan va ommaviy xulosaga kirmaydi.",
+        hostsNotProbed:
+          "Bu proba yetib bormagan tugunlar: bitta tekshiruvda ko'pi bilan to'rttasi so'raladi. Shifrlash natijasi ularga taalluqli emas.",
         subjectAltNames:
           "Sertifikat amal qiladigan nomlar. Yulduzcha nomning aynan bitta qismini almashtiradi: *.example.uz www.example.uz ni qamraydi, lekin a.b.example.uz ni ham, example.uz ning o'zini ham qamramaydi — shuning uchun yalang'och nom odatda alohida yoziladi.",
         issuer:

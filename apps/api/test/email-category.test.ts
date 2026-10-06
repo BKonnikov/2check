@@ -158,6 +158,45 @@ function check(body: WebScanResponse, checkId: string) {
   return category(body)?.checks.find((entry) => entry.checkId === checkId);
 }
 
+/** PRD 6.4 and 1.1 §9.4 — the Technical view, as a reader gets it by asking for it. */
+async function technical(fixture: Fixture, dkimSelector?: string) {
+  const instance = app(fixture);
+  const created = await instance.inject({
+    method: "POST",
+    url: "/api/web/v1/scans",
+    payload: {
+      input: "example.uz",
+      mode: "PARTIAL",
+      selectedCategories: ["email"],
+      ...(dkimSelector === undefined ? {} : { dkimSelector }),
+    },
+  });
+  const { scanId } = created.json<{ scanId: string }>();
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const response = await instance.inject({ method: "GET", url: `/api/web/v1/scans/${scanId}` });
+    if (response.json<WebScanResponse>().executionState !== "RUNNING") {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  const response = await instance.inject({
+    method: "GET",
+    url: `/api/web/v1/scans/${scanId}/details`,
+  });
+  await instance.close();
+  const body = response.json<{
+    checks?: readonly {
+      checkId: string;
+      source?: Record<string, unknown>;
+      details?: Record<string, unknown>;
+    }[];
+  }>();
+  return {
+    body,
+    of: (checkId: string) => body.checks?.find((entry) => entry.checkId === checkId),
+  };
+}
+
 describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
   it("is accepted and produces every check in the category", async () => {
     const body = await scan(SOUND, "mine");
@@ -188,11 +227,98 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
     expect(body.summary?.verdictCode).toBeUndefined();
   });
 
-  it("publishes no detail fields for the category yet", async () => {
-    // 1.1 §9.4 — a field reaches the reader only once a check actually produces one.
-    const body = await scan(SOUND);
+  it("publishes no detail fields in the public view", async () => {
+    // PRD 6.4 — details are the Technical level and never ride along with the public result.
+    const body = await scan(SOUND, "mine");
     for (const entry of category(body)?.checks ?? []) {
-      expect(entry.details).toBeUndefined();
+      expect(entry.details, entry.checkId).toBeUndefined();
+    }
+  });
+});
+
+describe("1.1 §9.4 — what the technical view adds, and what it keeps out of the public one", () => {
+  it("shows each record as published, and the names each walk read", async () => {
+    const { of } = await technical(SOUND, "mine");
+    expect(of("email.spf.record")?.details?.recordText).toBe("v=spf1 ip4:203.0.113.0/24 -all");
+    expect(of("email.dmarc.record")?.details?.recordText).toContain("v=DMARC1");
+    expect(of("email.spf.record")?.source).toMatchObject({ kind: "DNS_RECORD" });
+  });
+
+  it("names the DMARC report addresses here and only the domains in the public result", async () => {
+    const { of } = await technical(SOUND, "mine");
+    expect(of("email.dmarc.reports")?.details?.reportAddresses).toEqual([
+      "mailto:dmarc@example.uz",
+    ]);
+
+    const body = await scan(SOUND, "mine");
+    expect(check(body, "email.dmarc.reports")?.message.params?.domains).toBe("example.uz");
+    expect(JSON.stringify(body)).not.toContain("dmarc@example.uz");
+  });
+
+  it("names the selectors it queried, and the key's length rather than the key", async () => {
+    const { of } = await technical(SOUND, "mine");
+    const dkim = of("email.dkim.key");
+    expect(dkim?.details?.triedNames).toEqual(["mine._domainkey.example.uz"]);
+    expect(dkim?.details?.keyBits).toBe(2048);
+    expect(JSON.stringify(dkim)).not.toContain(RSA_2048.slice(0, 40));
+  });
+
+  it("shows the addresses the hosts resolved to, which the public result does not", async () => {
+    const { of } = await technical(SOUND, "mine");
+    expect(of("email.mx.records")?.details?.hosts).toEqual([
+      { hostname: "mail.example.uz", preference: 10, addresses: ["93.184.216.34"] },
+    ]);
+
+    const body = await scan(SOUND, "mine");
+    expect(JSON.stringify(body)).not.toContain("93.184.216.34");
+  });
+
+  it("shows the certificate of the mail host under the names the TLS category uses", async () => {
+    const { of } = await technical(SOUND, "mine");
+    expect(of("email.starttls.certificate")?.details).toMatchObject({
+      address: "93.184.216.34",
+      issuer: "R11 (Let's Encrypt)",
+      subjectAltNames: ["DNS:mail.example.uz"],
+    });
+  });
+
+  it("shows each address and the reverse names it answered with", async () => {
+    const { of } = await technical(SOUND, "mine");
+    expect(of("email.ptr.ipv4")?.details?.addresses).toEqual([
+      { address: "93.184.216.34", names: ["mail.example.uz"] },
+    ]);
+    expect(of("email.ptr.ipv4")?.source).toMatchObject({
+      kind: "DNS_RECORD",
+      traversedNames: ["34.216.184.93.in-addr.arpa"],
+    });
+  });
+
+  it("publishes nothing the permitted list does not name", async () => {
+    /**
+     * PRD 23.6 — the list is the boundary, so this is the assertion that matters: a field a
+     * module starts producing does not reach a reader until somebody adds it deliberately.
+     */
+    const permitted = new Set([
+      "recordText",
+      "triedNames",
+      "keyBits",
+      "reportAddresses",
+      "hosts",
+      "addresses",
+      "address",
+      "protocol",
+      "hostsNotProbed",
+      "validFrom",
+      "validTo",
+      "issuer",
+      "subjectAltNames",
+      "chainErrorCode",
+    ]);
+    const { body } = await technical(SOUND, "mine");
+    for (const entry of body.checks ?? []) {
+      for (const field of Object.keys(entry.details ?? {})) {
+        expect(permitted.has(field), `${entry.checkId} publishes ${field}`).toBe(true);
+      }
     }
   });
 });

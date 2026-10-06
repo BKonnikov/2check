@@ -95,6 +95,10 @@ export interface StarttlsAnalysis {
   readonly certificate?: TlsCertificate;
   readonly certificateHost?: string;
   readonly protocol?: string;
+  /** The address the handshake happened at, which 1.1 §9.4 keeps in the Technical view. */
+  readonly certificateAddress?: string;
+  /** §7.3 — the hosts §6 named that this probe did not reach. */
+  readonly notProbed: readonly string[];
   /** 1.1 §7.6 — why nothing was observed, when nothing was. */
   readonly reasonCode?: string;
   /** 1.1 §12.4 — the earliest of the observation times that went into the result. */
@@ -115,6 +119,7 @@ export function analyseStarttls(input: StarttlsInput): StarttlsAnalysis {
   const base = {
     hostsProbed: probes.length,
     hostsSkipped: skipped.length,
+    notProbed: skipped,
     observedHosts: [] as readonly string[],
     plainHosts: [] as readonly string[],
     securedHosts: [] as readonly string[],
@@ -139,6 +144,7 @@ export function analyseStarttls(input: StarttlsInput): StarttlsAnalysis {
       : {
           certificate: withCertificate.certificate,
           certificateHost: withCertificate.hostname,
+          certificateAddress: withCertificate.address,
           protocol: withCertificate.protocol,
         }),
     ...(() => {
@@ -237,6 +243,41 @@ function check(
         ? options.freshness
         : { ...options.freshness, checkedAt: analysis.observedAt },
     ...rest,
+  };
+}
+
+/**
+ * 1.1 §9.4 — the addresses and the hosts that were left alone, which the Public view does not
+ * name: the message says how many were probed, this says which.
+ */
+function probeDetails(analysis: StarttlsAnalysis): Record<string, unknown> | undefined {
+  const details = {
+    ...(analysis.certificateAddress === undefined
+      ? {}
+      : { address: analysis.certificateAddress, protocol: analysis.protocol }),
+    ...(analysis.notProbed.length === 0 ? {} : { hostsNotProbed: analysis.notProbed }),
+  };
+  return Object.keys(details).length === 0 ? undefined : details;
+}
+
+/**
+ * 1.1 §7.5 — the certificate facts, under the same names the TLS category uses. §7.5 reads the
+ * certificate by the rules of 1.0 §10, and that includes how 1.0 §10.5 exposes it.
+ */
+function certificateDetails(analysis: StarttlsAnalysis): Record<string, unknown> | undefined {
+  const certificate = analysis.certificate;
+  if (certificate === undefined) {
+    return undefined;
+  }
+  return {
+    ...(analysis.certificateAddress === undefined ? {} : { address: analysis.certificateAddress }),
+    validFrom: certificate.validFrom,
+    validTo: certificate.validTo,
+    issuer: certificate.issuer,
+    subjectAltNames: certificate.subjectAltNames,
+    ...(certificate.chainErrorCode === undefined
+      ? {}
+      : { chainErrorCode: certificate.chainErrorCode }),
   };
 }
 
@@ -433,5 +474,13 @@ export function evaluateStarttlsChecks(
   analysis: StarttlsAnalysis,
   options: StarttlsCheckOptions,
 ): readonly CheckResult[] {
-  return [encryptionCheck(analysis, options), certificateCheck(analysis, options)];
+  const probe = probeDetails(analysis);
+  const certificate = certificateDetails(analysis);
+  return [
+    { ...encryptionCheck(analysis, options), ...(probe === undefined ? {} : { details: probe }) },
+    {
+      ...certificateCheck(analysis, options),
+      ...(certificate === undefined ? {} : { details: certificate }),
+    },
+  ];
 }

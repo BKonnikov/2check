@@ -198,6 +198,26 @@ function target(analysis: MailServerAnalysis, options: MailCheckOptions): MailHo
   };
 }
 
+/**
+ * 1.1 §9.4 — the hosts with their preference, which the Public view already names in the
+ * message, and their addresses, which only this view does. They travel together because a
+ * preference without the host it belongs to is unreadable, and the Technical view is where a
+ * reader goes to see what the check actually resolved.
+ */
+function hostDetails(analysis: MailServerAnalysis): Record<string, unknown> | undefined {
+  if (analysis.hosts.length === 0) {
+    return undefined;
+  }
+  return {
+    hosts: analysis.hosts.map((host) => ({
+      hostname: host.hostname,
+      ...(host.preference === undefined ? {} : { preference: host.preference }),
+      ...(host.implicit === true ? { implicit: true } : {}),
+      addresses: host.addresses,
+    })),
+  };
+}
+
 function check(
   status: CheckResult["status"],
   severity: Severity,
@@ -207,6 +227,7 @@ function check(
   extra: { readonly reasonCode?: string; readonly params?: MessageParams } = {},
 ): CheckResult {
   const { params, ...rest } = extra;
+  const details = hostDetails(analysis);
   return {
     checkId: MAIL_CHECK_IDS.records,
     category: "email",
@@ -214,7 +235,9 @@ function check(
     severity,
     target: target(analysis, options),
     message: { titleCode, ...(params === undefined ? {} : { params }) },
+    source: { kind: "DNS_RECORD" },
     freshness: options.freshness,
+    ...(details === undefined ? {} : { details }),
     ...rest,
   };
 }
