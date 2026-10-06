@@ -35,6 +35,22 @@ const VERDICT_GROUPS: readonly (readonly ["clean" | "notes" | "problems", readon
   ["problems", ["PROBLEMS", "CRITICAL_PROBLEM"]],
 ];
 
+/**
+ * The pages a scan can be started from, and the path each one sits at.
+ *
+ * Exported because it has to agree with the navigation: the service counts a single-category
+ * PARTIAL scan under that category's name from the moment the category exists, so a tool page
+ * that is missing here is a page whose scans are counted and then shown nowhere. That is what
+ * happened to the mail page, and a test now holds the two lists together.
+ */
+export const SCAN_PAGES: readonly (readonly [string, string])[] = [
+  ["home", ""],
+  ["dns", "/dns-check"],
+  ["registry", "/whois"],
+  ["tls", "/ssl-check"],
+  ["email", "/email-check"],
+];
+
 function groupVerdicts(verdicts: Readonly<Record<string, number>>, copy: StatsCopy) {
   return VERDICT_GROUPS.map(([group, codes]) => ({
     key: group,
@@ -123,19 +139,12 @@ export default function StatsView({
   const browserTotal = stats.audience.browsers.reduce((sum, entry) => sum + entry.sessions, 0);
 
   /**
-   * The four pages a scan can be started from, in the order they sit in the navigation.
-   *
    * A PARTIAL scan of several categories at once is counted apart by the service, and is not
-   * listed here: the interface has no page that produces one, so a row for it would name
-   * something a reader cannot go and look at. Nothing on this page claims to be a total, so
-   * leaving it out misstates nothing.
+   * listed: the interface has no page that produces one, so a row for it would name something a
+   * reader cannot go and look at. Nothing on this page claims to be a total, so leaving it out
+   * misstates nothing.
    */
-  const TOOLS: readonly (readonly [string, string])[] = [
-    ["home", `/${key}`],
-    ["dns", `/${key}/dns-check`],
-    ["registry", `/${key}/whois`],
-    ["tls", `/${key}/ssl-check`],
-  ];
+  const TOOLS = SCAN_PAGES.map(([code, path]) => [code, `/${key}${path}`] as const);
 
   return (
     <>

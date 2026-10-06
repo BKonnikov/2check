@@ -7,6 +7,7 @@ import {
   localeAlternates,
   negotiateLocale,
 } from "../app/_components/chrome";
+import { SCAN_PAGES } from "../app/_components/StatsView";
 import { STATS } from "../app/_components/stats";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
@@ -193,6 +194,27 @@ describe("PRD 24.1 — the neutral entry point negotiates a language", () => {
     expect(negotiateLocale("*")).toBe("ru");
     // A zero quality value is an explicit refusal, not a preference.
     expect(negotiateLocale("en;q=0,uz;q=0.5")).toBe("uz");
+  });
+});
+
+/**
+ * The statistics page counts a scan under the page it was started from, so its list of pages and
+ * the site's own list have to be the same list. They drifted once: the mail page shipped, the
+ * service counted its scans from that day, and the statistics page did not have a row for them.
+ */
+describe("the statistics page lists every page a scan can start from", () => {
+  it("has a row for each indexable page, in the same order", () => {
+    const paths = SCAN_PAGES.map(([, path]) => path);
+    expect(paths).toEqual([...INDEXABLE_PATHS]);
+  });
+
+  it("names each of them in every language", () => {
+    for (const locale of LOCALES) {
+      for (const [code] of SCAN_PAGES) {
+        expect(STATS[locale].toolNames[code], `${code} in ${locale}`).toBeDefined();
+        expect(STATS[locale].toolNames[code]?.trim(), `${code} in ${locale}`).not.toBe("");
+      }
+    }
   });
 });
 
