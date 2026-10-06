@@ -10,6 +10,7 @@ import type {
 import { describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import { type Env, loadEnv } from "../src/config/env.js";
+import { createMetrics, type Metrics } from "../src/observability/metrics.js";
 
 const env: Env = loadEnv({
   LOG_LEVEL: "silent",
@@ -34,9 +35,10 @@ interface Fixture {
   readonly ptr?: Readonly<Record<string, readonly string[]>>;
 }
 
-function app(fixture: Fixture) {
+function app(fixture: Fixture, metrics?: Metrics) {
   return buildApp({
     env,
+    ...(metrics === undefined ? {} : { metrics }),
     spfLookup: () => ({
       provider: "fixture",
       lookup: async (name) => fixture.txt?.[name] ?? { outcome: "NAME_NOT_FOUND" },
@@ -233,6 +235,66 @@ describe("1.1 §14 — a PARTIAL scan of the mail category", () => {
     for (const entry of category(body)?.checks ?? []) {
       expect(entry.details, entry.checkId).toBeUndefined();
     }
+  });
+});
+
+describe("AC-16.5 — the category's metrics are counted", () => {
+  async function counted(fixture: Fixture, selector?: string) {
+    const metrics = createMetrics();
+    const instance = app(fixture, metrics);
+    const created = await instance.inject({
+      method: "POST",
+      url: "/api/web/v1/scans",
+      payload: {
+        input: "example.uz",
+        mode: "PARTIAL",
+        selectedCategories: ["email"],
+        ...(selector === undefined ? {} : { dkimSelector: selector }),
+      },
+    });
+    const { scanId } = created.json<{ scanId: string }>();
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const response = await instance.inject({ method: "GET", url: `/api/web/v1/scans/${scanId}` });
+      if (response.json<WebScanResponse>().executionState !== "RUNNING") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    await instance.close();
+    return metrics.snapshot();
+  }
+
+  it("counts a probe by its outcome, and never by its host", async () => {
+    const snapshot = await counted(SOUND, "mine");
+    const probes = Object.keys(snapshot).filter((key) => key.startsWith("email_smtp_probe_total"));
+    expect(probes).toHaveLength(1);
+    expect(probes[0]).toContain("SECURED");
+    // AC-21.4 — a host name is unbounded, so it can never be a label.
+    expect(probes[0]).not.toContain("mail.example.uz");
+  });
+
+  it("counts a host the security check refused apart from one it probed", async () => {
+    const snapshot = await counted({
+      ...SOUND,
+      addresses: {
+        ...SOUND.addresses,
+        "mail.example.uz": host("mail.example.uz", "93.184.216.34", "127.0.0.1"),
+      },
+    });
+    expect(
+      Object.keys(snapshot).some((key) => key.startsWith("email_smtp_probe_blocked_total")),
+    ).toBe(true);
+    expect(Object.keys(snapshot).some((key) => key.startsWith("email_smtp_probe_total"))).toBe(
+      false,
+    );
+  });
+
+  it("counts a check that ended without a key, and not one that found one", async () => {
+    const withoutSelector = await counted(SOUND);
+    expect(withoutSelector.email_dkim_selector_unknown_total).toBe(1);
+
+    const withSelector = await counted(SOUND, "mine");
+    expect(withSelector.email_dkim_selector_unknown_total).toBeUndefined();
   });
 });
 
