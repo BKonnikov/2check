@@ -116,10 +116,27 @@ function earliest(times: readonly string[]): string | undefined {
  */
 export function analyseStarttls(input: StarttlsInput): StarttlsAnalysis {
   const { probes, skipped } = input;
+  /**
+   * 1.1 §9.3 — the counts say what the result covers, so they count what was actually done.
+   *
+   * A host the deployment could not reach at all, and a host the security check refused, were
+   * never connected to: counting them as probed would answer "how much does this cover?" with a
+   * number that includes the hosts it does not. They join the hosts beyond the cap instead, and
+   * the two counts then add up to the hosts §6 named.
+   */
+  const untouched = (candidates: readonly StarttlsOutcome[]): readonly string[] => [
+    ...candidates
+      .filter((probe) => probe.kind === "UNAVAILABLE" || probe.kind === "BLOCKED")
+      .map((probe) => probe.hostname),
+    ...skipped,
+  ];
+  const attempted = probes.filter(
+    (probe) => probe.kind !== "UNAVAILABLE" && probe.kind !== "BLOCKED",
+  );
   const base = {
-    hostsProbed: probes.length,
-    hostsSkipped: skipped.length,
-    notProbed: skipped,
+    hostsProbed: attempted.length,
+    hostsSkipped: untouched(probes).length,
+    notProbed: untouched(probes),
     observedHosts: [] as readonly string[],
     plainHosts: [] as readonly string[],
     securedHosts: [] as readonly string[],

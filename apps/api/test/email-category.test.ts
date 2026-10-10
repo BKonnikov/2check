@@ -347,7 +347,9 @@ describe("1.1 §9.4 — what the technical view adds, and what it keeps out of t
   it("shows each address and the reverse names it answered with", async () => {
     const { of } = await technical(SOUND, "mine");
     expect(of("email.ptr.ipv4")?.details?.addresses).toEqual([
-      { address: "93.184.216.34", names: ["mail.example.uz"] },
+      // The host is on the row: a family's addresses can come from several hosts, and the
+      // check's subject names only the first of them.
+      { address: "93.184.216.34", hostname: "mail.example.uz", names: ["mail.example.uz"] },
     ]);
     expect(of("email.ptr.ipv4")?.source).toMatchObject({
       kind: "DNS_RECORD",

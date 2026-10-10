@@ -274,10 +274,24 @@ function renderValue(value: unknown, ui: Ui, language: Language, key?: string): 
     if (
       value.every((entry) => typeof entry === "object" && entry !== null && !Array.isArray(entry))
     ) {
+      /**
+       * Which field names the row cannot be decided by the order the keys arrive in: a detail
+       * read back from the scan store has been through a jsonb column, which sorts keys and does
+       * not keep the order they were written in. So the rows that have a natural subject name it.
+       */
+      const LEADS: Readonly<Record<string, string>> = {
+        hosts: "hostname",
+        addresses: "address",
+      };
+      const lead = key === undefined ? undefined : LEADS[key];
       return (
         <ul className="detail-sub">
           {value.map((entry, index) => {
-            const [head, ...rest] = Object.entries(entry as Record<string, unknown>);
+            const fields = Object.entries(entry as Record<string, unknown>);
+            const head =
+              (lead === undefined ? undefined : fields.find(([name]) => name === lead)) ??
+              fields[0];
+            const rest = fields.filter(([name]) => name !== head?.[0]);
             return (
               <li key={`${String(head?.[1] ?? index)}`}>
                 <span className="detail-key">{String(head?.[1] ?? "")}</span>

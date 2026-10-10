@@ -153,6 +153,41 @@ describe("AC-7.7 and §13.7 — a limit of the service is not a fault of the dom
     expect(encryption?.severity).toBe("none");
   });
 
+  it("counts a host it never connected to as not probed", () => {
+    /**
+     * 1.1 §9.3 — the counts answer "how much does this cover?", so a host the deployment could
+     * not reach and a host the security check refused belong with the hosts beyond the cap. The
+     * two counts then add up to the hosts §6 named, which is what makes them readable.
+     */
+    const unavailable = run(
+      [
+        { kind: "UNAVAILABLE", hostname: "a.example.uz" },
+        { kind: "UNAVAILABLE", hostname: "b.example.uz" },
+      ],
+      ["c.example.uz"],
+    );
+    expect(unavailable.encryption?.source).toEqual({
+      kind: "SMTP_PROBE",
+      hostsProbed: 0,
+      hostsSkipped: 3,
+    });
+    expect(unavailable.analysis.notProbed).toEqual([
+      "a.example.uz",
+      "b.example.uz",
+      "c.example.uz",
+    ]);
+
+    const refused = run([
+      secured("a.example.uz"),
+      { kind: "BLOCKED", hostname: "b.example.uz", reasonCode: "ssrf_policy_block" },
+    ]);
+    expect(refused.encryption?.source).toEqual({
+      kind: "SMTP_PROBE",
+      hostsProbed: 1,
+      hostsSkipped: 1,
+    });
+  });
+
   it("names 2check as the limit when the host is our own infrastructure", () => {
     const { encryption } = run([
       { kind: "BLOCKED", hostname: "a.example.uz", reasonCode: "own_infrastructure_not_observed" },

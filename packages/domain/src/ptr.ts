@@ -279,9 +279,13 @@ function addressDetails(analysis: PtrFamilyAnalysis): Record<string, unknown> | 
     return undefined;
   }
   return {
-    // The host is already the check's subject, so each row is the address and what it answered.
+    /**
+     * The host is named on every row, not left to the check's subject: a family's addresses can
+     * come from several hosts, and the subject names only the first of them.
+     */
     addresses: analysis.addresses.map((entry) => ({
       address: entry.address,
+      hostname: entry.hostname,
       names: entry.names,
     })),
   };
