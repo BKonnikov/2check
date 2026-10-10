@@ -580,6 +580,81 @@ describe("1.1 §7 and §13 — STARTTLS through the whole stack", () => {
     expect(encryption?.message.params).toMatchObject({ probed: 4, skipped: 2 });
   });
 
+  it("probes the hosts together, because in sequence they would outlast the scan", async () => {
+    /**
+     * A session has its own timeout, four hosts are allowed, and the scan budget of 1.0 §22 is
+     * one for every category — so four hosts in sequence would spend more than the whole budget
+     * and the reader would get a deadline instead of a result.
+     *
+     * The test is a barrier rather than a stopwatch: every probe waits until all four have been
+     * entered. Run together they all arrive and the scan finishes; run one at a time the first
+     * one waits for a probe that will never start, and this fails instead of being slow.
+     */
+    const hosts = ["m1", "m2", "m3", "m4"].map((name) => `${name}.example.uz`);
+    let entered = 0;
+    let release: () => void = () => {};
+    const everyoneIn = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const instance = buildApp({
+      env,
+      smtpProbeEnabled: true,
+      smtpProbe: async (_address, hostname) => {
+        entered += 1;
+        if (entered === hosts.length) {
+          release();
+        }
+        await everyoneIn;
+        return encrypted(hostname);
+      },
+      spfLookup: () => ({ provider: "fixture", lookup: async () => ({ outcome: "EMPTY" }) }),
+      dmarcLookup: () => ({ provider: "fixture", lookup: async () => ({ outcome: "EMPTY" }) }),
+      dkimLookup: () => ({ provider: "fixture", lookup: async () => ({ outcome: "EMPTY" }) }),
+      mailHostLookup: () => ({
+        provider: "fixture",
+        mx: async () => ({
+          outcome: "ANSWER",
+          records: hosts.map((exchange, index) => ({
+            preference: (index + 1) * 10,
+            exchange,
+          })),
+        }),
+        addresses: async (name) => ({
+          hostname: name,
+          outcome: "ANSWER",
+          addresses: [`93.184.216.${hosts.indexOf(name) + 1}`],
+        }),
+        reverse: async () => ({ outcome: "NAME_NOT_FOUND" }),
+      }),
+    });
+
+    const created = await instance.inject({
+      method: "POST",
+      url: "/api/web/v1/scans",
+      payload: { input: "example.uz", mode: "PARTIAL", selectedCategories: ["email"] },
+    });
+    const { scanId } = created.json<{ scanId: string }>();
+    let body: WebScanResponse | undefined;
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const response = await instance.inject({ method: "GET", url: `/api/web/v1/scans/${scanId}` });
+      body = response.json<WebScanResponse>();
+      if (body.executionState === "COMPLETED" || body.executionState === "FAILED") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    await instance.close();
+
+    expect(entered).toBe(hosts.length);
+    expect(body?.executionState).toBe("COMPLETED");
+    expect(
+      body?.categories
+        ?.find((entry) => entry.category === "email")
+        ?.checks.find((entry) => entry.checkId === "email.starttls.encryption")?.status,
+    ).toBe("PASS");
+  });
+
   it("blocks a host whose address the security check refuses, and says it is our limit", async () => {
     // AC-13.1 and AC-13.2 — a forbidden address blocks the host; it is not dropped so the rest
     // of the set can be used.

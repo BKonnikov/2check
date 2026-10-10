@@ -175,33 +175,46 @@ async function probeMailHosts(
       ? {}
       : { internalInfrastructureDenylist: deps.internalInfrastructureDenylist }),
   };
-  const probes: StarttlsOutcome[] = [];
-  const parts: Observed[] = [];
-  for (const host of chosen) {
-    const result = await cached(host.hostname, host.addresses, async () => {
-      const validation = validateTarget(host.addresses, policy);
-      if (validation.decision !== "ALLOW") {
-        deps.metrics?.increment("email_smtp_probe_blocked_total", {
-          decision: validation.decision,
-        });
-        return {
-          kind: "BLOCKED",
-          hostname: host.hostname,
-          reasonCode: validation.reasonCode ?? "security_validation_incomplete",
-        };
-      }
-      const address = [...host.addresses].sort()[0];
-      if (address === undefined) {
-        return { kind: "CONNECT_FAILED", hostname: host.hostname };
-      }
-      const outcome = await probe(address, host.hostname);
-      deps.metrics?.increment("email_smtp_probe_total", { outcome: outcome.kind });
-      return outcome;
-    });
-    probes.push(result.value);
-    parts.push(result.observed);
-  }
-  return { probes, skipped, parts };
+  /**
+   * The hosts are probed together, because the arithmetic of doing it one at a time does not
+   * fit: a session has its own timeout, four hosts are allowed, and the scan budget of 1.0 §22
+   * is one for every category. Four unresponsive hosts in sequence would spend more than the
+   * whole budget and take the other three categories down with them, and the reader would get a
+   * deadline instead of a result. Nothing in §7 asks for a sequence — they are separate hosts
+   * and separate connections — and §13.3 bounds the load by the number of hosts, which is what
+   * makes running them at once the intended shape rather than a shortcut.
+   *
+   * The results keep the order the hosts came in, which is the order of preference §7.3 reports.
+   */
+  const results = await Promise.all(
+    chosen.map((host) =>
+      cached(host.hostname, host.addresses, async () => {
+        const validation = validateTarget(host.addresses, policy);
+        if (validation.decision !== "ALLOW") {
+          deps.metrics?.increment("email_smtp_probe_blocked_total", {
+            decision: validation.decision,
+          });
+          return {
+            kind: "BLOCKED",
+            hostname: host.hostname,
+            reasonCode: validation.reasonCode ?? "security_validation_incomplete",
+          };
+        }
+        const address = [...host.addresses].sort()[0];
+        if (address === undefined) {
+          return { kind: "CONNECT_FAILED", hostname: host.hostname };
+        }
+        const outcome = await probe(address, host.hostname);
+        deps.metrics?.increment("email_smtp_probe_total", { outcome: outcome.kind });
+        return outcome;
+      }),
+    ),
+  );
+  return {
+    probes: results.map((result) => result.value),
+    skipped,
+    parts: results.map((result) => result.observed),
+  };
 }
 
 /**
